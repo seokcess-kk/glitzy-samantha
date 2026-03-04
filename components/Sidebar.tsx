@@ -3,7 +3,7 @@ import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import { signOut } from 'next-auth/react'
 import { useSession } from 'next-auth/react'
-import { LayoutDashboard, Users, MessageCircle, BarChart2, LogOut, Activity, Calendar, Shield, ChevronDown } from 'lucide-react'
+import { LayoutDashboard, Users, MessageCircle, BarChart2, LogOut, Activity, Calendar, Shield, ChevronDown, Film, Link2 } from 'lucide-react'
 import { useClinic } from './ClinicContext'
 
 const navItems = [
@@ -12,6 +12,8 @@ const navItems = [
   { href: '/chatbot', label: '챗봇 현황', icon: MessageCircle },
   { href: '/patients', label: '예약 / 결제 관리', icon: Calendar },
   { href: '/ads', label: '광고 성과 분석', icon: BarChart2 },
+  { href: '/content', label: '브랜드 콘텐츠', icon: Film },
+  { href: '/utm', label: 'UTM 생성기', icon: Link2 },
 ]
 
 export default function Sidebar() {
