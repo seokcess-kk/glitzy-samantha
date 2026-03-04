@@ -25,9 +25,12 @@ export async function GET(req: Request) {
   const supabase = serverSupabase()
   const clinicId = await getClinicId(req.url)
 
+  // 텍스트 기반 콘텐츠만 분석 대상: 네이버 블로그, 인스타그램 피드 (reels 제외)
   let query = supabase
     .from('content_posts')
     .select('*, audit:content_audits(risk_score, risk_level, findings, summary, analyzed_at)')
+    .in('platform', ['Naver', 'Instagram'])
+    .not('utm_campaign', 'like', '%reels%')
     .order('published_at', { ascending: false })
     .limit(100)
 

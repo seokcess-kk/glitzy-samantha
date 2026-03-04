@@ -162,7 +162,7 @@ export default function MonitorPage() {
       <div className="flex items-center justify-between mb-8">
         <div>
           <h1 className="text-2xl font-bold text-white">콘텐츠 모니터링</h1>
-          <p className="text-sm text-slate-400 mt-1">AI가 의료광고법 저촉 여부를 분석합니다.</p>
+          <p className="text-sm text-slate-400 mt-1">네이버 블로그 · 인스타그램 피드 텍스트의 의료광고법 저촉 여부를 AI로 분석합니다.</p>
         </div>
         <button
           onClick={fetchPosts}
