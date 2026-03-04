@@ -260,15 +260,23 @@ function BookingRow({ booking, onToast, onRefresh }: { booking: any; onToast: (m
           <p className="font-medium text-white text-sm">{customer?.name || '이름 없음'}</p>
           <p className="text-xs text-slate-500 flex items-center gap-1 mt-0.5"><Phone size={10} /> {customer?.phone_number}</p>
         </div>
-        <div className="text-xs text-slate-400 flex items-center gap-1 shrink-0">
+        <div className="w-44 shrink-0 text-xs text-slate-400 flex items-center gap-1">
           <Clock size={11} />
           {booking.booking_datetime ? new Date(booking.booking_datetime).toLocaleString('ko', { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' }) : '-'}
         </div>
-        <span className={`px-2 py-0.5 rounded-full text-xs font-semibold border shrink-0 ${cfg.color}`}>{cfg.label}</span>
-        {latestConsult && (
-          <span className="px-2 py-0.5 rounded-full text-xs font-semibold bg-slate-500/15 text-slate-400 shrink-0">{latestConsult.status}</span>
-        )}
-        {totalPayment > 0 && <span className="text-sm font-semibold text-emerald-400 shrink-0">₩{totalPayment.toLocaleString()}</span>}
+        <div className="w-20 shrink-0">
+          <span className={`px-2 py-0.5 rounded-full text-xs font-semibold border ${cfg.color}`}>{cfg.label}</span>
+        </div>
+        <div className="w-20 shrink-0">
+          {latestConsult
+            ? <span className="px-2 py-0.5 rounded-full text-xs font-semibold bg-slate-500/15 text-slate-400">{latestConsult.status}</span>
+            : <span className="text-slate-600 text-xs">-</span>}
+        </div>
+        <div className="w-28 shrink-0 text-right">
+          {totalPayment > 0
+            ? <span className="text-sm font-semibold text-emerald-400">₩{totalPayment.toLocaleString()}</span>
+            : <span className="text-slate-600 text-sm">-</span>}
+        </div>
         {open ? <ChevronUp size={16} className="text-slate-500 shrink-0" /> : <ChevronDown size={16} className="text-slate-500 shrink-0" />}
       </button>
 
@@ -407,11 +415,23 @@ export default function PatientsPage() {
               <p className="text-slate-400 text-sm">{search || statusFilter !== 'all' ? '검색 결과가 없습니다.' : '예약 데이터가 없습니다.'}</p>
             </div>
           ) : (
-            <div className="space-y-2">
-              {filtered.map(b => (
-                <BookingRow key={b.id} booking={b} onToast={(msg, type) => setToast({ msg, type })} onRefresh={fetchBookings} />
-              ))}
-            </div>
+            <>
+              {/* 컬럼 헤더 */}
+              <div className="flex items-center gap-4 px-5 py-2 text-xs font-medium text-slate-500 uppercase tracking-wider border-b border-white/5 glass-card mb-1">
+                <div className="w-9 shrink-0" />
+                <div className="flex-1 min-w-0">고객명</div>
+                <div className="w-44 shrink-0">예약 일시</div>
+                <div className="w-20 shrink-0">예약 상태</div>
+                <div className="w-20 shrink-0">상담 상태</div>
+                <div className="w-28 shrink-0 text-right">결제 금액</div>
+                <div className="w-4 shrink-0" />
+              </div>
+              <div className="space-y-2">
+                {filtered.map(b => (
+                  <BookingRow key={b.id} booking={b} onToast={(msg, type) => setToast({ msg, type })} onRefresh={fetchBookings} />
+                ))}
+              </div>
+            </>
           )}
         </>
       ) : (

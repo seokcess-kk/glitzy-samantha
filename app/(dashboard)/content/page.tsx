@@ -192,62 +192,61 @@ function StatEditRow({ post, onSaved }: { post: any; onSaved: () => void }) {
   )
 }
 
-// ─── 콘텐츠 카드 ──────────────────────────────────────────
-function ContentCard({ post, onDelete, onRefresh }: { post: any; onDelete: (id: number) => void; onRefresh: () => void }) {
+// ─── 콘텐츠 테이블 행 ─────────────────────────────────────
+function ContentRow({ post, onDelete, onRefresh }: { post: any; onDelete: (id: number) => void; onRefresh: () => void }) {
   const [expanded, setExpanded] = useState(false)
   const platCfg = PLATFORM_CONFIG[post.platform] || { label: post.platform, color: 'bg-slate-500/20 text-slate-400 border-slate-500/30', statFields: [], hasApi: false, chartColor: '#64748b' }
   const latestStat = (post.stats || []).sort((a: any, b: any) => b.stat_date?.localeCompare(a.stat_date))[0] || {}
   const engagement = (latestStat.likes || 0) + (latestStat.comments || 0) + (latestStat.shares || 0) + (latestStat.saves || 0)
 
   return (
-    <div className="glass-card p-4">
-      <div className="flex items-start gap-4">
-        {post.thumbnail_url ? (
-          <img src={post.thumbnail_url} alt={post.title} className="w-20 h-14 object-cover rounded-lg shrink-0" />
-        ) : (
-          <div className="w-20 h-14 rounded-lg bg-white/5 flex items-center justify-center shrink-0 text-slate-600 text-xs">{platCfg.label[0]}</div>
-        )}
-        <div className="flex-1 min-w-0">
-          <div className="flex items-start justify-between gap-2">
-            <div className="min-w-0">
-              <div className="flex items-center gap-2 mb-1 flex-wrap">
-                <span className={`px-2 py-0.5 rounded-full text-[10px] font-semibold border ${platCfg.color}`}>{platCfg.label}</span>
-                {post.is_api_synced && <span className="text-[10px] text-slate-500">API</span>}
-                {post.utm_campaign && <span className="text-[10px] text-brand-400 bg-brand-600/10 px-1.5 py-0.5 rounded">UTM: {post.utm_campaign}</span>}
-                {post.budget > 0 && <span className="text-[10px] text-amber-400 bg-amber-500/10 px-1.5 py-0.5 rounded">₩{Number(post.budget).toLocaleString()}</span>}
-              </div>
-              <p className="text-white text-sm font-medium truncate">{post.title}</p>
-              {post.published_at && <p className="text-xs text-slate-500 mt-0.5">{new Date(post.published_at).toLocaleDateString('ko')}</p>}
-            </div>
-            <div className="flex items-center gap-1 shrink-0">
-              {post.url && (
-                <a href={post.url} target="_blank" rel="noopener noreferrer" className="p-1.5 hover:bg-white/10 rounded-lg text-slate-500 hover:text-white">
-                  <ExternalLink size={13} />
-                </a>
-              )}
-              <button onClick={() => setExpanded(v => !v)} className="p-1.5 hover:bg-white/10 rounded-lg text-slate-500 hover:text-white text-xs">
-                {expanded ? '닫기' : '수정'}
-              </button>
-              <button onClick={() => onDelete(post.id)} className="p-1.5 hover:bg-red-500/10 rounded-lg text-slate-600 hover:text-red-400">
-                <Trash2 size={13} />
-              </button>
-            </div>
+    <>
+      <tr className="border-b border-white/5 hover:bg-white/[0.03] transition-colors">
+        <td className="py-3 px-4">
+          <span className={`px-2 py-0.5 rounded-full text-[10px] font-semibold border whitespace-nowrap ${platCfg.color}`}>{platCfg.label}</span>
+        </td>
+        <td className="py-3 px-4 max-w-[280px]">
+          <p className="text-white text-sm font-medium truncate">{post.title}</p>
+          {post.utm_campaign && <span className="text-[10px] text-brand-400">{post.utm_campaign}</span>}
+        </td>
+        <td className="py-3 px-4 text-slate-400 text-xs whitespace-nowrap">
+          {post.published_at ? new Date(post.published_at).toLocaleDateString('ko') : '-'}
+        </td>
+        <td className="py-3 px-4 text-slate-300 text-xs text-right">
+          {latestStat.views > 0 ? latestStat.views.toLocaleString() : <span className="text-slate-600">-</span>}
+        </td>
+        <td className="py-3 px-4 text-slate-300 text-xs text-right">
+          {engagement > 0 ? engagement.toLocaleString() : <span className="text-slate-600">-</span>}
+        </td>
+        <td className="py-3 px-4 text-xs text-right">
+          {post.budget > 0
+            ? <span className="text-amber-400 font-medium">₩{Number(post.budget).toLocaleString()}</span>
+            : <span className="text-slate-600">-</span>}
+        </td>
+        <td className="py-3 px-4">
+          <div className="flex items-center justify-end gap-1">
+            {post.url && (
+              <a href={post.url} target="_blank" rel="noopener noreferrer" className="p-1.5 hover:bg-white/10 rounded-lg text-slate-500 hover:text-white">
+                <ExternalLink size={13} />
+              </a>
+            )}
+            <button onClick={() => setExpanded(v => !v)} className="px-2 py-1 text-xs text-slate-400 hover:text-white hover:bg-white/10 rounded-lg transition-all">
+              {expanded ? '닫기' : '수정'}
+            </button>
+            <button onClick={() => onDelete(post.id)} className="p-1.5 hover:bg-red-500/10 rounded-lg text-slate-600 hover:text-red-400 transition-all">
+              <Trash2 size={13} />
+            </button>
           </div>
-          <div className="flex items-center gap-4 mt-2">
-            {latestStat.views > 0 && <div className="flex items-center gap-1 text-xs text-slate-400"><Eye size={11} /> {latestStat.views.toLocaleString()}</div>}
-            {latestStat.likes > 0 && <div className="flex items-center gap-1 text-xs text-slate-400"><Heart size={11} /> {latestStat.likes.toLocaleString()}</div>}
-            {latestStat.comments > 0 && <div className="flex items-center gap-1 text-xs text-slate-400"><MessageCircle size={11} /> {latestStat.comments.toLocaleString()}</div>}
-            {latestStat.shares > 0 && <div className="flex items-center gap-1 text-xs text-slate-400"><Share2 size={11} /> {latestStat.shares.toLocaleString()}</div>}
-            {engagement > 0 && <div className="ml-auto text-xs text-slate-500">참여 {engagement.toLocaleString()}</div>}
-          </div>
-        </div>
-      </div>
+        </td>
+      </tr>
       {expanded && (
-        <div className="border-t border-white/5 mt-3 pt-3">
-          <StatEditRow post={post} onSaved={() => { setExpanded(false); onRefresh() }} />
-        </div>
+        <tr className="border-b border-white/5 bg-white/[0.02]">
+          <td colSpan={7} className="px-4 pt-2 pb-4">
+            <StatEditRow post={post} onSaved={() => { setExpanded(false); onRefresh() }} />
+          </td>
+        </tr>
       )}
-    </div>
+    </>
   )
 }
 
@@ -389,18 +388,19 @@ export default function ContentPage() {
       {/* ── 대시보드 영역 ── */}
 
       {/* KPI 카드 */}
-      <div className="grid grid-cols-6 gap-3 mb-5">
+      <div className="grid grid-cols-7 gap-3 mb-5">
         {[
-          { label: '총 조회수', value: totalViews.toLocaleString(), color: 'text-white' },
-          { label: '총 참여수', value: totalEngagement.toLocaleString(), color: 'text-white' },
-          { label: '총 예산', value: totalBudget > 0 ? `₩${totalBudget.toLocaleString()}` : '-', color: 'text-amber-400' },
-          { label: 'DB 유입', value: totalLeads > 0 ? `${totalLeads}건` : '-', color: 'text-blue-400' },
-          { label: 'CPL', value: overallCpl > 0 ? `₩${overallCpl.toLocaleString()}` : '-', color: 'text-white' },
-          { label: 'ROAS', value: overallRoas > 0 ? `${overallRoas}%` : '-', color: overallRoas >= 100 ? 'text-emerald-400' : overallRoas > 0 ? 'text-red-400' : 'text-slate-500' },
+          { label: '총 조회수',    value: totalViews.toLocaleString(),                                                    color: 'text-white' },
+          { label: '총 참여수',    value: totalEngagement.toLocaleString(),                                               color: 'text-white' },
+          { label: '총 예산',      value: totalBudget > 0 ? `₩${totalBudget.toLocaleString()}` : '-',                    color: 'text-amber-400' },
+          { label: 'DB 유입',      value: totalLeads > 0 ? `${totalLeads}건` : '-',                                      color: 'text-blue-400' },
+          { label: '총 결제 금액', value: totalRevenue > 0 ? `₩${totalRevenue.toLocaleString()}` : '-',                  color: 'text-emerald-400' },
+          { label: 'CPL',          value: overallCpl > 0 ? `₩${overallCpl.toLocaleString()}` : '-',                     color: 'text-white' },
+          { label: 'ROAS',         value: overallRoas > 0 ? `${overallRoas}%` : '-',                                    color: overallRoas >= 100 ? 'text-emerald-400' : overallRoas > 0 ? 'text-red-400' : 'text-slate-500' },
         ].map(({ label, value, color }) => (
-          <div key={label} className="glass-card p-4">
-            <p className="text-xs text-slate-400 uppercase tracking-widest mb-1">{label}</p>
-            <p className={`text-xl font-bold ${color}`}>{loading ? '-' : value}</p>
+          <div key={label} className="glass-card p-3">
+            <p className="text-[10px] text-slate-400 uppercase tracking-widest mb-1 leading-tight">{label}</p>
+            <p className={`text-lg font-bold ${color}`}>{loading ? '-' : value}</p>
           </div>
         ))}
       </div>
@@ -498,31 +498,42 @@ export default function ContentPage() {
       </div>
 
       {/* ── 콘텐츠 목록 ── */}
-      <div className="flex items-center justify-between mb-4">
-        <h3 className="text-sm font-semibold text-slate-300">콘텐츠 목록 ({filteredPosts.length})</h3>
-        <div className="relative">
-          <Search size={13} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-500" />
-          <input
-            type="text"
-            value={searchQuery}
-            onChange={e => setSearchQuery(e.target.value)}
-            placeholder="콘텐츠명 검색..."
-            className="bg-white/5 border border-white/10 rounded-lg pl-8 pr-3 py-1.5 text-sm text-white placeholder-slate-600 focus:outline-none focus:border-brand-500 w-52"
-          />
+      <div className="glass-card overflow-hidden">
+        <div className="flex items-center justify-between px-4 py-3 border-b border-white/5">
+          <h3 className="text-sm font-semibold text-slate-300">콘텐츠 목록 <span className="text-slate-500 font-normal">({filteredPosts.length})</span></h3>
+          <div className="relative">
+            <Search size={13} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-500" />
+            <input
+              type="text"
+              value={searchQuery}
+              onChange={e => setSearchQuery(e.target.value)}
+              placeholder="콘텐츠명 검색..."
+              className="bg-white/5 border border-white/10 rounded-lg pl-8 pr-3 py-1.5 text-sm text-white placeholder-slate-600 focus:outline-none focus:border-brand-500 w-52"
+            />
+          </div>
         </div>
-      </div>
 
-      {loading ? (
-        <div className="space-y-3">{Array(4).fill(0).map((_, i) => <div key={i} className="glass-card h-24 animate-pulse" />)}</div>
-      ) : filteredPosts.length === 0 ? (
-        <div className="glass-card p-12 text-center">
-          <p className="text-slate-400 text-sm">{searchQuery ? '검색 결과가 없습니다.' : '콘텐츠 데이터가 없습니다.'}</p>
-        </div>
-      ) : (
-        <div className="space-y-3">
-          {filteredPosts.map(p => <ContentCard key={p.id} post={p} onDelete={handleDelete} onRefresh={fetchPosts} />)}
-        </div>
-      )}
+        {loading ? (
+          <div className="p-4 space-y-2">{Array(4).fill(0).map((_, i) => <div key={i} className="h-12 bg-white/5 rounded-lg animate-pulse" />)}</div>
+        ) : filteredPosts.length === 0 ? (
+          <div className="p-12 text-center">
+            <p className="text-slate-400 text-sm">{searchQuery ? '검색 결과가 없습니다.' : '콘텐츠 데이터가 없습니다.'}</p>
+          </div>
+        ) : (
+          <table className="w-full text-sm">
+            <thead>
+              <tr className="text-xs text-slate-500 uppercase tracking-wider border-b border-white/5">
+                {['플랫폼', '제목 / UTM', '발행일', '조회수', '참여수', '예산', ''].map((h, i) => (
+                  <th key={i} className={`py-3 px-4 font-medium ${i >= 3 && i <= 5 ? 'text-right' : 'text-left'}`}>{h}</th>
+                ))}
+              </tr>
+            </thead>
+            <tbody>
+              {filteredPosts.map(p => <ContentRow key={p.id} post={p} onDelete={handleDelete} onRefresh={fetchPosts} />)}
+            </tbody>
+          </table>
+        )}
+      </div>
     </>
   )
 }

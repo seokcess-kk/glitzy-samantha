@@ -126,18 +126,20 @@ export default function AdsPage() {
         ))}
       </div>
 
-      <div className="grid grid-cols-3 gap-4 mb-8">
+      <div className="grid grid-cols-8 gap-3 mb-8">
         {[
-          { label: '총 광고비', value: `₩${Math.round(totalSpend).toLocaleString()}` },
-          { label: '총 클릭', value: totalClicks.toLocaleString() },
-          { label: '총 노출', value: totalImpressions.toLocaleString() },
+          { label: '총 광고비',   value: `₩${Math.round(totalSpend).toLocaleString()}` },
+          { label: 'ROAS',        value: kpi ? `${(kpi.roas * 100).toFixed(0)}%` : '-' },
+          { label: '총 결제 금액', value: kpi ? `₩${kpi.totalRevenue?.toLocaleString()}` : '-' },
+          { label: 'CAC',         value: kpi ? `₩${kpi.cac?.toLocaleString()}` : '-' },
+          { label: 'ARPC',        value: kpi ? `₩${kpi.arpc?.toLocaleString()}` : '-' },
+          { label: '총 클릭',     value: totalClicks.toLocaleString() },
+          { label: '총 노출',     value: totalImpressions.toLocaleString() },
           { label: platformFilter === 'all' ? '활성 매체' : '캠페인 수', value: platformFilter === 'all' ? `${platforms.length - 1}개` : `${filteredStats.length}건` },
-          { label: 'CAC (고객 획득 비용)', value: kpi ? `₩${kpi.cac?.toLocaleString()}` : '-' },
-          { label: 'ARPC (결제 고객 평균 매출)', value: kpi ? `₩${kpi.arpc?.toLocaleString()}` : '-' },
         ].map(({ label, value }) => (
-          <div key={label} className="glass-card p-5">
-            <p className="text-xs text-slate-400 uppercase tracking-widest mb-2">{label}</p>
-            <p className="text-2xl font-bold text-white">{loading ? '-' : value}</p>
+          <div key={label} className="glass-card p-3">
+            <p className="text-[10px] text-slate-400 uppercase tracking-widest mb-1 leading-tight">{label}</p>
+            <p className="text-lg font-bold text-white truncate">{loading ? '-' : value}</p>
           </div>
         ))}
       </div>
