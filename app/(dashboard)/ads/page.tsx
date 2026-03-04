@@ -19,6 +19,7 @@ export default function AdsPage() {
   const [syncResult, setSyncResult] = useState<any>(null)
   const [days, setDays] = useState(30)
   const [platformFilter, setPlatformFilter] = useState('all')
+  const [searchQuery, setSearchQuery] = useState('')
 
   const fetchData = async () => {
     setLoading(true)
@@ -54,7 +55,9 @@ export default function AdsPage() {
   }
 
   const platforms = ['all', ...([...new Set(stats.map(s => s.platform))] as string[])]
-  const filteredStats = platformFilter === 'all' ? stats : stats.filter(s => s.platform === platformFilter)
+  const filteredStats = stats
+    .filter(s => platformFilter === 'all' || s.platform === platformFilter)
+    .filter(s => !searchQuery || (s.campaign_name || s.campaign_id || '').toLowerCase().includes(searchQuery.toLowerCase()))
   const filteredChannel = platformFilter === 'all' ? channelData : channelData.filter(c => c.channel === platformFilter)
 
   const totalSpend = filteredStats.reduce((s, r) => s + Number(r.spend_amount), 0)
@@ -186,12 +189,21 @@ export default function AdsPage() {
       )}
 
       <div className="glass-card p-6">
-        <div className="flex items-center justify-between mb-5">
-          <h2 className="font-semibold text-white">
+        <div className="flex items-center justify-between mb-5 gap-4">
+          <h2 className="font-semibold text-white shrink-0">
             캠페인별 상세 지출 내역
             {platformFilter !== 'all' && <span className="ml-2 text-sm text-slate-500">({platformFilter})</span>}
           </h2>
-          <span className="text-xs text-slate-500">{filteredStats.length}건</span>
+          <div className="flex items-center gap-2">
+            <input
+              type="text"
+              value={searchQuery}
+              onChange={e => setSearchQuery(e.target.value)}
+              placeholder="캠페인명 검색..."
+              className="bg-white/5 border border-white/10 rounded-lg px-3 py-1.5 text-sm text-white placeholder-slate-600 focus:outline-none focus:border-brand-500 w-48"
+            />
+            <span className="text-xs text-slate-500 shrink-0">{filteredStats.length}건</span>
+          </div>
         </div>
         {loading ? (
           <div className="space-y-3">

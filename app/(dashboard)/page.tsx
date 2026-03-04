@@ -5,10 +5,17 @@ import {
   XAxis, YAxis, CartesianGrid, Tooltip,
   ResponsiveContainer, Legend, PieChart, Pie, Cell
 } from 'recharts'
-import { TrendingUp, TrendingDown, Bell, Settings, Search, RefreshCw } from 'lucide-react'
+import { TrendingUp, Bell, Settings, Search, RefreshCw } from 'lucide-react'
 
 const PIE_COLORS = ['#6366f1', '#8b5cf6', '#a78bfa', '#c4b5fd']
 const fmtKrw = (v: number) => `₩${(v / 10000).toFixed(0)}만`
+
+// 매체별 색상
+const MEDIA_COLORS: Record<string, string> = {
+  Meta: '#6366f1', Google: '#10b981', TikTok: '#f59e0b',
+  유튜브: '#ef4444', '인스타 피드': '#ec4899', '인스타 릴스': '#a855f7',
+  틱톡: '#64748b', '네이버 블로그': '#22c55e',
+}
 
 function KpiCard({ label, value, loading }: { label: string; value: string; loading: boolean }) {
   return (
@@ -34,10 +41,18 @@ const CustomTooltip = ({ active, payload, label }: any) => {
   )
 }
 
+// 커스텀 바 — 매체별 색상
+function CustomBar(props: any) {
+  const { x, y, width, height, name } = props
+  const color = MEDIA_COLORS[name] || '#6366f1'
+  return <rect x={x} y={y} width={width} height={height} fill={color} rx={4} />
+}
+
 export default function DashboardPage() {
   const [kpi, setKpi] = useState<any>(null)
   const [trend, setTrend] = useState<any[]>([])
   const [channel, setChannel] = useState<any[]>([])
+  const [contentPlatform, setContentPlatform] = useState<any[]>([])
   const [leads, setLeads] = useState<any[]>([])
   const [loading, setLoading] = useState(true)
   const [lastUpdated, setLastUpdated] = useState<Date | null>(null)
@@ -45,21 +60,22 @@ export default function DashboardPage() {
   const fetchAll = async () => {
     setLoading(true)
     try {
-      const [kpiRes, trendRes, channelRes, leadsRes] = await Promise.allSettled([
+      const [kpiRes, trendRes, channelRes, contentRes, leadsRes] = await Promise.allSettled([
         fetch('/api/dashboard/kpi').then(r => r.json()),
         fetch('/api/dashboard/trend').then(r => r.json()),
         fetch('/api/dashboard/channel').then(r => r.json()),
+        fetch('/api/content/analytics?groupBy=platform').then(r => r.json()),
         fetch('/api/leads').then(r => r.json()),
       ])
       if (kpiRes.status === 'fulfilled') setKpi(kpiRes.value)
       if (trendRes.status === 'fulfilled') {
-        const d = trendRes.value.map((r: any) => ({
+        setTrend(trendRes.value.map((r: any) => ({
           date: new Date(r.week).toLocaleDateString('ko', { month: 'numeric', day: 'numeric' }),
           spend: r.spend || 0,
-        }))
-        setTrend(d)
+        })))
       }
       if (channelRes.status === 'fulfilled') setChannel(channelRes.value)
+      if (contentRes.status === 'fulfilled') setContentPlatform(Array.isArray(contentRes.value) ? contentRes.value : [])
       if (leadsRes.status === 'fulfilled') setLeads(Array.isArray(leadsRes.value) ? leadsRes.value.slice(0, 10) : [])
       setLastUpdated(new Date())
     } finally {
@@ -76,16 +92,24 @@ export default function DashboardPage() {
     { label: '총 결제 매출', value: `₩${kpi.totalRevenue?.toLocaleString()}` },
   ] : Array(4).fill({ label: '로딩 중...', value: '-' })
 
-  // 시술 비중 (payments에서 파생)
+  // 시술 비중
   const treatmentPie = leads
     .filter(l => l.customer?.payments?.length)
     .flatMap((l: any) => l.customer.payments)
     .reduce((acc: Record<string, number>, p: any) => {
-      const name = p.treatment_name
-      acc[name] = (acc[name] || 0) + 1
+      acc[p.treatment_name] = (acc[p.treatment_name] || 0) + 1
       return acc
     }, {})
   const pieData = Object.entries(treatmentPie as Record<string, number>).map(([name, value]) => ({ name, value: value as number }))
+
+  // 광고 매체 + 콘텐츠 매체 통합 CPL/ROAS 데이터
+  const adCplData = channel.filter(c => c.cpl > 0).map(c => ({ name: c.channel, cpl: c.cpl }))
+  const contentCplData = contentPlatform.filter(c => c.cpl > 0).map(c => ({ name: c.label, cpl: c.cpl }))
+  const allCplData = [...adCplData, ...contentCplData]
+
+  const adRoasData = channel.filter(c => c.roas > 0).map(c => ({ name: c.channel, roas: Math.round(c.roas * 100) }))
+  const contentRoasData = contentPlatform.filter(c => c.roas > 0).map(c => ({ name: c.label, roas: c.roas }))
+  const allRoasData = [...adRoasData, ...contentRoasData]
 
   return (
     <>
@@ -110,6 +134,7 @@ export default function DashboardPage() {
         {kpiCards.map((d, i) => <KpiCard key={i} {...d} loading={loading} />)}
       </div>
 
+      {/* 광고비 추이 + 시술 비중 */}
       <div className="grid grid-cols-3 gap-4 mb-6">
         <div className="col-span-2 glass-card p-6">
           <div className="flex items-center justify-between mb-5">
@@ -173,25 +198,71 @@ export default function DashboardPage() {
         </div>
       </div>
 
-      {channel.length > 0 && (
-        <div className="glass-card p-6 mb-6">
-          <h2 className="font-semibold text-white mb-5">매체별 CPL / ROAS 비교</h2>
-          <ResponsiveContainer width="100%" height={180}>
-            <BarChart data={channel} barGap={6}>
-              <CartesianGrid strokeDasharray="3 3" stroke="#1e1e3a" />
-              <XAxis dataKey="channel" tick={{ fill: '#64748b', fontSize: 12 }} axisLine={false} tickLine={false} />
-              <YAxis yAxisId="left" tickFormatter={v => `₩${(v / 1000).toFixed(0)}k`} tick={{ fill: '#64748b', fontSize: 11 }} axisLine={false} tickLine={false} />
-              <YAxis yAxisId="right" orientation="right" tickFormatter={v => `${(v * 100).toFixed(0)}%`} tick={{ fill: '#64748b', fontSize: 11 }} axisLine={false} tickLine={false} />
-              <Tooltip contentStyle={{ background: '#1a1a2e', border: 'none', borderRadius: 8, fontSize: 12 }}
-                formatter={(value: any, name: string) => name === 'ROAS (%)' ? [`${(value * 100).toFixed(0)}%`, name] : [`₩${Number(value).toLocaleString()}`, name]} />
-              <Legend wrapperStyle={{ fontSize: 12, color: '#94a3b8' }} />
-              <Bar yAxisId="left" dataKey="cpl" name="CPL (₩)" fill="#6366f1" radius={[6, 6, 0, 0]} />
-              <Bar yAxisId="right" dataKey="roas" name="ROAS (%)" fill="#10b981" radius={[6, 6, 0, 0]} />
-            </BarChart>
-          </ResponsiveContainer>
+      {/* CPL / ROAS 차트 — 분리 (광고 + 콘텐츠 통합) */}
+      {(allCplData.length > 0 || allRoasData.length > 0) && (
+        <div className="grid grid-cols-2 gap-4 mb-6">
+          {/* CPL 차트 */}
+          <div className="glass-card p-6">
+            <div className="flex items-center justify-between mb-1">
+              <h2 className="font-semibold text-white text-sm">매체별 CPL 비교</h2>
+              <span className="text-[10px] text-slate-500">광고 + 콘텐츠</span>
+            </div>
+            <p className="text-xs text-slate-500 mb-4">DB 1건 획득 비용</p>
+            {allCplData.length > 0 ? (
+              <ResponsiveContainer width="100%" height={200}>
+                <BarChart data={allCplData} barSize={28}>
+                  <CartesianGrid strokeDasharray="3 3" stroke="#1e1e3a" />
+                  <XAxis dataKey="name" tick={{ fill: '#64748b', fontSize: 11 }} axisLine={false} tickLine={false} />
+                  <YAxis tickFormatter={v => `₩${(v / 1000).toFixed(0)}k`} tick={{ fill: '#64748b', fontSize: 10 }} axisLine={false} tickLine={false} />
+                  <Tooltip
+                    contentStyle={{ background: '#1a1a2e', border: 'none', borderRadius: 8, fontSize: 12 }}
+                    formatter={(v: any) => [`₩${Number(v).toLocaleString()}`, 'CPL']}
+                  />
+                  <Bar dataKey="cpl" radius={[4, 4, 0, 0]}>
+                    {allCplData.map((entry, i) => (
+                      <Cell key={i} fill={MEDIA_COLORS[entry.name] || '#6366f1'} />
+                    ))}
+                  </Bar>
+                </BarChart>
+              </ResponsiveContainer>
+            ) : (
+              <div className="h-[200px] flex items-center justify-center text-slate-600 text-xs">CPL 데이터 없음</div>
+            )}
+          </div>
+
+          {/* ROAS 차트 */}
+          <div className="glass-card p-6">
+            <div className="flex items-center justify-between mb-1">
+              <h2 className="font-semibold text-white text-sm">매체별 ROAS 비교</h2>
+              <span className="text-[10px] text-slate-500">광고 + 콘텐츠</span>
+            </div>
+            <p className="text-xs text-slate-500 mb-4">예산 대비 매출 (100% 이상 = 흑자)</p>
+            {allRoasData.length > 0 ? (
+              <ResponsiveContainer width="100%" height={200}>
+                <BarChart data={allRoasData} barSize={28}>
+                  <CartesianGrid strokeDasharray="3 3" stroke="#1e1e3a" />
+                  <XAxis dataKey="name" tick={{ fill: '#64748b', fontSize: 11 }} axisLine={false} tickLine={false} />
+                  <YAxis tickFormatter={v => `${v}%`} tick={{ fill: '#64748b', fontSize: 10 }} axisLine={false} tickLine={false} />
+                  <Tooltip
+                    contentStyle={{ background: '#1a1a2e', border: 'none', borderRadius: 8, fontSize: 12 }}
+                    formatter={(v: any) => [`${v}%`, 'ROAS']}
+                  />
+                  {/* 100% 기준선 */}
+                  <Bar dataKey="roas" radius={[4, 4, 0, 0]}>
+                    {allRoasData.map((entry, i) => (
+                      <Cell key={i} fill={entry.roas >= 100 ? (MEDIA_COLORS[entry.name] || '#10b981') : '#ef4444'} fillOpacity={entry.roas >= 100 ? 1 : 0.7} />
+                    ))}
+                  </Bar>
+                </BarChart>
+              </ResponsiveContainer>
+            ) : (
+              <div className="h-[200px] flex items-center justify-center text-slate-600 text-xs">ROAS 데이터 없음</div>
+            )}
+          </div>
         </div>
       )}
 
+      {/* 최근 인입 고객 */}
       <div className="glass-card p-6">
         <h2 className="font-semibold text-white mb-5">최근 인입 고객 & 챗봇 현황</h2>
         {loading ? (

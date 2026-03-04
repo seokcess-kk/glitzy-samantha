@@ -42,9 +42,40 @@ export async function GET(req: Request) {
   const calcRevenue = (matchedLeads: any[]) =>
     matchedLeads.reduce((s, l) => s + (paymentByCustomer[l.customer_id] || 0), 0)
 
+  const PLATFORM_LABELS: Record<string, string> = {
+    youtube: '유튜브', instagram_feed: '인스타 피드', instagram_reels: '인스타 릴스',
+    tiktok: '틱톡', naver_blog: '네이버 블로그',
+  }
+
   let result: any[] = []
 
-  if (groupBy === 'campaign') {
+  if (groupBy === 'platform') {
+    const platformMap: Record<string, { posts: any[]; budget: number }> = {}
+    for (const post of posts) {
+      const plat = post.platform || 'unknown'
+      if (!platformMap[plat]) platformMap[plat] = { posts: [], budget: 0 }
+      platformMap[plat].posts.push(post)
+      platformMap[plat].budget += (post.budget || 0)
+    }
+
+    result = Object.entries(platformMap).map(([platform, data]) => {
+      const campaigns = [...new Set(data.posts.map((p: any) => p.utm_campaign).filter(Boolean))]
+      const matchedLeads = (leads || []).filter((l: any) => campaigns.includes(l.campaign_id))
+      const leadCount = matchedLeads.length
+      const revenue = calcRevenue(matchedLeads)
+      return {
+        key: platform,
+        label: PLATFORM_LABELS[platform] || platform,
+        postCount: data.posts.length,
+        budget: data.budget,
+        leads: leadCount,
+        revenue,
+        cpl: leadCount > 0 && data.budget > 0 ? Math.round(data.budget / leadCount) : 0,
+        roas: data.budget > 0 ? Math.round((revenue / data.budget) * 100) : 0,
+      }
+    })
+
+  } else if (groupBy === 'campaign') {
     const campaigns = [...new Set(posts.map((p: any) => p.utm_campaign).filter(Boolean))] as string[]
 
     result = campaigns.map(campaign => {
