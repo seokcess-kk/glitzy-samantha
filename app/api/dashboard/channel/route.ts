@@ -2,16 +2,21 @@ import { NextResponse } from 'next/server'
 import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
 import { serverSupabase } from '@/lib/supabase'
+import { getClinicId } from '@/lib/session'
 
-export async function GET() {
+export async function GET(req: Request) {
   const session = await getServerSession(authOptions)
   if (!session) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
   const supabase = serverSupabase()
+  const clinicId = await getClinicId(req.url)
+
+  const ac = (q: any) => clinicId ? q.eq('clinic_id', clinicId) : q
+
   const [adStatsRes, customersRes, paymentsRes] = await Promise.all([
-    supabase.from('ad_campaign_stats').select('platform, spend_amount'),
-    supabase.from('customers').select('id, first_source').in('first_source', ['Meta', 'Google', 'TikTok']),
-    supabase.from('payments').select('payment_amount, customer_id'),
+    ac(supabase.from('ad_campaign_stats').select('platform, spend_amount')),
+    ac(supabase.from('customers').select('id, first_source').in('first_source', ['Meta', 'Google', 'TikTok'])),
+    ac(supabase.from('payments').select('payment_amount, customer_id')),
   ])
 
   const customerSourceMap = new Map((customersRes.data || []).map(c => [c.id, c.first_source]))
@@ -28,7 +33,7 @@ export async function GET() {
 
   const revenueBySource: Record<string, number> = {}
   for (const p of paymentsRes.data || []) {
-    const source = customerSourceMap.get(p.customer_id)
+    const source = customerSourceMap.get(p.customer_id) as string | undefined
     if (source) revenueBySource[source] = (revenueBySource[source] || 0) + Number(p.payment_amount)
   }
 

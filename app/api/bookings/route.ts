@@ -9,22 +9,34 @@ export async function GET(req: Request) {
   if (!session) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
   const supabase = serverSupabase()
-  const url = new URL(req.url)
-  const days = Number(url.searchParams.get('days') || 30)
-  const platform = url.searchParams.get('platform')
-  const since = new Date(Date.now() - days * 24 * 60 * 60 * 1000).toISOString()
   const clinicId = await getClinicId(req.url)
 
   let query = supabase
-    .from('ad_campaign_stats')
-    .select('*')
-    .gte('stat_date', since)
-    .order('stat_date', { ascending: false })
+    .from('bookings')
+    .select('*, customer:customers(id, name, phone_number)')
+    .order('booking_datetime', { ascending: true })
 
-  if (platform) query = query.eq('platform', platform)
   if (clinicId) query = query.eq('clinic_id', clinicId)
 
   const { data, error } = await query
+  if (error) return NextResponse.json({ error: error.message }, { status: 500 })
+  return NextResponse.json(data)
+}
+
+export async function PATCH(req: Request) {
+  const session = await getServerSession(authOptions)
+  if (!session) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+
+  const { id, status, notes } = await req.json()
+  const supabase = serverSupabase()
+
+  const { data, error } = await supabase
+    .from('bookings')
+    .update({ status, notes })
+    .eq('id', id)
+    .select()
+    .single()
+
   if (error) return NextResponse.json({ error: error.message }, { status: 500 })
   return NextResponse.json(data)
 }
