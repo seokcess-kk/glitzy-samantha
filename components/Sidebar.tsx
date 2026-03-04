@@ -3,15 +3,14 @@ import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import { signOut } from 'next-auth/react'
 import { useSession } from 'next-auth/react'
-import { LayoutDashboard, Users, MessageCircle, ClipboardList, BarChart2, LogOut, Activity, Calendar, Shield, ChevronDown } from 'lucide-react'
+import { LayoutDashboard, Users, MessageCircle, BarChart2, LogOut, Activity, Calendar, Shield, ChevronDown } from 'lucide-react'
 import { useClinic } from './ClinicContext'
 
 const navItems = [
   { href: '/', label: '대시보드', icon: LayoutDashboard },
   { href: '/leads', label: '고객(CDP) 관리', icon: Users },
-  { href: '/bookings', label: '예약 관리', icon: Calendar },
   { href: '/chatbot', label: '챗봇 현황', icon: MessageCircle },
-  { href: '/patients', label: '병원 데이터 입력', icon: ClipboardList },
+  { href: '/patients', label: '예약 / 결제 관리', icon: Calendar },
   { href: '/ads', label: '광고 성과 분석', icon: BarChart2 },
 ]
 
