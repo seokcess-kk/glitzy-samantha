@@ -1,0 +1,42 @@
+import { NextResponse } from 'next/server'
+import { getServerSession } from 'next-auth'
+import { authOptions } from '@/lib/auth'
+import { serverSupabase } from '@/lib/supabase'
+
+export async function GET() {
+  const session = await getServerSession(authOptions)
+  if (!session) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+
+  const supabase = serverSupabase()
+  const eightWeeksAgo = new Date(Date.now() - 56 * 24 * 60 * 60 * 1000).toISOString()
+
+  const { data, error } = await supabase
+    .from('ad_campaign_stats')
+    .select('stat_date, spend_amount, campaign_id')
+    .gte('stat_date', eightWeeksAgo)
+    .order('stat_date')
+
+  if (error) return NextResponse.json({ error: error.message }, { status: 500 })
+
+  // JS에서 주별 집계
+  const weekMap = new Map<string, { week: string; spend: number; campaigns: Set<string> }>()
+  for (const row of data || []) {
+    const d = new Date(row.stat_date)
+    const weekStart = new Date(d)
+    weekStart.setDate(d.getDate() - d.getDay())
+    weekStart.setHours(0, 0, 0, 0)
+    const key = weekStart.toISOString()
+    if (!weekMap.has(key)) weekMap.set(key, { week: key, spend: 0, campaigns: new Set() })
+    const w = weekMap.get(key)!
+    w.spend += Number(row.spend_amount)
+    w.campaigns.add(row.campaign_id)
+  }
+
+  const result = [...weekMap.values()].map(w => ({
+    week: w.week,
+    spend: w.spend,
+    campaigns: w.campaigns.size,
+  }))
+
+  return NextResponse.json(result)
+}

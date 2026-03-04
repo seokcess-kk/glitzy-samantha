@@ -1,0 +1,45 @@
+# Git 추적 제외 파일 목록 (.gitignore)
+# ==============================================================
+# 환경 변수 (API 키 등 민감 정보 - 절대 GitHub에 올리면 안됨!)
+# ==============================================================
+.env
+.env.local
+.env.production
+*.env
+
+# Node.js 패키지 폴더
+node_modules/
+*/node_modules/
+
+# Next.js 빌드 결과물
+.next/
+out/
+frontend/.next/
+frontend/out/
+
+# Claude AI 메모리 폴더
+.claude/
+.agent/
+.agents
+
+# Vite 빌드 결과물
+dist/
+
+# Python 캐시
+__pycache__/
+*.pyc
+*.pyo
+.venv/
+ai-service/venv/
+
+# 로그 파일
+*.log
+logs/
+
+# OS 시스템 파일
+.DS_Store
+Thumbs.db
+
+# IDE 설정 파일
+.vscode/
+.idea/
