@@ -1,7 +1,9 @@
 import { serverSupabase } from '@/lib/supabase'
-import { fetchWithRetry, logServiceCall } from '@/lib/api-client'
+import { fetchWithRetry } from '@/lib/api-client'
+import { createLogger } from '@/lib/logger'
 
 const SERVICE_NAME = 'TikTokAds'
+const logger = createLogger(SERVICE_NAME)
 
 interface TikTokCampaign {
   dimensions: {
@@ -23,7 +25,7 @@ export async function fetchTikTokAds(date = new Date()) {
   const advertiserId = process.env.TIKTOK_ADVERTISER_ID
   const accessToken = process.env.TIKTOK_ACCESS_TOKEN
   if (!advertiserId || !accessToken) {
-    console.warn(`[${SERVICE_NAME}] Missing TIKTOK_ADVERTISER_ID or TIKTOK_ACCESS_TOKEN`)
+    logger.warn('Missing TIKTOK_ADVERTISER_ID or TIKTOK_ACCESS_TOKEN')
     return { platform: 'TikTok', count: 0, error: 'Missing credentials' }
   }
 
@@ -69,17 +71,17 @@ export async function fetchTikTokAds(date = new Date()) {
         .upsert(rows, { onConflict: 'platform,campaign_id,stat_date' })
 
       if (error) {
-        console.error(`[${SERVICE_NAME}] DB upsert error:`, error.message)
+        logger.error('DB upsert error', error)
       }
     }
 
     const duration = Date.now() - startTime
-    logServiceCall(SERVICE_NAME, 'sync', { count: campaigns.length, duration_ms: duration })
+    logger.info('Sync completed', { action: 'sync', count: campaigns.length, duration })
 
     return { platform: 'TikTok', count: campaigns.length }
   } catch (error) {
     const message = error instanceof Error ? error.message : String(error)
-    logServiceCall(SERVICE_NAME, 'error', { error: message, duration_ms: Date.now() - startTime })
+    logger.error('Sync failed', error, { action: 'sync', duration: Date.now() - startTime })
     return { platform: 'TikTok', count: 0, error: message }
   }
 }

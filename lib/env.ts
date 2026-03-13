@@ -158,3 +158,27 @@ export function getEnv(key: string, defaultValue?: string): string {
 export function getEnvOptional(key: string): string | undefined {
   return process.env[key]
 }
+
+/**
+ * 숫자 환경변수 값 가져오기
+ */
+export function getEnvNumber(key: string, defaultValue?: number): number {
+  const value = process.env[key]
+  if (value !== undefined) {
+    const parsed = parseInt(value, 10)
+    if (!isNaN(parsed)) return parsed
+  }
+  if (defaultValue !== undefined) return defaultValue
+  throw new Error(`환경변수 ${key}가 설정되지 않았거나 유효한 숫자가 아닙니다.`)
+}
+
+/**
+ * 불리언 환경변수 값 가져오기
+ * - "true", "1", "yes" → true
+ * - "false", "0", "no", 미설정 → false
+ */
+export function getEnvBoolean(key: string, defaultValue: boolean = false): boolean {
+  const value = process.env[key]?.toLowerCase()
+  if (value === undefined) return defaultValue
+  return ['true', '1', 'yes'].includes(value)
+}

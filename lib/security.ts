@@ -149,6 +149,11 @@ export async function canModifyBooking(
   bookingId: number,
   user: SessionUser
 ): Promise<{ allowed: boolean; clinicId: number | null; error?: string }> {
+  // superadmin은 모든 예약에 접근 가능 (DB 조회 생략)
+  if (user.role === 'superadmin') {
+    return { allowed: true, clinicId: null }
+  }
+
   const supabase = serverSupabase()
 
   const { data: booking, error } = await supabase
@@ -166,8 +171,8 @@ export async function canModifyBooking(
     return { allowed: false, clinicId: null, error: '예약을 찾을 수 없습니다.' }
   }
 
-  const allowed = checkClinicAccess(booking.clinic_id, user)
-  if (!allowed) {
+  // clinic_admin의 경우 자신의 병원 예약만 접근 가능
+  if (booking.clinic_id !== user.clinic_id) {
     return { allowed: false, clinicId: booking.clinic_id, error: '해당 예약에 대한 권한이 없습니다.' }
   }
 
@@ -218,6 +223,11 @@ export async function canAccessContentPost(
   postId: number,
   user: SessionUser
 ): Promise<{ allowed: boolean; clinicId: number | null; error?: string }> {
+  // superadmin은 모든 포스트에 접근 가능 (DB 조회 생략)
+  if (user.role === 'superadmin') {
+    return { allowed: true, clinicId: null }
+  }
+
   const supabase = serverSupabase()
 
   const { data: post, error } = await supabase
@@ -235,8 +245,8 @@ export async function canAccessContentPost(
     return { allowed: false, clinicId: null, error: '포스트를 찾을 수 없습니다.' }
   }
 
-  const allowed = checkClinicAccess(post.clinic_id, user)
-  if (!allowed) {
+  // clinic_admin의 경우 자신의 병원 포스트만 접근 가능
+  if (post.clinic_id !== user.clinic_id) {
     return { allowed: false, clinicId: post.clinic_id, error: '해당 포스트에 대한 권한이 없습니다.' }
   }
 

@@ -1,7 +1,9 @@
 import { serverSupabase } from '@/lib/supabase'
-import { fetchWithRetry, logServiceCall } from '@/lib/api-client'
+import { fetchWithRetry } from '@/lib/api-client'
+import { createLogger } from '@/lib/logger'
 
 const SERVICE_NAME = 'PressSync'
+const logger = createLogger(SERVICE_NAME)
 
 interface PressItem {
   title: string
@@ -99,12 +101,23 @@ export async function syncPressForClinic(clinicId: number | null): Promise<numbe
   }
 
   const duration = Date.now() - startTime
-  logServiceCall(SERVICE_NAME, 'sync', {
-    clinics_processed: clinics.length,
-    total_inserted: totalInserted,
-    errors: errors.length > 0 ? errors : undefined,
-    duration_ms: duration,
-  })
+
+  if (errors.length > 0) {
+    logger.warn('Sync completed with errors', {
+      action: 'sync',
+      clinicsProcessed: clinics.length,
+      totalInserted,
+      errorCount: errors.length,
+      duration
+    })
+  } else {
+    logger.info('Sync completed', {
+      action: 'sync',
+      clinicsProcessed: clinics.length,
+      totalInserted,
+      duration
+    })
+  }
 
   return totalInserted
 }

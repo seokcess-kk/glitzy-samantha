@@ -1,7 +1,9 @@
 import { serverSupabase } from '@/lib/supabase'
-import { fetchWithRetry, logServiceCall } from '@/lib/api-client'
+import { fetchWithRetry } from '@/lib/api-client'
+import { createLogger } from '@/lib/logger'
 
 const SERVICE_NAME = 'MetaAds'
+const logger = createLogger(SERVICE_NAME)
 
 export async function fetchMetaAds(date = new Date()) {
   const dateStr = date.toISOString().split('T')[0]
@@ -11,7 +13,7 @@ export async function fetchMetaAds(date = new Date()) {
   const accountId = process.env.META_AD_ACCOUNT_ID
   const accessToken = process.env.META_ACCESS_TOKEN
   if (!accountId || !accessToken) {
-    console.warn(`[${SERVICE_NAME}] Missing META_AD_ACCOUNT_ID or META_ACCESS_TOKEN`)
+    logger.warn('Missing META_AD_ACCOUNT_ID or META_ACCESS_TOKEN')
     return { platform: 'Meta', count: 0, error: 'Missing credentials' }
   }
 
@@ -61,17 +63,17 @@ export async function fetchMetaAds(date = new Date()) {
         .upsert(rows, { onConflict: 'platform,campaign_id,stat_date' })
 
       if (error) {
-        console.error(`[${SERVICE_NAME}] DB upsert error:`, error.message)
+        logger.error('DB upsert error', error)
       }
     }
 
     const duration = Date.now() - startTime
-    logServiceCall(SERVICE_NAME, 'sync', { count: campaigns.length, duration_ms: duration })
+    logger.info('Sync completed', { action: 'sync', count: campaigns.length, duration })
 
     return { platform: 'Meta', count: campaigns.length }
   } catch (error) {
     const message = error instanceof Error ? error.message : String(error)
-    logServiceCall(SERVICE_NAME, 'error', { error: message, duration_ms: Date.now() - startTime })
+    logger.error('Sync failed', error, { action: 'sync', duration: Date.now() - startTime })
     return { platform: 'Meta', count: 0, error: message }
   }
 }

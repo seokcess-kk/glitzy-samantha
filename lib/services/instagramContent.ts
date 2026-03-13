@@ -1,7 +1,9 @@
 import { serverSupabase } from '@/lib/supabase'
-import { fetchWithRetry, logServiceCall } from '@/lib/api-client'
+import { fetchWithRetry } from '@/lib/api-client'
+import { createLogger } from '@/lib/logger'
 
 const SERVICE_NAME = 'InstagramContent'
+const logger = createLogger(SERVICE_NAME)
 
 interface InstagramMedia {
   id: string
@@ -80,19 +82,19 @@ export async function syncInstagramContent(clinicId: number, accessToken: string
           .upsert(statsRows, { onConflict: 'post_id,stat_date' })
 
         if (error) {
-          console.error(`[${SERVICE_NAME}] Stats upsert error:`, error.message)
+          logger.error('Stats upsert error', error)
         }
       }
     }
 
     const count = insertedPosts?.length || 0
     const duration = Date.now() - startTime
-    logServiceCall(SERVICE_NAME, 'sync', { clinic_id: clinicId, count, duration_ms: duration })
+    logger.info('Sync completed', { action: 'sync', clinicId, count, duration })
 
     return { platform: 'Instagram', count }
   } catch (error) {
     const message = error instanceof Error ? error.message : String(error)
-    logServiceCall(SERVICE_NAME, 'error', { clinic_id: clinicId, error: message, duration_ms: Date.now() - startTime })
+    logger.error('Sync failed', error, { action: 'sync', clinicId, duration: Date.now() - startTime })
     return { platform: 'Instagram', count: 0, error: message }
   }
 }

@@ -1,8 +1,9 @@
 import { GoogleAdsApi } from 'google-ads-api'
 import { serverSupabase } from '@/lib/supabase'
-import { logServiceCall } from '@/lib/api-client'
+import { createLogger } from '@/lib/logger'
 
 const SERVICE_NAME = 'GoogleAds'
+const logger = createLogger(SERVICE_NAME)
 
 export async function fetchGoogleAds(date = new Date()) {
   const dateStr = date.toISOString().split('T')[0]
@@ -16,7 +17,7 @@ export async function fetchGoogleAds(date = new Date()) {
   const refreshToken = process.env.GOOGLE_ADS_REFRESH_TOKEN
 
   if (!clientId || !clientSecret || !developerToken || !customerId || !refreshToken) {
-    console.warn(`[${SERVICE_NAME}] Missing Google Ads credentials`)
+    logger.warn('Missing Google Ads credentials')
     return { platform: 'Google', count: 0, error: 'Missing credentials' }
   }
 
@@ -57,17 +58,17 @@ export async function fetchGoogleAds(date = new Date()) {
         .upsert(rows, { onConflict: 'platform,campaign_id,stat_date' })
 
       if (error) {
-        console.error(`[${SERVICE_NAME}] DB upsert error:`, error.message)
+        logger.error('DB upsert error', error)
       }
     }
 
     const duration = Date.now() - startTime
-    logServiceCall(SERVICE_NAME, 'sync', { count: campaigns.length, duration_ms: duration })
+    logger.info('Sync completed', { action: 'sync', count: campaigns.length, duration })
 
     return { platform: 'Google', count: campaigns.length }
   } catch (error) {
     const message = error instanceof Error ? error.message : String(error)
-    logServiceCall(SERVICE_NAME, 'error', { error: message, duration_ms: Date.now() - startTime })
+    logger.error('Sync failed', error, { action: 'sync', duration: Date.now() - startTime })
     return { platform: 'Google', count: 0, error: message }
   }
 }
