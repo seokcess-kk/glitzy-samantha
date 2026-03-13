@@ -9,14 +9,10 @@ import { NextResponse } from 'next/server'
 import { getServerSession } from 'next-auth'
 import { authOptions } from './auth'
 import { getClinicId } from './session'
+import { SessionUser } from './security'
 
-// 사용자 타입
-export interface AuthUser {
-  id: string
-  username: string
-  role: 'superadmin' | 'clinic_admin'
-  clinic_id: number | null
-}
+// AuthUser를 SessionUser의 별칭으로 export (하위 호환성)
+export type AuthUser = SessionUser
 
 // 컨텍스트 타입
 export interface AuthContext {

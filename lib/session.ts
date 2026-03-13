@@ -1,6 +1,9 @@
 import { getServerSession } from 'next-auth'
 import { authOptions } from './auth'
 import { serverSupabase } from './supabase'
+import { createLogger } from './logger'
+
+const logger = createLogger('Session')
 
 /**
  * 현재 세션의 clinic_id 반환
@@ -22,7 +25,7 @@ export async function getClinicId(url?: string): Promise<number | null> {
 
           // 숫자 검증
           if (isNaN(clinicId) || clinicId < 1) {
-            console.warn(`[Security] Invalid clinic_id parameter: ${clinicIdParam}`)
+            logger.warn('Invalid clinic_id parameter', { clinicIdParam })
             return null
           }
 
@@ -36,14 +39,14 @@ export async function getClinicId(url?: string): Promise<number | null> {
             .single()
 
           if (!clinic) {
-            console.warn(`[Security] Clinic not found or inactive: ${clinicId}`)
+            logger.warn('Clinic not found or inactive', { clinicId })
             return null
           }
 
           return clinicId
         }
       } catch (e) {
-        console.warn('[Security] Failed to parse clinic_id from URL:', e)
+        logger.warn('Failed to parse clinic_id from URL', { error: String(e) })
         return null
       }
     }

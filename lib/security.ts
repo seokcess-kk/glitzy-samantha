@@ -1,6 +1,9 @@
 import { getServerSession } from 'next-auth'
 import { authOptions } from './auth'
 import { serverSupabase } from './supabase'
+import { createLogger } from './logger'
+
+const logger = createLogger('Security')
 
 // ============================================
 // 상수 정의
@@ -26,22 +29,11 @@ export const VALID_CONSULTATION_STATUSES = [
 export type ConsultationStatus = (typeof VALID_CONSULTATION_STATUSES)[number]
 
 // ============================================
-// 환경변수 검증
+// 환경변수 검증 (lib/env.ts로 이동됨)
 // ============================================
 
-export function validateEnv() {
-  const required = [
-    'NEXT_PUBLIC_SUPABASE_URL',
-    'NEXT_PUBLIC_SUPABASE_ANON_KEY',
-    'SUPABASE_SERVICE_ROLE_KEY',
-    'NEXTAUTH_SECRET',
-  ]
-
-  const missing = required.filter(key => !process.env[key])
-  if (missing.length > 0) {
-    throw new Error(`[Security] Missing required environment variables: ${missing.join(', ')}`)
-  }
-}
+// 하위 호환성을 위해 re-export
+export { validateEnv } from './env'
 
 // ============================================
 // 입력값 검증 함수
@@ -166,7 +158,7 @@ export async function canModifyBooking(
     .single()
 
   if (error) {
-    console.error('[Security] DB error in canModifyBooking:', error.message)
+    logger.error('DB error in canModifyBooking', error, { action: 'canModifyBooking' })
     return { allowed: false, clinicId: null, error: '예약 조회 중 오류가 발생했습니다.' }
   }
 
@@ -196,7 +188,7 @@ export async function canAccessCustomer(
     .single()
 
   if (error) {
-    console.error('[Security] DB error in canAccessCustomer:', error.message)
+    logger.error('DB error in canAccessCustomer', error, { action: 'canAccessCustomer' })
     return { allowed: false, clinicId: null, error: '고객 조회 중 오류가 발생했습니다.' }
   }
 
@@ -235,7 +227,7 @@ export async function canAccessContentPost(
     .single()
 
   if (error) {
-    console.error('[Security] DB error in canAccessContentPost:', error.message)
+    logger.error('DB error in canAccessContentPost', error, { action: 'canAccessContentPost' })
     return { allowed: false, clinicId: null, error: '포스트 조회 중 오류가 발생했습니다.' }
   }
 
