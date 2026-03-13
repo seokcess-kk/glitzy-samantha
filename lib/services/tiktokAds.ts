@@ -38,7 +38,7 @@ export async function fetchTikTokAds(date = new Date()) {
     url.searchParams.set('start_date', dateStr)
     url.searchParams.set('end_date', dateStr)
 
-    const response = await fetchWithRetry(url.toString(), {
+    const { response } = await fetchWithRetry(url.toString(), {
       headers: { 'Access-Token': accessToken },
       service: SERVICE_NAME,
       timeout: 30000,

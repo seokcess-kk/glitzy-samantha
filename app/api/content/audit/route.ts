@@ -12,18 +12,12 @@
 // );
 
 import { NextResponse } from 'next/server'
-import { getServerSession } from 'next-auth'
-import { authOptions } from '@/lib/auth'
 import { serverSupabase } from '@/lib/supabase'
-import { getClinicId } from '@/lib/session'
+import { withClinicFilter, ClinicContext } from '@/lib/api-middleware'
 
 // GET /api/content/audit  — list posts with their latest audit
-export async function GET(req: Request) {
-  const session = await getServerSession(authOptions)
-  if (!session) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-
+export const GET = withClinicFilter(async (req: Request, { clinicId }: ClinicContext) => {
   const supabase = serverSupabase()
-  const clinicId = await getClinicId(req.url)
 
   // 텍스트 기반 콘텐츠만 분석 대상: 네이버 블로그, 인스타그램 피드 (reels 제외)
   let query = supabase
@@ -47,13 +41,10 @@ export async function GET(req: Request) {
   })
 
   return NextResponse.json(posts)
-}
+})
 
 // POST /api/content/audit  — analyze a single post
-export async function POST(req: Request) {
-  const session = await getServerSession(authOptions)
-  if (!session) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-
+export const POST = withClinicFilter(async (req: Request, { clinicId, user }: ClinicContext) => {
   const { post_id } = await req.json()
   if (!post_id) return NextResponse.json({ error: 'post_id required' }, { status: 400 })
 
@@ -70,6 +61,11 @@ export async function POST(req: Request) {
     .single()
 
   if (postError || !post) return NextResponse.json({ error: '포스트를 찾을 수 없습니다.' }, { status: 404 })
+
+  // 리소스 소유권 검증: clinic_admin은 자신의 병원 포스트만 분석 가능
+  if (user.role === 'clinic_admin' && post.clinic_id !== clinicId) {
+    return NextResponse.json({ error: '권한이 없습니다.' }, { status: 403 })
+  }
 
   const prompt = `당신은 한국 의료광고법 전문가입니다. 다음 의료 마케팅 콘텐츠를 분석해주세요.
 
@@ -139,7 +135,8 @@ URL: ${post.post_url || '없음'}
     if (auditError) return NextResponse.json({ error: auditError.message }, { status: 500 })
     return NextResponse.json(audit)
 
-  } catch (e: any) {
-    return NextResponse.json({ error: e.message }, { status: 500 })
+  } catch (e: unknown) {
+    const message = e instanceof Error ? e.message : String(e)
+    return NextResponse.json({ error: message }, { status: 500 })
   }
-}
+})

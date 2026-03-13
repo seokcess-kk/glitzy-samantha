@@ -18,19 +18,22 @@ export async function fetchMetaAds(date = new Date()) {
   const supabase = serverSupabase()
 
   try {
+    // access_token은 URL이 아닌 Authorization 헤더로 전달 (보안)
     const url = `https://graph.facebook.com/v19.0/${accountId}/insights?` +
       new URLSearchParams({
-        access_token: accessToken,
         level: 'campaign',
         fields: 'campaign_id,campaign_name,spend,clicks,impressions',
         time_range: JSON.stringify({ since: dateStr, until: dateStr }),
         time_increment: '1',
       })
 
-    const response = await fetchWithRetry(url, {
+    const { response } = await fetchWithRetry(url, {
       service: SERVICE_NAME,
       timeout: 30000,
       retries: 3,
+      headers: {
+        'Authorization': `Bearer ${accessToken}`,
+      },
     })
 
     if (!response.ok) {

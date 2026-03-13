@@ -40,19 +40,28 @@ export interface RouteParams {
 type AuthHandlerWithParams = (req: Request, context: AuthContext & RouteParams) => Promise<NextResponse>
 type ClinicHandlerWithParams = (req: Request, context: ClinicContext & RouteParams) => Promise<NextResponse>
 
+// 인증 실패 응답
+const UNAUTHORIZED = NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+const FORBIDDEN_SUPERADMIN = NextResponse.json({ error: 'Forbidden: superadmin only' }, { status: 403 })
+
+/**
+ * 세션에서 인증된 사용자 추출
+ * @returns AuthUser 또는 null (미인증 시)
+ */
+async function getAuthUser(): Promise<AuthUser | null> {
+  const session = await getServerSession(authOptions)
+  if (!session?.user) return null
+  return session.user as AuthUser
+}
+
 /**
  * 인증 필수 래퍼
  * - 로그인한 사용자만 접근 가능
  */
 export function withAuth(handler: AuthHandler) {
   return async (req: Request): Promise<NextResponse> => {
-    const session = await getServerSession(authOptions)
-
-    if (!session?.user) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-    }
-
-    const user = session.user as AuthUser
+    const user = await getAuthUser()
+    if (!user) return UNAUTHORIZED
     return handler(req, { user })
   }
 }
@@ -62,13 +71,8 @@ export function withAuth(handler: AuthHandler) {
  */
 export function withAuthParams(handler: AuthHandlerWithParams) {
   return async (req: Request, routeParams: RouteParams): Promise<NextResponse> => {
-    const session = await getServerSession(authOptions)
-
-    if (!session?.user) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-    }
-
-    const user = session.user as AuthUser
+    const user = await getAuthUser()
+    if (!user) return UNAUTHORIZED
     return handler(req, { user, params: routeParams.params })
   }
 }
@@ -81,15 +85,10 @@ export function withAuthParams(handler: AuthHandlerWithParams) {
  */
 export function withClinicFilter(handler: ClinicHandler) {
   return async (req: Request): Promise<NextResponse> => {
-    const session = await getServerSession(authOptions)
+    const user = await getAuthUser()
+    if (!user) return UNAUTHORIZED
 
-    if (!session?.user) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-    }
-
-    const user = session.user as AuthUser
     const clinicId = await getClinicId(req.url)
-
     return handler(req, { user, clinicId })
   }
 }
@@ -99,15 +98,10 @@ export function withClinicFilter(handler: ClinicHandler) {
  */
 export function withClinicFilterParams(handler: ClinicHandlerWithParams) {
   return async (req: Request, routeParams: RouteParams): Promise<NextResponse> => {
-    const session = await getServerSession(authOptions)
+    const user = await getAuthUser()
+    if (!user) return UNAUTHORIZED
 
-    if (!session?.user) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-    }
-
-    const user = session.user as AuthUser
     const clinicId = await getClinicId(req.url)
-
     return handler(req, { user, clinicId, params: routeParams.params })
   }
 }
@@ -118,18 +112,9 @@ export function withClinicFilterParams(handler: ClinicHandlerWithParams) {
  */
 export function withSuperAdmin(handler: SuperAdminHandler) {
   return async (req: Request): Promise<NextResponse> => {
-    const session = await getServerSession(authOptions)
-
-    if (!session?.user) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-    }
-
-    const user = session.user as AuthUser
-
-    if (user.role !== 'superadmin') {
-      return NextResponse.json({ error: 'Forbidden: superadmin only' }, { status: 403 })
-    }
-
+    const user = await getAuthUser()
+    if (!user) return UNAUTHORIZED
+    if (user.role !== 'superadmin') return FORBIDDEN_SUPERADMIN
     return handler(req, { user })
   }
 }

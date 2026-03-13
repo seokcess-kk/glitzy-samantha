@@ -1,22 +1,17 @@
 import { NextResponse } from 'next/server'
-import { getServerSession } from 'next-auth'
-import { authOptions } from '@/lib/auth'
 import { serverSupabase } from '@/lib/supabase'
-import { getClinicId } from '@/lib/session'
+import { withClinicFilter, ClinicContext } from '@/lib/api-middleware'
 
-export async function GET(req: Request) {
-  const session = await getServerSession(authOptions)
-  if (!session) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-
+export const GET = withClinicFilter(async (req: Request, { clinicId }: ClinicContext) => {
   const supabase = serverSupabase()
-  const clinicId = await getClinicId(req.url)
 
-  const ac = (q: any) => clinicId ? q.eq('clinic_id', clinicId) : q
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const applyFilter = <T>(q: T): T => clinicId ? (q as any).eq('clinic_id', clinicId) : q
 
   const [adStatsRes, customersRes, paymentsRes] = await Promise.all([
-    ac(supabase.from('ad_campaign_stats').select('platform, spend_amount')),
-    ac(supabase.from('customers').select('id, first_source').in('first_source', ['Meta', 'Google', 'TikTok'])),
-    ac(supabase.from('payments').select('payment_amount, customer_id')),
+    applyFilter(supabase.from('ad_campaign_stats').select('platform, spend_amount')),
+    applyFilter(supabase.from('customers').select('id, first_source').in('first_source', ['Meta', 'Google', 'TikTok'])),
+    applyFilter(supabase.from('payments').select('payment_amount, customer_id')),
   ])
 
   const customerSourceMap = new Map((customersRes.data || []).map(c => [c.id, c.first_source]))
@@ -50,4 +45,4 @@ export async function GET(req: Request) {
   })
 
   return NextResponse.json(result)
-}
+})

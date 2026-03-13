@@ -23,7 +23,7 @@ export async function syncInstagramContent(clinicId: number, accessToken: string
     // Authorization 헤더 사용 (URL에 토큰 노출 방지)
     const url = `https://graph.facebook.com/v19.0/${userId}/media?fields=id,caption,media_type,media_url,thumbnail_url,timestamp,like_count,comments_count&limit=50`
 
-    const response = await fetchWithRetry(url, {
+    const { response } = await fetchWithRetry(url, {
       headers: { Authorization: `Bearer ${accessToken}` },
       service: SERVICE_NAME,
       timeout: 30000,

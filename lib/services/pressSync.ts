@@ -58,7 +58,7 @@ export async function syncPressForClinic(clinicId: number | null): Promise<numbe
       const q = encodeURIComponent(clinic.name)
       const rssUrl = `https://news.google.com/rss/search?q=${q}&hl=ko&gl=KR&ceid=KR:ko`
 
-      const res = await fetchWithRetry(rssUrl, {
+      const { response: res } = await fetchWithRetry(rssUrl, {
         headers: { 'User-Agent': 'Mozilla/5.0 (compatible; MMI-Bot/1.0)' },
         service: SERVICE_NAME,
         timeout: 15000,

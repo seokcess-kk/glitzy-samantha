@@ -1,31 +1,23 @@
 import { NextResponse } from 'next/server'
-import { getServerSession } from 'next-auth'
-import { authOptions } from '@/lib/auth'
 import { serverSupabase } from '@/lib/supabase'
-import { getClinicId } from '@/lib/session'
+import { withClinicFilter, ClinicContext } from '@/lib/api-middleware'
 
 // GET /api/content/analytics?groupBy=campaign|month|post&clinic_id=X
-export async function GET(req: Request) {
-  const session = await getServerSession(authOptions)
-  if (!session) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-
+export const GET = withClinicFilter(async (req: Request, { clinicId }: ClinicContext) => {
   const supabase = serverSupabase()
   const url = new URL(req.url)
   const groupBy = url.searchParams.get('groupBy') || 'campaign'
-  const clinicId = await getClinicId(req.url)
-
-  const ac = (q: any) => clinicId ? q.eq('clinic_id', clinicId) : q
 
   // 콘텐츠 포스트
-  const { data: posts } = await ac(
-    supabase.from('content_posts').select('id, title, platform, utm_campaign, budget, published_at')
-  )
+  let postsQuery = supabase.from('content_posts').select('id, title, platform, utm_campaign, budget, published_at')
+  if (clinicId) postsQuery = postsQuery.eq('clinic_id', clinicId)
+  const { data: posts } = await postsQuery
   if (!posts?.length) return NextResponse.json([])
 
   // 리드 전체 조회
-  const { data: leads } = await ac(
-    supabase.from('leads').select('id, customer_id, campaign_id, created_at')
-  )
+  let leadsQuery = supabase.from('leads').select('id, customer_id, campaign_id, created_at')
+  if (clinicId) leadsQuery = leadsQuery.eq('clinic_id', clinicId)
+  const { data: leads } = await leadsQuery
 
   // 결제 조회 (리드 고객 기준)
   const customerIds = [...new Set((leads || []).map((l: any) => l.customer_id))]
@@ -157,4 +149,4 @@ export async function GET(req: Request) {
   }
 
   return NextResponse.json(result)
-}
+})

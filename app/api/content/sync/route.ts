@@ -1,16 +1,10 @@
 import { NextResponse } from 'next/server'
-import { getServerSession } from 'next-auth'
-import { authOptions } from '@/lib/auth'
 import { serverSupabase } from '@/lib/supabase'
-import { getClinicId } from '@/lib/session'
+import { withClinicFilter, ClinicContext } from '@/lib/api-middleware'
 import { syncYoutubeContent } from '@/lib/services/youtubeContent'
 import { syncInstagramContent } from '@/lib/services/instagramContent'
 
-export async function POST(req: Request) {
-  const session = await getServerSession(authOptions)
-  if (!session) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-
-  const clinicId = await getClinicId(req.url)
+export const POST = withClinicFilter(async (req: Request, { clinicId }: ClinicContext) => {
   const { platform } = await req.json().catch(() => ({ platform: 'all' }))
 
   const supabase = serverSupabase()
@@ -72,4 +66,4 @@ export async function POST(req: Request) {
   }
 
   return NextResponse.json({ success: true, results })
-}
+})

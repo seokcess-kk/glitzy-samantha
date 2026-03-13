@@ -26,7 +26,7 @@ export async function syncYoutubeContent(clinicId: number, apiKey: string, chann
 
   try {
     // 1. 채널의 업로드 재생목록 ID 조회
-    const channelRes = await fetchWithRetry(
+    const { response: channelRes } = await fetchWithRetry(
       `https://www.googleapis.com/youtube/v3/channels?part=contentDetails&id=${channelId}&key=${apiKey}`,
       { service: SERVICE_NAME, timeout: 15000, retries: 2 }
     )
@@ -37,7 +37,7 @@ export async function syncYoutubeContent(clinicId: number, apiKey: string, chann
     const uploadsPlaylistId = channelData.items[0].contentDetails.relatedPlaylists.uploads
 
     // 2. 최근 업로드 영상 목록 (최대 50개)
-    const playlistRes = await fetchWithRetry(
+    const { response: playlistRes } = await fetchWithRetry(
       `https://www.googleapis.com/youtube/v3/playlistItems?part=snippet&playlistId=${uploadsPlaylistId}&maxResults=50&key=${apiKey}`,
       { service: SERVICE_NAME, timeout: 15000, retries: 2 }
     )
@@ -54,7 +54,7 @@ export async function syncYoutubeContent(clinicId: number, apiKey: string, chann
     }
 
     // 3. 영상별 통계 조회
-    const statsRes = await fetchWithRetry(
+    const { response: statsRes } = await fetchWithRetry(
       `https://www.googleapis.com/youtube/v3/videos?part=statistics,snippet&id=${videoIds}&key=${apiKey}`,
       { service: SERVICE_NAME, timeout: 15000, retries: 2 }
     )

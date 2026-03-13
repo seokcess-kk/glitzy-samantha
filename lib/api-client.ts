@@ -12,6 +12,11 @@ export interface FetchOptions extends RequestInit {
   service?: string        // 서비스 이름 (로깅용)
 }
 
+export interface FetchWithRetryResult {
+  response: Response
+  attempts: number
+}
+
 export interface FetchResult<T = unknown> {
   success: boolean
   data?: T
@@ -40,12 +45,34 @@ function delay(ms: number): Promise<void> {
 }
 
 /**
+ * Retry-After 헤더에서 대기 시간 추출 (초 단위)
+ */
+function parseRetryAfter(response: Response): number | null {
+  const retryAfter = response.headers.get('Retry-After')
+  if (!retryAfter) return null
+
+  // 숫자인 경우 (초)
+  const seconds = parseInt(retryAfter, 10)
+  if (!isNaN(seconds)) return seconds * 1000
+
+  // HTTP 날짜 형식인 경우
+  const date = Date.parse(retryAfter)
+  if (!isNaN(date)) {
+    const waitMs = date - Date.now()
+    return waitMs > 0 ? waitMs : null
+  }
+
+  return null
+}
+
+/**
  * 재시도 로직이 포함된 fetch 함수
+ * @returns 응답과 실제 시도 횟수를 포함한 결과
  */
 export async function fetchWithRetry(
   url: string,
   options: FetchOptions = {}
-): Promise<Response> {
+): Promise<FetchWithRetryResult> {
   const {
     timeout = 30000,
     retries = 3,
@@ -75,12 +102,27 @@ export async function fetchWithRetry(
         if (!response.ok) {
           console.warn(`[${service}] Request failed with status ${response.status}`)
         }
-        return response
+        return { response, attempts: attempt }
       }
 
       // 재시도 가능한 오류
       lastError = new Error(`HTTP ${response.status}: ${response.statusText}`)
       console.warn(`[${service}] Attempt ${attempt}/${retries + 1} failed: ${response.status}`)
+
+      // 마지막 시도가 아니면 대기 후 재시도
+      if (attempt <= retries) {
+        // Retry-After 헤더 처리 (429 Too Many Requests)
+        let waitTime = retryDelay * Math.pow(2, attempt - 1)
+        if (response.status === 429) {
+          const retryAfterMs = parseRetryAfter(response)
+          if (retryAfterMs) {
+            waitTime = Math.min(retryAfterMs, 60000) // 최대 60초
+            console.log(`[${service}] Rate limited. Retry-After: ${waitTime}ms`)
+          }
+        }
+        console.log(`[${service}] Retrying in ${waitTime}ms...`)
+        await delay(waitTime)
+      }
 
     } catch (error) {
       clearTimeout(timeoutId)
@@ -91,13 +133,13 @@ export async function fetchWithRetry(
       }
 
       console.warn(`[${service}] Attempt ${attempt}/${retries + 1} failed: ${lastError.message}`)
-    }
 
-    // 마지막 시도가 아니면 대기 후 재시도
-    if (attempt <= retries) {
-      const waitTime = retryDelay * Math.pow(2, attempt - 1) // exponential backoff
-      console.log(`[${service}] Retrying in ${waitTime}ms...`)
-      await delay(waitTime)
+      // 마지막 시도가 아니면 대기 후 재시도
+      if (attempt <= retries) {
+        const waitTime = retryDelay * Math.pow(2, attempt - 1)
+        console.log(`[${service}] Retrying in ${waitTime}ms...`)
+        await delay(waitTime)
+      }
     }
   }
 
@@ -116,14 +158,14 @@ export async function fetchJSON<T = unknown>(
 
   try {
     const startTime = Date.now()
-    const response = await fetchWithRetry(url, options)
-    attempts = 1 // fetchWithRetry 내부에서 재시도 횟수 추적
+    const { response, attempts: actualAttempts } = await fetchWithRetry(url, options)
+    attempts = actualAttempts
 
     const duration = Date.now() - startTime
 
     if (!response.ok) {
       const errorText = await response.text().catch(() => 'Unknown error')
-      console.error(`[${service}] Request failed: ${response.status} - ${errorText} (${duration}ms)`)
+      console.error(`[${service}] Request failed: ${response.status} - ${errorText} (${duration}ms, ${attempts} attempts)`)
       return {
         success: false,
         error: `HTTP ${response.status}: ${errorText}`,
@@ -133,7 +175,7 @@ export async function fetchJSON<T = unknown>(
     }
 
     const data = await response.json() as T
-    console.log(`[${service}] Request successful (${duration}ms)`)
+    console.log(`[${service}] Request successful (${duration}ms, ${attempts} attempts)`)
 
     return {
       success: true,

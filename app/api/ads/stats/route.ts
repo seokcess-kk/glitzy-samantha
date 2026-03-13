@@ -1,19 +1,13 @@
 import { NextResponse } from 'next/server'
-import { getServerSession } from 'next-auth'
-import { authOptions } from '@/lib/auth'
 import { serverSupabase } from '@/lib/supabase'
-import { getClinicId } from '@/lib/session'
+import { withClinicFilter, ClinicContext } from '@/lib/api-middleware'
 
-export async function GET(req: Request) {
-  const session = await getServerSession(authOptions)
-  if (!session) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-
+export const GET = withClinicFilter(async (req: Request, { clinicId }: ClinicContext) => {
   const supabase = serverSupabase()
   const url = new URL(req.url)
   const days = Number(url.searchParams.get('days') || 30)
   const platform = url.searchParams.get('platform')
   const since = new Date(Date.now() - days * 24 * 60 * 60 * 1000).toISOString()
-  const clinicId = await getClinicId(req.url)
 
   let query = supabase
     .from('ad_campaign_stats')
@@ -27,4 +21,4 @@ export async function GET(req: Request) {
   const { data, error } = await query
   if (error) return NextResponse.json({ error: error.message }, { status: 500 })
   return NextResponse.json(data)
-}
+})
