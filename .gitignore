@@ -17,10 +17,13 @@ out/
 frontend/.next/
 frontend/out/
 
-# Claude AI 메모리 폴더
-.claude/
+# Claude AI 메모리 폴더 (로컬 전용)
+# .claude/  # 팀 공유를 위해 커밋 허용
 .agent/
 .agents
+
+# Claude 런타임 생성 파일 (커밋 제외)
+dev/active/file-changes.log
 
 # Vite 빌드 결과물
 dist/

@@ -1,0 +1,62 @@
+{
+  "version": "1.0",
+  "description": "MMI 프로젝트 스킬 자동 활성화 규칙",
+  "skills": [
+    {
+      "name": "nextjs-guidelines",
+      "file": "nextjs-guidelines.md",
+      "enforcement": "suggest",
+      "triggers": {
+        "keywords": ["API", "route", "페이지", "page", "component", "컴포넌트", "layout", "middleware"],
+        "filePatterns": ["app/**/*.tsx", "app/**/*.ts", "components/**/*.tsx"]
+      },
+      "description": "Next.js 14 App Router 패턴 가이드"
+    },
+    {
+      "name": "supabase-guidelines",
+      "file": "supabase-guidelines.md",
+      "enforcement": "suggest",
+      "triggers": {
+        "keywords": ["DB", "database", "쿼리", "query", "supabase", "테이블", "table", "insert", "update", "select"],
+        "filePatterns": ["lib/**/*.ts", "app/api/**/*.ts"]
+      },
+      "description": "Supabase 쿼리 패턴 가이드"
+    },
+    {
+      "name": "multitenant-guidelines",
+      "file": "multitenant-guidelines.md",
+      "enforcement": "block",
+      "triggers": {
+        "keywords": ["병원", "clinic", "권한", "role", "tenant", "clinic_id", "멀티테넌트", "superadmin", "clinic_admin"],
+        "filePatterns": ["app/api/**/*.ts", "lib/session.ts", "lib/auth.ts"]
+      },
+      "description": "멀티테넌트 핵심 패턴 (필수 준수)",
+      "critical": true
+    },
+    {
+      "name": "ads-sync-guidelines",
+      "file": "ads-sync-guidelines.md",
+      "enforcement": "suggest",
+      "triggers": {
+        "keywords": ["광고", "ads", "동기화", "sync", "campaign", "캠페인", "Google Ads", "Meta", "TikTok"],
+        "filePatterns": ["lib/services/**/*.ts", "app/api/cron/**/*.ts"]
+      },
+      "description": "광고 API 동기화 패턴 가이드"
+    },
+    {
+      "name": "security-guidelines",
+      "file": "security-guidelines.md",
+      "enforcement": "block",
+      "triggers": {
+        "keywords": ["보안", "security", "인증", "auth", "검증", "validation", "XSS", "injection", "CSRF", "토큰", "token"],
+        "filePatterns": ["lib/auth.ts", "middleware.ts", "app/api/**/*.ts"]
+      },
+      "description": "보안 필수 규칙 (필수 준수)",
+      "critical": true
+    }
+  ],
+  "globalSettings": {
+    "blockOnCriticalViolation": true,
+    "logActivations": true
+  }
+}
