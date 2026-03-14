@@ -2,6 +2,10 @@
 import { useState, useEffect, useCallback } from 'react'
 import { RefreshCw, Newspaper, ExternalLink, Play } from 'lucide-react'
 import { useClinic } from '@/components/ClinicContext'
+import { Card } from '@/components/ui/card'
+import { Button } from '@/components/ui/button'
+import { Skeleton } from '@/components/ui/skeleton'
+import { PageHeader, StatsCard, EmptyState } from '@/components/common'
 
 function groupByDate(articles: any[]): Record<string, any[]> {
   const map: Record<string, any[]> = {}
@@ -56,33 +60,29 @@ export default function PressPage() {
 
   return (
     <>
-      <div className="flex items-center justify-between mb-8">
-        <div>
-          <h1 className="text-2xl font-bold text-white">언론보도</h1>
-          <p className="text-sm text-slate-400 mt-1">Google 뉴스에서 병원 관련 보도를 수집합니다. 매일 오전 9시 자동 갱신.</p>
-        </div>
-        <div className="flex items-center gap-3">
-          <button onClick={fetchArticles} disabled={loading} className="glass-card p-2.5 hover:bg-white/10 transition-all">
-            <RefreshCw size={16} className={`text-slate-400 ${loading ? 'animate-spin' : ''}`} />
-          </button>
-          <button
-            onClick={handleSync}
-            disabled={syncing}
-            className="flex items-center gap-2 bg-brand-600 hover:bg-brand-700 disabled:opacity-50 text-white text-sm font-medium px-4 py-2 rounded-xl transition-all"
-          >
-            <Play size={14} /> {syncing ? '수집 중...' : '지금 수집'}
-          </button>
-        </div>
-      </div>
+      <PageHeader
+        title="언론보도"
+        description="Google 뉴스에서 병원 관련 보도를 수집합니다. 매일 오전 9시 자동 갱신."
+        actions={
+          <>
+            <Button variant="glass" size="icon" onClick={fetchArticles} disabled={loading}>
+              <RefreshCw size={16} className={loading ? 'animate-spin' : ''} />
+            </Button>
+            <Button onClick={handleSync} disabled={syncing} className="bg-brand-600 hover:bg-brand-700">
+              <Play size={14} /> {syncing ? '수집 중...' : '지금 수집'}
+            </Button>
+          </>
+        }
+      />
 
       {syncMsg && (
         <div className={`mb-6 px-4 py-3 rounded-xl text-sm ${syncMsg.ok ? 'bg-emerald-500/10 border border-emerald-500/20 text-emerald-400' : 'bg-red-500/10 border border-red-500/20 text-red-400'}`}>
-          {syncMsg.ok ? '✅' : '❌'} {syncMsg.text}
+          {syncMsg.text}
         </div>
       )}
 
       {/* 통계 */}
-      <div className="grid grid-cols-3 gap-4 mb-8">
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-8">
         {[
           { label: '총 보도 수',   value: articles.length },
           { label: '언론사 수',    value: new Set(articles.map(a => a.source)).size },
@@ -91,10 +91,10 @@ export default function PressPage() {
             return (Date.now() - new Date(a.published_at).getTime()) < 7 * 24 * 3600 * 1000
           }).length },
         ].map(({ label, value }) => (
-          <div key={label} className="glass-card p-4">
+          <Card key={label} variant="glass" className="p-4">
             <p className="text-xs text-slate-500 mb-1">{label}</p>
-            <p className="text-2xl font-bold text-white">{loading ? '-' : value}</p>
-          </div>
+            {loading ? <Skeleton className="h-7 w-16" /> : <p className="text-2xl font-bold text-white">{value}</p>}
+          </Card>
         ))}
       </div>
 
@@ -102,22 +102,24 @@ export default function PressPage() {
       {loading ? (
         <div className="space-y-4">
           {Array(3).fill(0).map((_, i) => (
-            <div key={i} className="glass-card p-4 space-y-3">
-              <div className="h-4 bg-white/5 rounded animate-pulse w-32" />
-              {Array(3).fill(0).map((__, j) => <div key={j} className="h-10 bg-white/5 rounded-xl animate-pulse" />)}
-            </div>
+            <Card key={i} variant="glass" className="p-4 space-y-3">
+              <Skeleton className="h-4 w-32" />
+              {Array(3).fill(0).map((__, j) => <Skeleton key={j} className="h-10 rounded-xl" />)}
+            </Card>
           ))}
         </div>
       ) : dates.length === 0 ? (
-        <div className="glass-card py-16 text-center">
-          <Newspaper size={36} className="text-slate-600 mx-auto mb-3" />
-          <p className="text-sm text-slate-500 mb-2">수집된 언론보도가 없습니다.</p>
-          <p className="text-xs text-slate-600">'지금 수집' 버튼을 눌러 Google 뉴스를 검색하세요.</p>
-        </div>
+        <Card variant="glass" className="py-4">
+          <EmptyState
+            icon={Newspaper}
+            title="수집된 언론보도가 없습니다."
+            description="'지금 수집' 버튼을 눌러 Google 뉴스를 검색하세요."
+          />
+        </Card>
       ) : (
         <div className="space-y-6">
           {dates.map(date => (
-            <div key={date} className="glass-card p-0 overflow-hidden">
+            <Card key={date} variant="glass" className="p-0 overflow-hidden">
               <div className="px-5 py-3 border-b border-white/5 flex items-center gap-2">
                 <Newspaper size={13} className="text-brand-400" />
                 <span className="text-sm font-semibold text-white">{date}</span>
@@ -143,7 +145,7 @@ export default function PressPage() {
                   </div>
                 ))}
               </div>
-            </div>
+            </Card>
           ))}
         </div>
       )}

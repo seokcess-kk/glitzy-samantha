@@ -3,11 +3,25 @@ import { useState, useEffect } from 'react'
 import {
   AreaChart, Area, BarChart, Bar,
   XAxis, YAxis, CartesianGrid, Tooltip,
-  ResponsiveContainer, Legend, PieChart, Pie, Cell
-} from 'recharts'
-import { TrendingUp, Bell, Settings, Search, RefreshCw } from 'lucide-react'
+  ResponsiveContainer, PieChart, Pie, Cell
+} from '@/components/charts'
+import { TrendingUp, Bell, Settings, Search, RefreshCw, Users, ArrowRight } from 'lucide-react'
+import { Card } from '@/components/ui/card'
+import { Button } from '@/components/ui/button'
+import { Badge } from '@/components/ui/badge'
+import { Skeleton } from '@/components/ui/skeleton'
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from '@/components/ui/table'
+import { PageHeader, StatsCard, ChannelBadge, StatusBadge } from '@/components/common'
 
 const PIE_COLORS = ['#6366f1', '#8b5cf6', '#a78bfa', '#c4b5fd']
+const FUNNEL_COLORS = ['#6366f1', '#8b5cf6', '#a78bfa', '#c4b5fd', '#10b981']
 const fmtKrw = (v: number) => `₩${(v / 10000).toFixed(0)}만`
 
 // 매체별 색상
@@ -17,17 +31,6 @@ const MEDIA_COLORS: Record<string, string> = {
   틱톡: '#64748b', '네이버 블로그': '#22c55e',
 }
 
-function KpiCard({ label, value, loading }: { label: string; value: string; loading: boolean }) {
-  return (
-    <div className="glass-card p-4 md:p-5 animate-fade-in-up overflow-hidden">
-      <p className="text-[10px] md:text-xs text-slate-400 uppercase tracking-widest mb-1 truncate">{label}</p>
-      {loading
-        ? <div className="h-7 md:h-9 bg-white/5 rounded-lg animate-pulse mt-2 mb-2 md:mb-3" />
-        : <p className="text-lg md:text-3xl font-bold text-white mt-2 mb-2 md:mb-3 truncate">{value}</p>
-      }
-    </div>
-  )
-}
 
 const CustomTooltip = ({ active, payload, label }: any) => {
   if (!active || !payload?.length) return null
@@ -41,31 +44,28 @@ const CustomTooltip = ({ active, payload, label }: any) => {
   )
 }
 
-// 커스텀 바 — 매체별 색상
-function CustomBar(props: any) {
-  const { x, y, width, height, name } = props
-  const color = MEDIA_COLORS[name] || '#6366f1'
-  return <rect x={x} y={y} width={width} height={height} fill={color} rx={4} />
-}
-
 export default function DashboardPage() {
   const [kpi, setKpi] = useState<any>(null)
   const [trend, setTrend] = useState<any[]>([])
   const [channel, setChannel] = useState<any[]>([])
   const [contentPlatform, setContentPlatform] = useState<any[]>([])
   const [leads, setLeads] = useState<any[]>([])
+  const [funnel, setFunnel] = useState<any>(null)
+  const [campaigns, setCampaigns] = useState<any[]>([])
   const [loading, setLoading] = useState(true)
   const [lastUpdated, setLastUpdated] = useState<Date | null>(null)
 
   const fetchAll = async () => {
     setLoading(true)
     try {
-      const [kpiRes, trendRes, channelRes, contentRes, leadsRes] = await Promise.allSettled([
+      const [kpiRes, trendRes, channelRes, contentRes, leadsRes, funnelRes, campaignRes] = await Promise.allSettled([
         fetch('/api/dashboard/kpi').then(r => r.json()),
         fetch('/api/dashboard/trend').then(r => r.json()),
         fetch('/api/dashboard/channel').then(r => r.json()),
         fetch('/api/content/analytics?groupBy=platform').then(r => r.json()),
         fetch('/api/leads').then(r => r.json()),
+        fetch('/api/dashboard/funnel').then(r => r.json()),
+        fetch('/api/dashboard/campaign').then(r => r.json()),
       ])
       if (kpiRes.status === 'fulfilled') setKpi(kpiRes.value)
       if (trendRes.status === 'fulfilled') {
@@ -74,9 +74,11 @@ export default function DashboardPage() {
           spend: r.spend || 0,
         })))
       }
-      if (channelRes.status === 'fulfilled') setChannel(channelRes.value)
+      if (channelRes.status === 'fulfilled') setChannel(Array.isArray(channelRes.value) ? channelRes.value : [])
       if (contentRes.status === 'fulfilled') setContentPlatform(Array.isArray(contentRes.value) ? contentRes.value : [])
       if (leadsRes.status === 'fulfilled') setLeads(Array.isArray(leadsRes.value) ? leadsRes.value.slice(0, 10) : [])
+      if (funnelRes.status === 'fulfilled') setFunnel(funnelRes.value)
+      if (campaignRes.status === 'fulfilled') setCampaigns(Array.isArray(campaignRes.value) ? campaignRes.value : [])
       setLastUpdated(new Date())
     } finally {
       setLoading(false)
@@ -115,36 +117,36 @@ export default function DashboardPage() {
 
   return (
     <>
-      <div className="flex items-center justify-between mb-6 gap-3 flex-wrap">
-        <div>
-          <h1 className="text-xl md:text-2xl font-bold text-white">마케팅 성과 대시보드</h1>
-          <p className="text-sm text-slate-400 mt-1">
-            {lastUpdated ? `마지막 업데이트: ${lastUpdated.toLocaleTimeString('ko')}` : '데이터 로딩 중...'}
-          </p>
-        </div>
-        <div className="flex items-center gap-2">
-          <button onClick={fetchAll} disabled={loading} className="glass-card p-2.5 hover:bg-white/10 transition-all disabled:opacity-50">
-            <RefreshCw size={16} className={`text-slate-400 ${loading ? 'animate-spin' : ''}`} />
-          </button>
-          <button className="glass-card p-2.5 hover:bg-white/10 transition-all"><Search size={16} className="text-slate-400" /></button>
-          <button className="glass-card p-2.5 hover:bg-white/10 transition-all"><Bell size={16} className="text-slate-400" /></button>
-          <button className="glass-card p-2.5 hover:bg-white/10 transition-all"><Settings size={16} className="text-slate-400" /></button>
-        </div>
-      </div>
+      {/* Header */}
+      <PageHeader
+        title="마케팅 성과 대시보드"
+        description={lastUpdated ? `마지막 업데이트: ${lastUpdated.toLocaleTimeString('ko')}` : '데이터 로딩 중...'}
+        actions={
+          <>
+            <Button variant="glass" size="icon" onClick={fetchAll} disabled={loading}>
+              <RefreshCw size={16} className={loading ? 'animate-spin' : ''} />
+            </Button>
+            <Button variant="glass" size="icon"><Search size={16} /></Button>
+            <Button variant="glass" size="icon"><Bell size={16} /></Button>
+            <Button variant="glass" size="icon"><Settings size={16} /></Button>
+          </>
+        }
+      />
 
+      {/* KPI Cards */}
       <div className="grid grid-cols-2 md:grid-cols-3 gap-3 md:gap-4 mb-6 md:mb-8">
-        {kpiCards.map((d, i) => <KpiCard key={i} {...d} loading={loading} />)}
+        {kpiCards.map((d, i) => <StatsCard key={i} label={d.label} value={d.value} loading={loading} />)}
       </div>
 
       {/* 광고비 추이 + 시술 비중 */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 mb-6">
-        <div className="lg:col-span-2 glass-card p-6">
+        <Card variant="glass" className="lg:col-span-2 p-6">
           <div className="flex items-center justify-between mb-5">
             <h2 className="font-semibold text-white">광고비 추이</h2>
-            <span className="text-xs bg-brand-600/20 text-brand-500 px-3 py-1 rounded-full">최근 8주</span>
+            <Badge variant="default" className="bg-brand-600/20 text-brand-500 border-0">최근 8주</Badge>
           </div>
           {loading ? (
-            <div className="h-[220px] bg-white/5 rounded-xl animate-pulse" />
+            <Skeleton className="h-[220px] rounded-xl" />
           ) : trend.length > 0 ? (
             <ResponsiveContainer width="100%" height={220}>
               <AreaChart data={trend}>
@@ -166,9 +168,9 @@ export default function DashboardPage() {
               광고 데이터를 수집하면 추이 그래프가 표시됩니다.
             </div>
           )}
-        </div>
+        </Card>
 
-        <div className="glass-card p-6">
+        <Card variant="glass" className="p-6">
           <h2 className="font-semibold text-white mb-5">결제 시술 비중</h2>
           {pieData.length > 0 ? (
             <>
@@ -197,14 +199,111 @@ export default function DashboardPage() {
               병원 데이터 입력 후<br />시술 비중이 표시됩니다.
             </div>
           )}
-        </div>
+        </Card>
       </div>
 
-      {/* CPL / ROAS 차트 — 분리 (광고 + 콘텐츠 통합) */}
+      {/* 퍼널 분석 */}
+      <Card variant="glass" className="p-6 mb-6">
+        <div className="flex items-center justify-between mb-5">
+          <div className="flex items-center gap-2">
+            <Users size={18} className="text-brand-400" />
+            <h2 className="font-semibold text-white">전환 퍼널</h2>
+          </div>
+          <span className="text-xs text-slate-500">리드 → 결제 전환율</span>
+        </div>
+        {loading ? (
+          <Skeleton className="h-[120px] rounded-xl" />
+        ) : funnel?.funnel?.stages ? (
+          <div className="flex items-center justify-between gap-2 overflow-x-auto pb-2">
+            {funnel.funnel.stages.map((stage: any, i: number) => (
+              <div key={stage.stage} className="flex items-center gap-2 min-w-0">
+                <div className="text-center min-w-[80px]">
+                  <div
+                    className="mx-auto rounded-lg flex items-center justify-center font-bold text-white mb-2"
+                    style={{
+                      width: Math.max(50, 80 - i * 6),
+                      height: Math.max(50, 80 - i * 6),
+                      background: `linear-gradient(135deg, ${FUNNEL_COLORS[i]}, ${FUNNEL_COLORS[i]}88)`,
+                    }}
+                  >
+                    {stage.count}
+                  </div>
+                  <p className="text-xs font-medium text-slate-300">{stage.label}</p>
+                  <p className="text-[10px] text-slate-500">{stage.rate}%</p>
+                </div>
+                {i < funnel.funnel.stages.length - 1 && (
+                  <div className="flex flex-col items-center text-slate-600 shrink-0">
+                    <ArrowRight size={16} />
+                    <span className="text-[10px] text-slate-500 mt-0.5">
+                      {stage.dropoff > 0 ? `-${stage.dropoff}%` : ''}
+                    </span>
+                  </div>
+                )}
+              </div>
+            ))}
+          </div>
+        ) : (
+          <div className="h-[120px] flex items-center justify-center text-slate-500 text-sm">
+            리드 데이터가 쌓이면 퍼널이 표시됩니다.
+          </div>
+        )}
+        {funnel?.funnel?.totalConversionRate > 0 && (
+          <div className="mt-4 pt-4 border-t border-white/5 flex items-center justify-between">
+            <span className="text-xs text-slate-500">전체 전환율 (리드 → 결제)</span>
+            <span className="text-lg font-bold text-emerald-400">{funnel.funnel.totalConversionRate}%</span>
+          </div>
+        )}
+      </Card>
+
+      {/* 캠페인별 성과 */}
+      {campaigns.length > 0 && (
+        <Card variant="glass" className="p-6 mb-6">
+          <div className="flex items-center justify-between mb-5">
+            <h2 className="font-semibold text-white">캠페인별 성과</h2>
+            <Badge variant="default" className="bg-brand-600/20 text-brand-500 border-0">Top {Math.min(campaigns.length, 5)}</Badge>
+          </div>
+          <div className="overflow-x-auto -mx-2">
+            <Table className="min-w-[700px]">
+              <TableHeader>
+                <TableRow className="border-b border-white/5 hover:bg-transparent">
+                  <TableHead className="text-xs text-slate-500 uppercase tracking-wider font-medium">캠페인</TableHead>
+                  <TableHead className="text-xs text-slate-500 uppercase tracking-wider font-medium">채널</TableHead>
+                  <TableHead className="text-xs text-slate-500 uppercase tracking-wider font-medium text-right">리드</TableHead>
+                  <TableHead className="text-xs text-slate-500 uppercase tracking-wider font-medium text-right">결제</TableHead>
+                  <TableHead className="text-xs text-slate-500 uppercase tracking-wider font-medium text-right">CPL</TableHead>
+                  <TableHead className="text-xs text-slate-500 uppercase tracking-wider font-medium text-right">ROAS</TableHead>
+                  <TableHead className="text-xs text-slate-500 uppercase tracking-wider font-medium text-right">전환율</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {campaigns.slice(0, 5).map((c: any) => (
+                  <TableRow key={c.campaign} className="border-b border-white/5 hover:bg-white/[0.03]">
+                    <TableCell className="font-medium text-white truncate max-w-[150px]" title={c.campaign}>{c.campaign}</TableCell>
+                    <TableCell>
+                      <ChannelBadge channel={c.channel} />
+                    </TableCell>
+                    <TableCell className="text-right text-slate-300">{c.leads}</TableCell>
+                    <TableCell className="text-right text-emerald-400 font-semibold">{c.payingCustomers}</TableCell>
+                    <TableCell className="text-right text-slate-300">{c.cpl > 0 ? `₩${c.cpl.toLocaleString()}` : '-'}</TableCell>
+                    <TableCell className="text-right">
+                      <span className={c.roasPercent >= 100 ? 'text-emerald-400' : 'text-red-400'}>
+                        {c.roasPercent > 0 ? `${c.roasPercent}%` : '-'}
+                      </span>
+                    </TableCell>
+                    <TableCell className="text-right text-slate-300">{c.conversionRate}%</TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          </div>
+        </Card>
+      )}
+
+      {/* CPL / ROAS 차트 */}
       {(allCplData.length > 0 || allRoasData.length > 0) && (
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
           {/* CPL 차트 */}
-          <div className="glass-card p-6">
+          <Card variant="glass" className="p-6">
             <div className="flex items-center justify-between mb-1">
               <h2 className="font-semibold text-white text-sm">매체별 CPL 비교</h2>
               <span className="text-[10px] text-slate-500">광고 + 콘텐츠</span>
@@ -217,7 +316,7 @@ export default function DashboardPage() {
                   <ResponsiveContainer width="100%" height={allCplData.length * 44 + 20}>
                     <BarChart layout="vertical" data={allCplData} barSize={20}>
                       <CartesianGrid strokeDasharray="3 3" stroke="#1e1e3a" vertical={false} />
-                      <XAxis type="number" tickFormatter={v => `₩${(v / 1000).toFixed(0)}k`} tick={{ fill: '#64748b', fontSize: 10 }} axisLine={false} tickLine={false} />
+                      <XAxis type="number" tickFormatter={(v: number) => `₩${(v / 1000).toFixed(0)}k`} tick={{ fill: '#64748b', fontSize: 10 }} axisLine={false} tickLine={false} />
                       <YAxis type="category" dataKey="name" tick={{ fill: '#64748b', fontSize: 11 }} axisLine={false} tickLine={false} width={60} />
                       <Tooltip contentStyle={{ background: '#1a1a2e', border: 'none', borderRadius: 8, fontSize: 12 }} formatter={(v: any) => [`₩${Number(v).toLocaleString()}`, 'CPL']} />
                       <Bar dataKey="cpl" radius={[0, 4, 4, 0]}>
@@ -232,7 +331,7 @@ export default function DashboardPage() {
                     <BarChart data={allCplData} barSize={28}>
                       <CartesianGrid strokeDasharray="3 3" stroke="#1e1e3a" />
                       <XAxis dataKey="name" tick={{ fill: '#64748b', fontSize: 11 }} axisLine={false} tickLine={false} />
-                      <YAxis tickFormatter={v => `₩${(v / 1000).toFixed(0)}k`} tick={{ fill: '#64748b', fontSize: 10 }} axisLine={false} tickLine={false} />
+                      <YAxis tickFormatter={(v: number) => `₩${(v / 1000).toFixed(0)}k`} tick={{ fill: '#64748b', fontSize: 10 }} axisLine={false} tickLine={false} />
                       <Tooltip contentStyle={{ background: '#1a1a2e', border: 'none', borderRadius: 8, fontSize: 12 }} formatter={(v: any) => [`₩${Number(v).toLocaleString()}`, 'CPL']} />
                       <Bar dataKey="cpl" radius={[4, 4, 0, 0]}>
                         {allCplData.map((entry, i) => <Cell key={i} fill={MEDIA_COLORS[entry.name] || '#6366f1'} />)}
@@ -244,10 +343,10 @@ export default function DashboardPage() {
             ) : (
               <div className="h-[200px] flex items-center justify-center text-slate-600 text-xs">CPL 데이터 없음</div>
             )}
-          </div>
+          </Card>
 
           {/* ROAS 차트 */}
-          <div className="glass-card p-6">
+          <Card variant="glass" className="p-6">
             <div className="flex items-center justify-between mb-1">
               <h2 className="font-semibold text-white text-sm">매체별 ROAS 비교</h2>
               <span className="text-[10px] text-slate-500">광고 + 콘텐츠</span>
@@ -260,7 +359,7 @@ export default function DashboardPage() {
                   <ResponsiveContainer width="100%" height={allRoasData.length * 44 + 20}>
                     <BarChart layout="vertical" data={allRoasData} barSize={20}>
                       <CartesianGrid strokeDasharray="3 3" stroke="#1e1e3a" vertical={false} />
-                      <XAxis type="number" tickFormatter={v => `${v}%`} tick={{ fill: '#64748b', fontSize: 10 }} axisLine={false} tickLine={false} />
+                      <XAxis type="number" tickFormatter={(v: number) => `${v}%`} tick={{ fill: '#64748b', fontSize: 10 }} axisLine={false} tickLine={false} />
                       <YAxis type="category" dataKey="name" tick={{ fill: '#64748b', fontSize: 11 }} axisLine={false} tickLine={false} width={60} />
                       <Tooltip contentStyle={{ background: '#1a1a2e', border: 'none', borderRadius: 8, fontSize: 12 }} formatter={(v: any) => [`${v}%`, 'ROAS']} />
                       <Bar dataKey="roas" radius={[0, 4, 4, 0]}>
@@ -275,7 +374,7 @@ export default function DashboardPage() {
                     <BarChart data={allRoasData} barSize={28}>
                       <CartesianGrid strokeDasharray="3 3" stroke="#1e1e3a" />
                       <XAxis dataKey="name" tick={{ fill: '#64748b', fontSize: 11 }} axisLine={false} tickLine={false} />
-                      <YAxis tickFormatter={v => `${v}%`} tick={{ fill: '#64748b', fontSize: 10 }} axisLine={false} tickLine={false} />
+                      <YAxis tickFormatter={(v: number) => `${v}%`} tick={{ fill: '#64748b', fontSize: 10 }} axisLine={false} tickLine={false} />
                       <Tooltip contentStyle={{ background: '#1a1a2e', border: 'none', borderRadius: 8, fontSize: 12 }} formatter={(v: any) => [`${v}%`, 'ROAS']} />
                       <Bar dataKey="roas" radius={[4, 4, 0, 0]}>
                         {allRoasData.map((entry, i) => (
@@ -289,58 +388,56 @@ export default function DashboardPage() {
             ) : (
               <div className="h-[200px] flex items-center justify-center text-slate-600 text-xs">ROAS 데이터 없음</div>
             )}
-          </div>
+          </Card>
         </div>
       )}
 
       {/* 최근 인입 고객 */}
-      <div className="glass-card p-6">
+      <Card variant="glass" className="p-6">
         <h2 className="font-semibold text-white mb-5">최근 인입 고객 & 챗봇 현황</h2>
         {loading ? (
           <div className="space-y-3">
-            {Array(5).fill(0).map((_, i) => <div key={i} className="h-10 bg-white/5 rounded-xl animate-pulse" />)}
+            {Array(5).fill(0).map((_, i) => <Skeleton key={i} className="h-10 rounded-xl" />)}
           </div>
         ) : leads.length > 0 ? (
           <div className="overflow-x-auto -mx-2">
-          <table className="w-full text-sm min-w-[600px]">
-            <thead>
-              <tr className="text-xs text-slate-500 uppercase tracking-wider border-b border-white/5">
-                {['고객명', '유입 채널', '챗봇 발송', '상담 상태', '결제 금액', '시술명'].map(h => (
-                  <th key={h} className="text-left py-2 px-3 font-medium">{h}</th>
-                ))}
-              </tr>
-            </thead>
-            <tbody>
-              {leads.map((lead: any) => {
-                const c = lead.customer
-                const consult = c?.consultations?.[0]
-                const payment = c?.payments?.[0]
-                return (
-                  <tr key={lead.id} className="border-b border-white/5 hover:bg-white/[0.03] transition-colors">
-                    <td className="py-3 px-3 font-medium text-white">{c?.name ? c.name.slice(0, 1) + '*' + c.name.slice(-1) : '-'}</td>
-                    <td className="py-3 px-3">
-                      <span className="px-2 py-0.5 rounded-full text-xs font-semibold bg-brand-600/20 text-brand-400">{c?.first_source || '-'}</span>
-                    </td>
-                    <td className="py-3 px-3 text-slate-300">{lead.chatbot_sent ? '✅ 발송' : '⏳ 대기중'}</td>
-                    <td className="py-3 px-3">
-                      <span className={`px-2 py-0.5 rounded-full text-xs font-semibold ${consult?.status === '예약완료' || consult?.status === '방문완료' ? 'bg-emerald-500/15 text-emerald-400' : 'bg-slate-500/15 text-slate-400'}`}>
-                        {consult?.status || '미응답'}
-                      </span>
-                    </td>
-                    <td className="py-3 px-3 font-semibold text-emerald-400">
-                      {payment ? `₩${Number(payment.payment_amount).toLocaleString()}` : '-'}
-                    </td>
-                    <td className="py-3 px-3 text-slate-400">{payment?.treatment_name || '-'}</td>
-                  </tr>
-                )
-              })}
-            </tbody>
-          </table>
+            <Table className="min-w-[600px]">
+              <TableHeader>
+                <TableRow className="border-b border-white/5 hover:bg-transparent">
+                  {['고객명', '유입 채널', '챗봇 발송', '상담 상태', '결제 금액', '시술명'].map(h => (
+                    <TableHead key={h} className="text-xs text-slate-500 uppercase tracking-wider font-medium">{h}</TableHead>
+                  ))}
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {leads.map((lead: any) => {
+                  const c = lead.customer
+                  const consult = c?.consultations?.[0]
+                  const payment = c?.payments?.[0]
+                  return (
+                    <TableRow key={lead.id} className="border-b border-white/5 hover:bg-white/[0.03]">
+                      <TableCell className="font-medium text-white">{c?.name ? c.name.slice(0, 1) + '*' + c.name.slice(-1) : '-'}</TableCell>
+                      <TableCell>
+                        <ChannelBadge channel={c?.first_source || '-'} />
+                      </TableCell>
+                      <TableCell className="text-slate-300">{lead.chatbot_sent ? '발송' : '대기중'}</TableCell>
+                      <TableCell>
+                        <StatusBadge status={consult?.status || '미응답'} />
+                      </TableCell>
+                      <TableCell className="font-semibold text-emerald-400">
+                        {payment ? `₩${Number(payment.payment_amount).toLocaleString()}` : '-'}
+                      </TableCell>
+                      <TableCell className="text-slate-400">{payment?.treatment_name || '-'}</TableCell>
+                    </TableRow>
+                  )
+                })}
+              </TableBody>
+            </Table>
           </div>
         ) : (
           <p className="text-slate-500 text-sm text-center py-8">인입된 고객 데이터가 없습니다.</p>
         )}
-      </div>
+      </Card>
     </>
   )
 }

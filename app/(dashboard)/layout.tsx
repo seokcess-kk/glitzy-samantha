@@ -37,7 +37,8 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
           >
             <button
               onClick={() => setSidebarOpen(true)}
-              className="p-1.5 rounded-lg text-slate-400 hover:text-white hover:bg-white/10 transition-all"
+              className="p-2.5 -ml-1 rounded-lg text-slate-400 hover:text-white hover:bg-white/10 transition-all"
+              aria-label="메뉴 열기"
             >
               <Menu size={20} />
             </button>

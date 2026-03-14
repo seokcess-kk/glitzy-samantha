@@ -1,8 +1,30 @@
 'use client'
-import { useState, useEffect } from 'react'
-import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, Cell } from 'recharts'
+import { useState, useEffect, useCallback } from 'react'
+import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from '@/components/charts'
 import { RefreshCw, Play, Calendar } from 'lucide-react'
+import { toast } from 'sonner'
 import { useClinic } from '@/components/ClinicContext'
+import { Card } from '@/components/ui/card'
+import { Button } from '@/components/ui/button'
+import { Badge } from '@/components/ui/badge'
+import { Skeleton } from '@/components/ui/skeleton'
+import { Input } from '@/components/ui/input'
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select'
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from '@/components/ui/table'
+import { PageHeader, StatsCard, ChannelBadge } from '@/components/common'
 
 const PLATFORM_COLORS: Record<string, string> = {
   Meta: '#6366f1',
@@ -17,15 +39,14 @@ export default function AdsPage() {
   const [kpi, setKpi] = useState<any>(null)
   const [loading, setLoading] = useState(true)
   const [syncing, setSyncing] = useState(false)
-  const [syncResult, setSyncResult] = useState<any>(null)
-  const [days, setDays] = useState(30)
+  const [days, setDays] = useState('30')
   const [platformFilter, setPlatformFilter] = useState('all')
   const [searchQuery, setSearchQuery] = useState('')
 
-  const fetchData = async () => {
+  const fetchData = useCallback(async () => {
     setLoading(true)
     try {
-      const qs = new URLSearchParams({ days: String(days) })
+      const qs = new URLSearchParams({ days })
       if (selectedClinicId) qs.set('clinic_id', String(selectedClinicId))
       const clinicQs = selectedClinicId ? `?clinic_id=${selectedClinicId}` : ''
       const [statsRes, channelRes, kpiRes] = await Promise.allSettled([
@@ -39,20 +60,19 @@ export default function AdsPage() {
     } finally {
       setLoading(false)
     }
-  }
+  }, [days, selectedClinicId])
 
-  useEffect(() => { fetchData() }, [days, selectedClinicId])
+  useEffect(() => { fetchData() }, [fetchData])
 
   const handleSync = async () => {
     setSyncing(true)
-    setSyncResult(null)
     try {
       const res = await fetch('/api/ads/sync', { method: 'POST' })
       const data = await res.json()
-      setSyncResult({ ok: true, data })
+      toast.success(`데이터 수집 완료 (Meta: ${data.results?.meta ?? 0}, Google: ${data.results?.google ?? 0}, TikTok: ${data.results?.tiktok ?? 0})`)
       await fetchData()
     } catch {
-      setSyncResult({ ok: false, msg: '동기화 실패' })
+      toast.error('동기화 실패')
     } finally {
       setSyncing(false)
     }
@@ -70,51 +90,39 @@ export default function AdsPage() {
 
   return (
     <>
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between mb-6 md:mb-8 gap-3">
-        <div>
-          <h1 className="text-xl md:text-2xl font-bold text-white">광고 성과 분석</h1>
-          <p className="text-sm text-slate-400 mt-1">Meta / Google / TikTok 광고 지출 및 성과 데이터.</p>
-        </div>
-        <div className="flex items-center gap-2 flex-wrap">
-          <select
-            value={days}
-            onChange={e => setDays(Number(e.target.value))}
-            className="glass-card px-3 py-2 text-sm text-white bg-transparent focus:outline-none"
-          >
-            {[7, 14, 30, 90].map(d => <option key={d} value={d} className="bg-slate-900">최근 {d}일</option>)}
-          </select>
-          <button onClick={fetchData} disabled={loading} className="glass-card p-2.5 hover:bg-white/10 transition-all">
-            <RefreshCw size={16} className={`text-slate-400 ${loading ? 'animate-spin' : ''}`} />
-          </button>
-          <button
-            onClick={handleSync}
-            disabled={syncing}
-            className="flex items-center gap-2 bg-brand-600 hover:bg-brand-700 disabled:opacity-50 text-white text-sm font-medium px-4 py-2 rounded-xl transition-all"
-          >
-            <Play size={14} /> {syncing ? '수집 중...' : '지금 데이터 수집'}
-          </button>
-        </div>
-      </div>
-
-      {syncResult && (
-        <div className={`mb-6 px-4 py-3 rounded-xl text-sm ${syncResult.ok ? 'bg-emerald-500/10 border border-emerald-500/20 text-emerald-400' : 'bg-red-500/10 border border-red-500/20 text-red-400'}`}>
-          {syncResult.ok
-            ? `✅ 데이터 수집 완료 (Meta: ${syncResult.data?.results?.meta}, Google: ${syncResult.data?.results?.google}, TikTok: ${syncResult.data?.results?.tiktok})`
-            : `❌ ${syncResult.msg}`}
-        </div>
-      )}
+      <PageHeader
+        title="광고 성과 분석"
+        description="Meta / Google / TikTok 광고 지출 및 성과 데이터."
+        actions={
+          <>
+            <Select value={days} onValueChange={setDays}>
+              <SelectTrigger className="w-[130px] glass-card border-0 text-white">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                {[7, 14, 30, 90].map(d => (
+                  <SelectItem key={d} value={String(d)}>최근 {d}일</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            <Button variant="glass" size="icon" onClick={fetchData} disabled={loading}>
+              <RefreshCw size={16} className={loading ? 'animate-spin' : ''} />
+            </Button>
+            <Button onClick={handleSync} disabled={syncing} className="bg-brand-600 hover:bg-brand-700">
+              <Play size={14} /> {syncing ? '수집 중...' : '지금 데이터 수집'}
+            </Button>
+          </>
+        }
+      />
 
       {/* 매체 필터 버튼 */}
       <div className="flex gap-2 mb-6 flex-wrap">
         {platforms.map(p => (
-          <button
+          <Button
             key={p}
+            variant={platformFilter === p ? 'default' : 'glass'}
             onClick={() => setPlatformFilter(p)}
-            className={`px-4 py-2 rounded-xl text-sm font-medium border transition-all ${
-              platformFilter === p
-                ? 'bg-brand-600 text-white border-brand-600'
-                : 'glass-card border-transparent text-slate-400 hover:text-white'
-            }`}
+            className={platformFilter === p ? 'bg-brand-600 border-brand-600' : ''}
           >
             {p === 'all' ? '전체 매체' : p}
             {p !== 'all' && (
@@ -122,10 +130,11 @@ export default function AdsPage() {
                 {stats.filter(s => s.platform === p).length}건
               </span>
             )}
-          </button>
+          </Button>
         ))}
       </div>
 
+      {/* KPI 카드 */}
       <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-8 gap-3 mb-8">
         {[
           { label: '총 광고비',   value: `₩${Math.round(totalSpend).toLocaleString()}` },
@@ -137,16 +146,16 @@ export default function AdsPage() {
           { label: '총 노출',     value: totalImpressions.toLocaleString() },
           { label: platformFilter === 'all' ? '활성 매체' : '캠페인 수', value: platformFilter === 'all' ? `${platforms.length - 1}개` : `${filteredStats.length}건` },
         ].map(({ label, value }) => (
-          <div key={label} className="glass-card p-3">
+          <Card key={label} variant="glass" className="p-3">
             <p className="text-[10px] text-slate-400 uppercase tracking-widest mb-1 leading-tight">{label}</p>
-            <p className="text-lg font-bold text-white truncate">{loading ? '-' : value}</p>
-          </div>
+            {loading ? <Skeleton className="h-6 mt-1" /> : <p className="text-lg font-bold text-white truncate">{value}</p>}
+          </Card>
         ))}
       </div>
 
       {/* 매체별 CPL / ROAS 차트 */}
       {(filteredChannel.length > 0 || channelData.length > 0) && (
-        <div className="glass-card p-6 mb-6">
+        <Card variant="glass" className="p-6 mb-6">
           <h2 className="font-semibold text-white mb-5">
             매체별 CPL / ROAS 비교
             {platformFilter !== 'all' && <span className="ml-2 text-sm text-brand-400">— {platformFilter}</span>}
@@ -157,8 +166,8 @@ export default function AdsPage() {
                 <BarChart data={platformFilter === 'all' ? channelData : filteredChannel} barGap={6}>
                   <CartesianGrid strokeDasharray="3 3" stroke="#1e1e3a" />
                   <XAxis dataKey="channel" tick={{ fill: '#64748b', fontSize: 12 }} axisLine={false} tickLine={false} />
-                  <YAxis yAxisId="left" tickFormatter={v => `₩${(v / 1000).toFixed(0)}k`} tick={{ fill: '#64748b', fontSize: 11 }} axisLine={false} tickLine={false} />
-                  <YAxis yAxisId="right" orientation="right" tickFormatter={v => `${(v * 100).toFixed(0)}%`} tick={{ fill: '#64748b', fontSize: 11 }} axisLine={false} tickLine={false} />
+                  <YAxis yAxisId="left" tickFormatter={(v: number) => `₩${(v / 1000).toFixed(0)}k`} tick={{ fill: '#64748b', fontSize: 11 }} axisLine={false} tickLine={false} />
+                  <YAxis yAxisId="right" orientation="right" tickFormatter={(v: number) => `${(v * 100).toFixed(0)}%`} tick={{ fill: '#64748b', fontSize: 11 }} axisLine={false} tickLine={false} />
                   <Tooltip
                     contentStyle={{ background: '#1a1a2e', border: 'none', borderRadius: 8, fontSize: 12 }}
                     formatter={(value: any, name: string) =>
@@ -197,67 +206,60 @@ export default function AdsPage() {
               </div>
             ))}
           </div>
-        </div>
+        </Card>
       )}
 
-      <div className="glass-card p-6">
+      {/* 캠페인별 상세 */}
+      <Card variant="glass" className="p-6">
         <div className="flex items-center justify-between mb-5 gap-4">
           <h2 className="font-semibold text-white shrink-0">
             캠페인별 상세 지출 내역
             {platformFilter !== 'all' && <span className="ml-2 text-sm text-slate-500">({platformFilter})</span>}
           </h2>
           <div className="flex items-center gap-2">
-            <input
+            <Input
               type="text"
               value={searchQuery}
               onChange={e => setSearchQuery(e.target.value)}
               placeholder="캠페인명 검색..."
-              className="bg-white/5 border border-white/10 rounded-lg px-3 py-1.5 text-sm text-white placeholder-slate-600 focus:outline-none focus:border-brand-500 w-48"
+              className="w-48"
             />
             <span className="text-xs text-slate-500 shrink-0">{filteredStats.length}건</span>
           </div>
         </div>
         {loading ? (
           <div className="space-y-3">
-            {Array(5).fill(0).map((_, i) => <div key={i} className="h-12 bg-white/5 rounded-xl animate-pulse" />)}
+            {Array(5).fill(0).map((_, i) => <Skeleton key={i} className="h-12 rounded-xl" />)}
           </div>
         ) : filteredStats.length > 0 ? (
           <div className="overflow-x-auto">
-          <table className="w-full text-sm min-w-[560px]">
-            <thead>
-              <tr className="text-xs text-slate-500 uppercase tracking-wider border-b border-white/5">
-                {['매체', '캠페인명', '날짜', '지출', '클릭', '노출'].map(h => (
-                  <th key={h} className="text-left py-2 px-3 font-medium">{h}</th>
-                ))}
-              </tr>
-            </thead>
-            <tbody>
-              {filteredStats.map((row: any) => {
-                const color = PLATFORM_COLORS[row.platform] || '#6366f1'
-                return (
-                  <tr key={row.id} className="border-b border-white/5 hover:bg-white/[0.03] transition-colors">
-                    <td className="py-3 px-3">
-                      <span
-                        className="px-2 py-0.5 rounded-full text-xs font-semibold"
-                        style={{ background: `${color}22`, color }}
-                      >
-                        {row.platform}
-                      </span>
-                    </td>
-                    <td className="py-3 px-3 text-slate-300 max-w-[200px] truncate">{row.campaign_name || row.campaign_id}</td>
-                    <td className="py-3 px-3 text-slate-400 text-xs">
+            <Table className="min-w-[560px]">
+              <TableHeader>
+                <TableRow className="border-b border-white/5 hover:bg-transparent">
+                  {['매체', '캠페인명', '날짜', '지출', '클릭', '노출'].map(h => (
+                    <TableHead key={h} className="text-xs text-slate-500 uppercase tracking-wider font-medium">{h}</TableHead>
+                  ))}
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {filteredStats.map((row: any) => (
+                  <TableRow key={row.id} className="border-b border-white/5 hover:bg-white/[0.03]">
+                    <TableCell>
+                      <ChannelBadge channel={row.platform} />
+                    </TableCell>
+                    <TableCell className="text-slate-300 max-w-[200px] truncate">{row.campaign_name || row.campaign_id}</TableCell>
+                    <TableCell className="text-slate-400 text-xs">
                       <span className="flex items-center gap-1">
                         <Calendar size={11} />{new Date(row.stat_date).toLocaleDateString('ko')}
                       </span>
-                    </td>
-                    <td className="py-3 px-3 font-semibold text-white">₩{Number(row.spend_amount).toLocaleString()}</td>
-                    <td className="py-3 px-3 text-slate-400">{(row.clicks || 0).toLocaleString()}</td>
-                    <td className="py-3 px-3 text-slate-400">{(row.impressions || 0).toLocaleString()}</td>
-                  </tr>
-                )
-              })}
-            </tbody>
-          </table>
+                    </TableCell>
+                    <TableCell className="font-semibold text-white">₩{Number(row.spend_amount).toLocaleString()}</TableCell>
+                    <TableCell className="text-slate-400">{(row.clicks || 0).toLocaleString()}</TableCell>
+                    <TableCell className="text-slate-400">{(row.impressions || 0).toLocaleString()}</TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
           </div>
         ) : (
           <div className="py-12 text-center text-slate-500">
@@ -265,7 +267,7 @@ export default function AdsPage() {
             <p className="text-xs">'.env.local'에 API 키를 입력 후 '지금 데이터 수집' 버튼을 눌러주세요.</p>
           </div>
         )}
-      </div>
+      </Card>
     </>
   )
 }

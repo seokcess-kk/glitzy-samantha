@@ -88,28 +88,28 @@ function log(level: LogLevel, message: string, context?: LogContext, error?: Err
 /**
  * 디버그 로그 (개발 환경에서만 출력)
  */
-export function logDebug(message: string, context?: LogContext): void {
+function logDebug(message: string, context?: LogContext): void {
   log('debug', message, context)
 }
 
 /**
  * 정보 로그
  */
-export function logInfo(message: string, context?: LogContext): void {
+function logInfo(message: string, context?: LogContext): void {
   log('info', message, context)
 }
 
 /**
  * 경고 로그
  */
-export function logWarn(message: string, context?: LogContext): void {
+function logWarn(message: string, context?: LogContext): void {
   log('warn', message, context)
 }
 
 /**
  * 에러 로그
  */
-export function logError(message: string, error?: Error | unknown, context?: LogContext): void {
+function logError(message: string, error?: Error | unknown, context?: LogContext): void {
   const err = error instanceof Error ? error : error ? new Error(String(error)) : undefined
   log('error', message, context, err)
 }

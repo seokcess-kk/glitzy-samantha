@@ -43,3 +43,9 @@ Thumbs.db
 # IDE 설정 파일
 .vscode/
 .idea/
+
+# 빌드 캐시
+*.tsbuildinfo
+
+# Windows 특수 파일
+nul

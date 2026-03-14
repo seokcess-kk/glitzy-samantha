@@ -2,7 +2,11 @@
 import { useState, useEffect } from 'react'
 import { signIn, useSession } from 'next-auth/react'
 import { useRouter } from 'next/navigation'
-import { Eye, EyeOff, Activity } from 'lucide-react'
+import { Eye, EyeOff, Activity, AlertCircle, Loader2 } from 'lucide-react'
+import { Card } from '@/components/ui/card'
+import { Button } from '@/components/ui/button'
+import { Input } from '@/components/ui/input'
+import { Label } from '@/components/ui/label'
 
 export default function LoginPage() {
   const { data: session } = useSession()
@@ -31,65 +35,97 @@ export default function LoginPage() {
   }
 
   return (
-    <div className="min-h-screen flex items-center justify-center px-4">
-      <div className="w-full max-w-sm">
+    <div className="min-h-screen flex items-center justify-center px-4 relative overflow-hidden">
+      {/* 배경 장식 */}
+      <div className="absolute inset-0 overflow-hidden pointer-events-none">
+        <div className="absolute -top-1/2 -left-1/2 w-full h-full bg-gradient-to-br from-brand-600/20 via-transparent to-transparent rounded-full blur-3xl" />
+        <div className="absolute -bottom-1/2 -right-1/2 w-full h-full bg-gradient-to-tl from-purple-600/10 via-transparent to-transparent rounded-full blur-3xl" />
+      </div>
+
+      <div className="w-full max-w-sm relative z-10">
         {/* 로고 */}
         <div className="flex flex-col items-center mb-8">
-          <div className="w-12 h-12 bg-brand-600 rounded-2xl flex items-center justify-center mb-4">
-            <Activity size={24} className="text-white" />
+          <div className="w-14 h-14 bg-gradient-to-br from-brand-500 to-brand-700 rounded-2xl flex items-center justify-center mb-4 shadow-lg shadow-brand-600/30">
+            <Activity size={28} className="text-white" />
           </div>
           <h1 className="text-2xl font-bold text-white">MMI 대시보드</h1>
           <p className="text-sm text-slate-500 mt-1">Medical Marketing Intelligence</p>
         </div>
 
         {/* 로그인 폼 */}
-        <form onSubmit={handleSubmit} className="glass-card p-6 space-y-4">
-          <div>
-            <label className="text-xs text-slate-400 font-medium mb-1.5 block">아이디</label>
-            <input
-              type="text"
-              value={username}
-              onChange={e => setUsername(e.target.value)}
-              placeholder="admin"
-              required
-              className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-sm text-white placeholder-slate-600 focus:outline-none focus:border-brand-500 transition-colors"
-            />
+        <Card variant="glass" className="p-6">
+          <div className="mb-6">
+            <h2 className="text-xl font-semibold text-white">로그인</h2>
+            <p className="text-sm text-slate-500 mt-1">계정 정보를 입력하여 로그인하세요</p>
           </div>
-          <div>
-            <label className="text-xs text-slate-400 font-medium mb-1.5 block">비밀번호</label>
-            <div className="relative">
-              <input
-                type={showPw ? 'text' : 'password'}
-                value={password}
-                onChange={e => setPassword(e.target.value)}
-                placeholder="••••••••"
+
+          <form onSubmit={handleSubmit} className="space-y-4">
+            <div className="space-y-2">
+              <Label htmlFor="username" className="text-xs text-slate-400 font-medium">아이디</Label>
+              <Input
+                id="username"
+                type="text"
+                value={username}
+                onChange={e => setUsername(e.target.value)}
+                placeholder="admin"
                 required
-                className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-sm text-white placeholder-slate-600 focus:outline-none focus:border-brand-500 transition-colors pr-10"
+                autoComplete="username"
               />
-              <button
-                type="button"
-                onClick={() => setShowPw(v => !v)}
-                className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-500 hover:text-slate-300"
-              >
-                {showPw ? <EyeOff size={16} /> : <Eye size={16} />}
-              </button>
             </div>
-          </div>
 
-          {error && (
-            <p className="text-sm text-red-400 bg-red-500/10 border border-red-500/20 rounded-lg px-3 py-2">
-              {error}
-            </p>
-          )}
+            <div className="space-y-2">
+              <Label htmlFor="password" className="text-xs text-slate-400 font-medium">비밀번호</Label>
+              <div className="relative">
+                <Input
+                  id="password"
+                  type={showPw ? 'text' : 'password'}
+                  value={password}
+                  onChange={e => setPassword(e.target.value)}
+                  placeholder="••••••••"
+                  required
+                  autoComplete="current-password"
+                  className="pr-10"
+                />
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="icon"
+                  onClick={() => setShowPw(v => !v)}
+                  className="absolute right-1 top-1/2 -translate-y-1/2 h-7 w-7 text-slate-500 hover:text-white hover:bg-white/10"
+                >
+                  {showPw ? <EyeOff size={15} /> : <Eye size={15} />}
+                </Button>
+              </div>
+            </div>
 
-          <button
-            type="submit"
-            disabled={loading}
-            className="w-full bg-brand-600 hover:bg-brand-700 disabled:opacity-50 text-white font-semibold py-3 rounded-xl transition-all text-sm"
-          >
-            {loading ? '로그인 중...' : '로그인'}
-          </button>
-        </form>
+            {error && (
+              <div className="flex items-center gap-2 text-sm text-red-400 bg-red-500/10 border border-red-500/20 rounded-lg px-3 py-2">
+                <AlertCircle size={14} className="shrink-0" />
+                {error}
+              </div>
+            )}
+
+            <Button
+              type="submit"
+              disabled={loading}
+              className="w-full bg-brand-600 hover:bg-brand-700"
+            >
+              {loading ? (
+                <>
+                  <Loader2 size={16} className="animate-spin mr-2" />
+                  로그인 중...
+                </>
+              ) : (
+                '로그인'
+              )}
+            </Button>
+          </form>
+        </Card>
+
+        {/* 푸터 */}
+        <p className="text-center text-xs text-slate-600 mt-6">
+          &copy; 2024 Glitzy. All rights reserved.
+        </p>
       </div>
     </div>
   )

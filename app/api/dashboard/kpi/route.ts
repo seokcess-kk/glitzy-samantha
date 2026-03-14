@@ -8,7 +8,6 @@ export const GET = withClinicFilter(async (req: Request, { clinicId }: ClinicCon
   const start = url.searchParams.get('startDate') || new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString()
   const end = url.searchParams.get('endDate') || new Date().toISOString()
 
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const applyFilter = <T>(q: T): T => clinicId ? (q as any).eq('clinic_id', clinicId) : q
 
   const [adStatsRes, leadsRes, paymentsRes, consultRes, contentBudgetRes] = await Promise.all([

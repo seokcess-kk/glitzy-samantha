@@ -3,8 +3,24 @@ import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import { signOut } from 'next-auth/react'
 import { useSession } from 'next-auth/react'
-import { LayoutDashboard, Users, MessageCircle, BarChart2, LogOut, Activity, Calendar, Shield, ChevronDown, Film, Link2, Scan, Newspaper } from 'lucide-react'
+import { LayoutDashboard, Users, MessageCircle, BarChart2, LogOut, Activity, Calendar, Shield, Film, Link2, Scan, Newspaper, Settings, ChevronUp, User } from 'lucide-react'
 import { useClinic } from './ClinicContext'
+import { Button } from '@/components/ui/button'
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select'
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu'
 
 const navItems = [
   { href: '/',        label: '대시보드',          icon: LayoutDashboard },
@@ -43,19 +59,20 @@ export default function Sidebar({ onClose }: { onClose?: () => void }) {
       {isSuperAdmin && (
         <div className="px-3 py-3 border-b border-white/5">
           <p className="text-[10px] text-slate-600 uppercase tracking-widest mb-2 px-1">병원 선택</p>
-          <div className="relative">
-            <select
-              value={selectedClinicId ?? ''}
-              onChange={e => setSelectedClinicId(e.target.value ? Number(e.target.value) : null)}
-              className="w-full appearance-none bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-brand-500 pr-8"
-            >
-              <option value="" className="bg-slate-900">전체 병원</option>
+          <Select
+            value={selectedClinicId?.toString() ?? ''}
+            onValueChange={v => setSelectedClinicId(v ? Number(v) : null)}
+          >
+            <SelectTrigger className="w-full bg-white/5 border-white/10 text-white text-sm">
+              <SelectValue placeholder="전체 병원" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="">전체 병원</SelectItem>
               {clinics.map(c => (
-                <option key={c.id} value={c.id} className="bg-slate-900">{c.name}</option>
+                <SelectItem key={c.id} value={String(c.id)}>{c.name}</SelectItem>
               ))}
-            </select>
-            <ChevronDown size={12} className="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" />
-          </div>
+            </SelectContent>
+          </Select>
           {selectedClinic && (
             <p className="text-[10px] text-brand-400 mt-1.5 px-1">{selectedClinic.name} 데이터 조회 중</p>
           )}
@@ -125,19 +142,40 @@ export default function Sidebar({ onClose }: { onClose?: () => void }) {
         )}
       </nav>
 
-      {/* 사용자 정보 + 로그아웃 */}
+      {/* 사용자 메뉴 */}
       <div className="px-3 pb-4 border-t border-white/5 pt-3">
-        <div className="px-3 mb-2">
-          <p className="text-xs text-white font-medium">{user?.name || user?.username}</p>
-          <p className="text-[10px] text-slate-500">{isSuperAdmin ? '슈퍼어드민' : '병원 어드민'}</p>
-        </div>
-        <button
-          onClick={() => signOut({ callbackUrl: '/login' })}
-          className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium text-slate-500 hover:text-white hover:bg-white/[0.05] transition-all"
-        >
-          <LogOut size={17} />
-          로그아웃
-        </button>
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <button className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl hover:bg-white/[0.05] transition-colors text-left" aria-label="사용자 메뉴">
+              <div className="w-8 h-8 rounded-full bg-brand-600/20 flex items-center justify-center text-brand-400 font-semibold text-sm shrink-0">
+                {(user?.name || user?.username)?.[0]?.toUpperCase() || <User size={14} />}
+              </div>
+              <div className="flex-1 min-w-0">
+                <p className="text-sm text-white font-medium truncate">{user?.name || user?.username}</p>
+                <p className="text-[10px] text-slate-500">{isSuperAdmin ? '슈퍼어드민' : '병원 어드민'}</p>
+              </div>
+              <ChevronUp size={14} className="text-slate-500 shrink-0" />
+            </button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent side="top" align="start" className="w-52">
+            <DropdownMenuLabel>
+              {user?.name || user?.username}
+            </DropdownMenuLabel>
+            <DropdownMenuSeparator />
+            <DropdownMenuItem disabled className="opacity-50">
+              <Settings size={14} />
+              설정 (준비 중)
+            </DropdownMenuItem>
+            <DropdownMenuSeparator />
+            <DropdownMenuItem
+              onClick={() => signOut({ callbackUrl: '/login' })}
+              className="text-red-400 hover:text-red-300 focus:text-red-300"
+            >
+              <LogOut size={14} />
+              로그아웃
+            </DropdownMenuItem>
+          </DropdownMenuContent>
+        </DropdownMenu>
       </div>
     </aside>
   )

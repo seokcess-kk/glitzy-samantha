@@ -1,30 +1,54 @@
 'use client'
 import { useState, useEffect } from 'react'
-import { Plus, Building2, Users, ToggleLeft, ToggleRight, Check, AlertCircle } from 'lucide-react'
+import { Plus, Building2, Users, ToggleLeft, ToggleRight } from 'lucide-react'
 import { useSession } from 'next-auth/react'
 import { useRouter } from 'next/navigation'
-
-function Toast({ message, type, onClose }: { message: string; type: string; onClose: () => void }) {
-  useEffect(() => {
-    const t = setTimeout(onClose, 3000)
-    return () => clearTimeout(t)
-  }, [onClose])
-  return (
-    <div className={`fixed bottom-6 right-6 flex items-center gap-2 px-4 py-3 rounded-xl shadow-xl text-sm font-medium z-50 ${type === 'success' ? 'bg-emerald-500/90 text-white' : 'bg-red-500/90 text-white'}`}>
-      {type === 'success' ? <Check size={15} /> : <AlertCircle size={15} />} {message}
-    </div>
-  )
-}
+import { toast } from 'sonner'
+import { Card } from '@/components/ui/card'
+import { Button } from '@/components/ui/button'
+import { Badge } from '@/components/ui/badge'
+import { Input } from '@/components/ui/input'
+import { Label } from '@/components/ui/label'
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select'
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from '@/components/ui/table'
+import {
+  Tabs,
+  TabsContent,
+  TabsList,
+  TabsTrigger,
+} from '@/components/ui/tabs'
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogFooter,
+} from '@/components/ui/dialog'
 
 export default function AdminPage() {
   const { data: session } = useSession()
   const router = useRouter()
   const user = session?.user as any
 
-  const [tab, setTab] = useState<'clinics' | 'users'>('clinics')
   const [clinics, setClinics] = useState<any[]>([])
   const [users, setUsers] = useState<any[]>([])
-  const [toast, setToast] = useState<{ msg: string; type: string } | null>(null)
+
+  // Dialog 상태
+  const [clinicDialogOpen, setClinicDialogOpen] = useState(false)
+  const [userDialogOpen, setUserDialogOpen] = useState(false)
 
   // 병원 폼
   const [clinicForm, setClinicForm] = useState({ name: '', slug: '' })
@@ -36,7 +60,7 @@ export default function AdminPage() {
 
   useEffect(() => {
     if (user && user.role !== 'superadmin') router.replace('/')
-  }, [user])
+  }, [user, router])
 
   const fetchAll = async () => {
     const [cRes, uRes] = await Promise.all([
@@ -50,7 +74,10 @@ export default function AdminPage() {
   useEffect(() => { fetchAll() }, [])
 
   const handleClinicSave = async () => {
-    if (!clinicForm.name || !clinicForm.slug) return setToast({ msg: '병원명과 슬러그를 입력해주세요.', type: 'error' })
+    if (!clinicForm.name || !clinicForm.slug) {
+      toast.error('병원명과 슬러그를 입력해주세요.')
+      return
+    }
     setSavingClinic(true)
     try {
       const res = await fetch('/api/admin/clinics', {
@@ -63,17 +90,21 @@ export default function AdminPage() {
         throw new Error(err.error)
       }
       setClinicForm({ name: '', slug: '' })
-      setToast({ msg: '병원이 등록되었습니다.', type: 'success' })
+      setClinicDialogOpen(false)
+      toast.success('병원이 등록되었습니다.')
       fetchAll()
     } catch (e: any) {
-      setToast({ msg: e.message || '등록 실패', type: 'error' })
+      toast.error(e.message || '등록 실패')
     } finally {
       setSavingClinic(false)
     }
   }
 
   const handleUserSave = async () => {
-    if (!userForm.username || !userForm.password) return setToast({ msg: '아이디와 비밀번호를 입력해주세요.', type: 'error' })
+    if (!userForm.username || !userForm.password) {
+      toast.error('아이디와 비밀번호를 입력해주세요.')
+      return
+    }
     setSavingUser(true)
     try {
       const res = await fetch('/api/admin/users', {
@@ -86,10 +117,11 @@ export default function AdminPage() {
         throw new Error(err.error)
       }
       setUserForm({ username: '', password: '', role: 'clinic_admin', clinic_id: '' })
-      setToast({ msg: '계정이 생성되었습니다.', type: 'success' })
+      setUserDialogOpen(false)
+      toast.success('계정이 생성되었습니다.')
       fetchAll()
     } catch (e: any) {
-      setToast({ msg: e.message || '생성 실패', type: 'error' })
+      toast.error(e.message || '생성 실패')
     } finally {
       setSavingUser(false)
     }
@@ -108,207 +140,212 @@ export default function AdminPage() {
 
   return (
     <>
-      {toast && <Toast message={toast.msg} type={toast.type} onClose={() => setToast(null)} />}
-
       <div className="mb-8">
         <h1 className="text-2xl font-bold text-white">어드민 관리</h1>
         <p className="text-sm text-slate-400 mt-1">병원 고객사 등록 및 계정 관리 (슈퍼어드민 전용)</p>
       </div>
 
-      {/* 탭 */}
-      <div className="flex gap-2 mb-6">
-        <button
-          onClick={() => setTab('clinics')}
-          className={`flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-medium transition-all ${tab === 'clinics' ? 'bg-brand-600 text-white' : 'glass-card text-slate-400 hover:text-white'}`}
-        >
-          <Building2 size={14} /> 병원 관리 ({clinics.length})
-        </button>
-        <button
-          onClick={() => setTab('users')}
-          className={`flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-medium transition-all ${tab === 'users' ? 'bg-brand-600 text-white' : 'glass-card text-slate-400 hover:text-white'}`}
-        >
-          <Users size={14} /> 계정 관리 ({users.length})
-        </button>
-      </div>
+      <Tabs defaultValue="clinics" className="space-y-6">
+        <TabsList className="glass-card p-1">
+          <TabsTrigger value="clinics" className="data-[state=active]:bg-brand-600 data-[state=active]:text-white">
+            <Building2 size={14} className="mr-2" /> 병원 관리 ({clinics.length})
+          </TabsTrigger>
+          <TabsTrigger value="users" className="data-[state=active]:bg-brand-600 data-[state=active]:text-white">
+            <Users size={14} className="mr-2" /> 계정 관리 ({users.length})
+          </TabsTrigger>
+        </TabsList>
 
-      {tab === 'clinics' && (
-        <div className="space-y-6">
-          {/* 병원 등록 폼 */}
-          <div className="glass-card p-6">
-            <h2 className="font-semibold text-white mb-4 flex items-center gap-2"><Plus size={16} /> 신규 병원 등록</h2>
-            <div className="grid grid-cols-3 gap-4">
-              <div>
-                <label className="text-xs text-slate-500 mb-1 block">병원명 *</label>
-                <input
-                  type="text"
-                  value={clinicForm.name}
-                  onChange={e => setClinicForm(f => ({ ...f, name: e.target.value }))}
-                  placeholder="예: 미래성형외과"
-                  className="w-full bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-sm text-white placeholder-slate-600 focus:outline-none focus:border-brand-500"
-                />
+        <TabsContent value="clinics" className="space-y-6">
+          {/* 병원 등록 Dialog */}
+          <Dialog open={clinicDialogOpen} onOpenChange={setClinicDialogOpen}>
+            <DialogContent>
+              <DialogHeader>
+                <DialogTitle>신규 병원 등록</DialogTitle>
+              </DialogHeader>
+              <div className="space-y-4 py-4">
+                <div className="space-y-2">
+                  <Label className="text-xs text-slate-400">병원명 *</Label>
+                  <Input
+                    type="text"
+                    value={clinicForm.name}
+                    onChange={e => setClinicForm(f => ({ ...f, name: e.target.value }))}
+                    placeholder="예: 미래성형외과"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label className="text-xs text-slate-400">슬러그 (영문소문자) *</Label>
+                  <Input
+                    type="text"
+                    value={clinicForm.slug}
+                    onChange={e => setClinicForm(f => ({ ...f, slug: e.target.value.toLowerCase().replace(/[^a-z0-9-]/g, '') }))}
+                    placeholder="예: mirae"
+                  />
+                  <p className="text-xs text-slate-500">URL에 사용됩니다. 영문 소문자, 숫자, 하이픈만 허용</p>
+                </div>
               </div>
-              <div>
-                <label className="text-xs text-slate-500 mb-1 block">슬러그 (영문소문자) *</label>
-                <input
-                  type="text"
-                  value={clinicForm.slug}
-                  onChange={e => setClinicForm(f => ({ ...f, slug: e.target.value.toLowerCase().replace(/[^a-z0-9-]/g, '') }))}
-                  placeholder="예: mirae"
-                  className="w-full bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-sm text-white placeholder-slate-600 focus:outline-none focus:border-brand-500"
-                />
-              </div>
-              <div className="flex items-end">
-                <button
-                  onClick={handleClinicSave}
-                  disabled={savingClinic}
-                  className="w-full bg-brand-600 hover:bg-brand-700 disabled:opacity-50 text-white text-sm font-medium px-4 py-2 rounded-lg transition-all"
-                >
+              <DialogFooter>
+                <Button variant="ghost" onClick={() => setClinicDialogOpen(false)}>취소</Button>
+                <Button onClick={handleClinicSave} disabled={savingClinic} className="bg-brand-600 hover:bg-brand-700">
                   {savingClinic ? '등록 중...' : '병원 등록'}
-                </button>
-              </div>
-            </div>
-          </div>
+                </Button>
+              </DialogFooter>
+            </DialogContent>
+          </Dialog>
 
           {/* 병원 목록 */}
-          <div className="glass-card p-6">
-            <h2 className="font-semibold text-white mb-4">병원 목록</h2>
+          <Card variant="glass" className="p-6">
+            <div className="flex items-center justify-between mb-4">
+              <h2 className="font-semibold text-white">병원 목록</h2>
+              <Button onClick={() => setClinicDialogOpen(true)} size="sm" className="bg-brand-600 hover:bg-brand-700">
+                <Plus size={14} /> 병원 등록
+              </Button>
+            </div>
             {clinics.length === 0 ? (
               <p className="text-slate-500 text-sm py-4 text-center">등록된 병원이 없습니다.</p>
             ) : (
-              <table className="w-full text-sm">
-                <thead>
-                  <tr className="text-xs text-slate-500 border-b border-white/5">
-                    <th className="text-left py-2 font-medium">ID</th>
-                    <th className="text-left py-2 font-medium">병원명</th>
-                    <th className="text-left py-2 font-medium">슬러그</th>
-                    <th className="text-left py-2 font-medium">등록일</th>
-                    <th className="text-left py-2 font-medium">상태</th>
-                  </tr>
-                </thead>
-                <tbody>
+              <Table>
+                <TableHeader>
+                  <TableRow className="border-b border-white/5 hover:bg-transparent">
+                    <TableHead className="text-xs text-slate-500 font-medium">ID</TableHead>
+                    <TableHead className="text-xs text-slate-500 font-medium">병원명</TableHead>
+                    <TableHead className="text-xs text-slate-500 font-medium">슬러그</TableHead>
+                    <TableHead className="text-xs text-slate-500 font-medium">등록일</TableHead>
+                    <TableHead className="text-xs text-slate-500 font-medium">상태</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
                   {clinics.map((c: any) => (
-                    <tr key={c.id} className="border-b border-white/5">
-                      <td className="py-3 text-slate-500 text-xs">#{c.id}</td>
-                      <td className="py-3 text-white font-medium">{c.name}</td>
-                      <td className="py-3 text-slate-400 font-mono text-xs">{c.slug}</td>
-                      <td className="py-3 text-slate-400 text-xs">{new Date(c.created_at).toLocaleDateString('ko')}</td>
-                      <td className="py-3">
-                        <span className={`px-2 py-0.5 rounded-full text-xs font-semibold ${c.is_active ? 'bg-emerald-500/15 text-emerald-400' : 'bg-slate-500/15 text-slate-400'}`}>
+                    <TableRow key={c.id} className="border-b border-white/5">
+                      <TableCell className="text-slate-500 text-xs">#{c.id}</TableCell>
+                      <TableCell className="text-white font-medium">{c.name}</TableCell>
+                      <TableCell className="text-slate-400 font-mono text-xs">{c.slug}</TableCell>
+                      <TableCell className="text-slate-400 text-xs">{new Date(c.created_at).toLocaleDateString('ko')}</TableCell>
+                      <TableCell>
+                        <Badge variant={c.is_active ? 'success' : 'secondary'}>
                           {c.is_active ? '활성' : '비활성'}
-                        </span>
-                      </td>
-                    </tr>
+                        </Badge>
+                      </TableCell>
+                    </TableRow>
                   ))}
-                </tbody>
-              </table>
+                </TableBody>
+              </Table>
             )}
-          </div>
-        </div>
-      )}
+          </Card>
+        </TabsContent>
 
-      {tab === 'users' && (
-        <div className="space-y-6">
-          {/* 계정 생성 폼 */}
-          <div className="glass-card p-6">
-            <h2 className="font-semibold text-white mb-4 flex items-center gap-2"><Plus size={16} /> 신규 계정 생성</h2>
-            <div className="grid grid-cols-2 gap-4 mb-4">
-              <div>
-                <label className="text-xs text-slate-500 mb-1 block">아이디 *</label>
-                <input
-                  type="text"
-                  value={userForm.username}
-                  onChange={e => setUserForm(f => ({ ...f, username: e.target.value }))}
-                  placeholder="로그인 아이디"
-                  className="w-full bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-sm text-white placeholder-slate-600 focus:outline-none focus:border-brand-500"
-                />
-              </div>
-              <div>
-                <label className="text-xs text-slate-500 mb-1 block">비밀번호 *</label>
-                <input
-                  type="password"
-                  value={userForm.password}
-                  onChange={e => setUserForm(f => ({ ...f, password: e.target.value }))}
-                  placeholder="초기 비밀번호"
-                  className="w-full bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-sm text-white placeholder-slate-600 focus:outline-none focus:border-brand-500"
-                />
-              </div>
-              <div>
-                <label className="text-xs text-slate-500 mb-1 block">역할 *</label>
-                <select
-                  value={userForm.role}
-                  onChange={e => setUserForm(f => ({ ...f, role: e.target.value }))}
-                  className="w-full bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-brand-500"
-                >
-                  <option value="clinic_admin" className="bg-slate-900">병원 어드민</option>
-                  <option value="superadmin" className="bg-slate-900">슈퍼어드민</option>
-                </select>
-              </div>
-              {userForm.role === 'clinic_admin' && (
-                <div>
-                  <label className="text-xs text-slate-500 mb-1 block">담당 병원 *</label>
-                  <select
-                    value={userForm.clinic_id}
-                    onChange={e => setUserForm(f => ({ ...f, clinic_id: e.target.value }))}
-                    className="w-full bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-brand-500"
-                  >
-                    <option value="" className="bg-slate-900">선택</option>
-                    {clinics.map((c: any) => (
-                      <option key={c.id} value={c.id} className="bg-slate-900">{c.name}</option>
-                    ))}
-                  </select>
+        <TabsContent value="users" className="space-y-6">
+          {/* 계정 생성 Dialog */}
+          <Dialog open={userDialogOpen} onOpenChange={setUserDialogOpen}>
+            <DialogContent>
+              <DialogHeader>
+                <DialogTitle>신규 계정 생성</DialogTitle>
+              </DialogHeader>
+              <div className="space-y-4 py-4">
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <Label className="text-xs text-slate-400">아이디 *</Label>
+                    <Input
+                      type="text"
+                      value={userForm.username}
+                      onChange={e => setUserForm(f => ({ ...f, username: e.target.value }))}
+                      placeholder="로그인 아이디"
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label className="text-xs text-slate-400">비밀번호 *</Label>
+                    <Input
+                      type="password"
+                      value={userForm.password}
+                      onChange={e => setUserForm(f => ({ ...f, password: e.target.value }))}
+                      placeholder="초기 비밀번호"
+                    />
+                  </div>
                 </div>
-              )}
-            </div>
-            <div className="flex justify-end">
-              <button
-                onClick={handleUserSave}
-                disabled={savingUser}
-                className="bg-brand-600 hover:bg-brand-700 disabled:opacity-50 text-white text-sm font-medium px-6 py-2 rounded-lg transition-all"
-              >
-                {savingUser ? '생성 중...' : '계정 생성'}
-              </button>
-            </div>
-          </div>
+                <div className="space-y-2">
+                  <Label className="text-xs text-slate-400">역할 *</Label>
+                  <Select value={userForm.role} onValueChange={v => setUserForm(f => ({ ...f, role: v }))}>
+                    <SelectTrigger>
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="clinic_admin">병원 어드민</SelectItem>
+                      <SelectItem value="superadmin">슈퍼어드민</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                {userForm.role === 'clinic_admin' && (
+                  <div className="space-y-2">
+                    <Label className="text-xs text-slate-400">담당 병원 *</Label>
+                    <Select value={userForm.clinic_id} onValueChange={v => setUserForm(f => ({ ...f, clinic_id: v }))}>
+                      <SelectTrigger>
+                        <SelectValue placeholder="선택" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {clinics.map((c: any) => (
+                          <SelectItem key={c.id} value={String(c.id)}>{c.name}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                )}
+              </div>
+              <DialogFooter>
+                <Button variant="ghost" onClick={() => setUserDialogOpen(false)}>취소</Button>
+                <Button onClick={handleUserSave} disabled={savingUser} className="bg-brand-600 hover:bg-brand-700">
+                  {savingUser ? '생성 중...' : '계정 생성'}
+                </Button>
+              </DialogFooter>
+            </DialogContent>
+          </Dialog>
 
           {/* 계정 목록 */}
-          <div className="glass-card p-6">
-            <h2 className="font-semibold text-white mb-4">계정 목록</h2>
-            <table className="w-full text-sm">
-              <thead>
-                <tr className="text-xs text-slate-500 border-b border-white/5">
+          <Card variant="glass" className="p-6">
+            <div className="flex items-center justify-between mb-4">
+              <h2 className="font-semibold text-white">계정 목록</h2>
+              <Button onClick={() => setUserDialogOpen(true)} size="sm" className="bg-brand-600 hover:bg-brand-700">
+                <Plus size={14} /> 계정 생성
+              </Button>
+            </div>
+            <Table>
+              <TableHeader>
+                <TableRow className="border-b border-white/5 hover:bg-transparent">
                   {['아이디', '역할', '담당 병원', '생성일', '상태', '활성화'].map(h => (
-                    <th key={h} className="text-left py-2 font-medium">{h}</th>
+                    <TableHead key={h} className="text-xs text-slate-500 font-medium">{h}</TableHead>
                   ))}
-                </tr>
-              </thead>
-              <tbody>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
                 {users.map((u: any) => (
-                  <tr key={u.id} className="border-b border-white/5">
-                    <td className="py-3 text-white font-medium">{u.username}</td>
-                    <td className="py-3">
-                      <span className={`px-2 py-0.5 rounded-full text-xs font-semibold ${u.role === 'superadmin' ? 'bg-purple-500/20 text-purple-400' : 'bg-brand-600/20 text-brand-400'}`}>
+                  <TableRow key={u.id} className="border-b border-white/5">
+                    <TableCell className="text-white font-medium">{u.username}</TableCell>
+                    <TableCell>
+                      <Badge variant={u.role === 'superadmin' ? 'default' : 'info'} className={u.role === 'superadmin' ? 'bg-purple-500/20 text-purple-400 border-0' : ''}>
                         {u.role === 'superadmin' ? '슈퍼어드민' : '병원어드민'}
-                      </span>
-                    </td>
-                    <td className="py-3 text-slate-400 text-xs">{u.clinic?.name || '-'}</td>
-                    <td className="py-3 text-slate-400 text-xs">{new Date(u.created_at).toLocaleDateString('ko')}</td>
-                    <td className="py-3">
-                      <span className={`px-2 py-0.5 rounded-full text-xs ${u.is_active ? 'bg-emerald-500/15 text-emerald-400' : 'bg-slate-500/15 text-slate-400'}`}>
+                      </Badge>
+                    </TableCell>
+                    <TableCell className="text-slate-400 text-xs">{u.clinic?.name || '-'}</TableCell>
+                    <TableCell className="text-slate-400 text-xs">{new Date(u.created_at).toLocaleDateString('ko')}</TableCell>
+                    <TableCell>
+                      <Badge variant={u.is_active ? 'success' : 'secondary'}>
                         {u.is_active ? '활성' : '비활성'}
-                      </span>
-                    </td>
-                    <td className="py-3">
-                      <button onClick={() => toggleUser(u.id, u.is_active)} className="text-slate-400 hover:text-white transition-colors">
+                      </Badge>
+                    </TableCell>
+                    <TableCell>
+                      <button
+                        onClick={() => toggleUser(u.id, u.is_active)}
+                        className="text-slate-400 hover:text-white transition-colors"
+                        aria-label={u.is_active ? '계정 비활성화' : '계정 활성화'}
+                      >
                         {u.is_active ? <ToggleRight size={20} className="text-emerald-400" /> : <ToggleLeft size={20} />}
                       </button>
-                    </td>
-                  </tr>
+                    </TableCell>
+                  </TableRow>
                 ))}
-              </tbody>
-            </table>
-          </div>
-        </div>
-      )}
+              </TableBody>
+            </Table>
+          </Card>
+        </TabsContent>
+      </Tabs>
     </>
   )
 }
