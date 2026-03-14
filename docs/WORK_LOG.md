@@ -465,6 +465,173 @@ npm install qrcode.react
 
 ---
 
+## P5: 메뉴 구조 개선 (2026-03-14)
+
+### 목표
+사용자 플로우와 권한 기반으로 메뉴 구조 재설계
+
+### 변경 파일
+
+| 파일 | 변경 내용 |
+|------|----------|
+| `components/Sidebar.tsx` | 그룹 기반 메뉴 구조, 리드 등록 메뉴 추가, 타입 정의 추가 |
+
+### 구현 내용
+
+#### 1. 메뉴 그룹화
+```
+📊 대시보드
+
+────────── 고객 관리 ──────────
+👥 고객(CDP)
+📅 예약/결제
+💬 챗봇 현황
+📝 리드 등록 ← 신규 추가
+
+────────── 마케팅 분석 ──────────
+📈 광고 성과
+🎬 콘텐츠 분석
+🔍 콘텐츠 모니터링
+📰 언론보도
+
+────────── 슈퍼어드민 ──────────
+🔗 UTM 생성기
+⚙️ 어드민 관리
+```
+
+#### 2. 타입 정의 추가
+```typescript
+interface MenuItem {
+  href: string
+  label: string
+  icon: LucideIcon
+}
+
+interface MenuGroup {
+  label?: string
+  items: MenuItem[]
+}
+
+const menuGroups: MenuGroup[] = [...]
+```
+
+#### 3. 버그 수정
+- `SelectItem value=""` → `value="all"` 변경 (radix-ui 빈 문자열 value 오류 해결)
+
+### 빌드 결과
+```
+✓ TypeScript 타입 검사 통과
+✓ ESLint 통과
+```
+
+---
+
+## P6-B: 고객 여정 타임라인 개선 (2026-03-15)
+
+### 목표
+고객 상세 패널의 여정 타임라인을 개선하여 유입→예약→상담→결제까지의 전체 여정을 직관적으로 시각화
+
+### 변경 파일
+
+| 파일 | 변경 내용 |
+|------|----------|
+| `components/common/customer-journey.tsx` | 신규 - 여정 타임라인 재사용 컴포넌트 |
+| `components/common/index.ts` | CustomerJourney export 추가 |
+| `app/(dashboard)/leads/page.tsx` | 기존 타임라인 → CustomerJourney 컴포넌트로 교체 |
+
+### 신규 컴포넌트: CustomerJourney
+
+#### 이벤트 유형별 설정
+
+| 유형 | 아이콘 | 색상 | 상태별 변형 |
+|------|--------|------|------------|
+| 유입 (inflow) | MousePointerClick | brand-500 | - |
+| 챗봇 (chatbot) | MessageSquare | emerald-500 (발송), slate-600 (대기) | 발송/대기 |
+| 예약 (booking) | CalendarCheck | blue-500 (확정), amber-500 (대기), purple-500 (방문), red-500 (노쇼), slate-600 (취소) | 상태별 |
+| 상담 (consultation) | Users | purple-500 | - |
+| 결제 (payment) | CreditCard | emerald-400 | - |
+
+#### Props 인터페이스
+```typescript
+interface CustomerJourneyProps {
+  leads: any[]
+  bookings: any[]
+  consultations: any[]
+  payments: any[]
+  className?: string
+}
+```
+
+#### 사용 예시
+```tsx
+<CustomerJourney
+  leads={allLeads}
+  bookings={bookings}
+  consultations={consultations}
+  payments={payments}
+/>
+```
+
+### 코드 품질 개선 (리뷰 반영)
+
+| 우선순위 | 문제 | 수정 내용 |
+|---------|------|----------|
+| 높음 | 날짜 null/invalid 시 에러 | `formatDate()` 등에 null 체크 및 `isNaN` 검증 추가 |
+| 높음 | 챗봇 이벤트 정렬 불안정 | 동일 시간 시 `typeOrder` 기반 안정 정렬 |
+| 중간 | leads 빈 배열 처리 | `lead.leads?.length ? lead.leads : [lead]` |
+| 중간 | 접근성 속성 누락 | `role="list"`, `role="listitem"`, `aria-label` 추가 |
+| 낮음 | 미사용 import | `getUtmSourceLabel` 제거 |
+| 낮음 | 중복 UI 섹션 | "유입 이력" 박스 제거 (타임라인에서 이미 표시) |
+
+### 구현 상세
+
+#### 1. 시간순 정렬 안정화
+```typescript
+const typeOrder: Record<JourneyEventType, number> = {
+  inflow: 0, chatbot: 1, booking: 2, consultation: 3, payment: 4,
+}
+return events.sort((a, b) => {
+  const timeDiff = new Date(a.date).getTime() - new Date(b.date).getTime()
+  if (timeDiff !== 0) return timeDiff
+  return typeOrder[a.type] - typeOrder[b.type]  // 동일 시간: 타입 순서 보장
+})
+```
+
+#### 2. 날짜 포맷 안전 처리
+```typescript
+function formatDate(dateStr: string | undefined | null): string {
+  if (!dateStr) return '-'
+  const date = new Date(dateStr)
+  if (isNaN(date.getTime())) return '-'
+  return date.toLocaleDateString('ko', { month: 'short', day: 'numeric' })
+}
+```
+
+#### 3. 접근성 개선
+```tsx
+<div role="list" aria-label="고객 여정 타임라인">
+  <div role="listitem" aria-label={`${label} - ${formatDate(event.date)}`}>
+    <div aria-hidden="true">...</div>  // 장식 요소
+  </div>
+</div>
+```
+
+### 빌드 결과
+```
+/leads    7.18 kB (총 150 kB)  ← 이전 7.29 kB에서 -0.11 kB
+
+✓ Build 성공
+✓ TypeScript 타입 검사 통과
+✓ ESLint 통과
+```
+
+### 커밋
+```
+84f68d3 feat: P6-B 고객 여정 타임라인 컴포넌트 개선
+```
+
+---
+
 ## 향후 작업 가능 항목
 
 1. **추가 컴포넌트**: Popover, Tooltip, Progress, Slider
