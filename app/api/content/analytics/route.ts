@@ -2,21 +2,27 @@ import { NextResponse } from 'next/server'
 import { serverSupabase } from '@/lib/supabase'
 import { withClinicFilter, ClinicContext } from '@/lib/api-middleware'
 
-// GET /api/content/analytics?groupBy=campaign|month|post&clinic_id=X
+// GET /api/content/analytics?groupBy=campaign|month|post&startDate=...&endDate=...
 export const GET = withClinicFilter(async (req: Request, { clinicId }: ClinicContext) => {
   const supabase = serverSupabase()
   const url = new URL(req.url)
   const groupBy = url.searchParams.get('groupBy') || 'campaign'
+  const startDate = url.searchParams.get('startDate')
+  const endDate = url.searchParams.get('endDate')
 
   // 콘텐츠 포스트
   let postsQuery = supabase.from('content_posts').select('id, title, platform, utm_campaign, budget, published_at')
   if (clinicId) postsQuery = postsQuery.eq('clinic_id', clinicId)
+  if (startDate) postsQuery = postsQuery.gte('published_at', startDate)
+  if (endDate) postsQuery = postsQuery.lte('published_at', endDate)
   const { data: posts } = await postsQuery
   if (!posts?.length) return NextResponse.json([])
 
-  // 리드 전체 조회
+  // 리드 조회 (기간 필터 적용)
   let leadsQuery = supabase.from('leads').select('id, customer_id, campaign_id, created_at')
   if (clinicId) leadsQuery = leadsQuery.eq('clinic_id', clinicId)
+  if (startDate) leadsQuery = leadsQuery.gte('created_at', startDate)
+  if (endDate) leadsQuery = leadsQuery.lte('created_at', endDate)
   const { data: leads } = await leadsQuery
 
   // 결제 조회 (리드 고객 기준)

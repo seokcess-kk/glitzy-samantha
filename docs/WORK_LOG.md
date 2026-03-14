@@ -432,6 +432,39 @@ npm install qrcode.react
 
 ---
 
+## P4: API 기간 필터 통일 (2026-03-14)
+
+### 목표
+대시보드 기간 선택이 모든 API에 적용되도록 startDate 파라미터 통일
+
+### 수정 파일
+
+| 파일 | 변경 내용 |
+|------|----------|
+| `app/api/dashboard/trend/route.ts` | startDate 파라미터 추가 (기본값: 8주 전) |
+| `app/api/content/analytics/route.ts` | startDate/endDate 파라미터 추가 |
+| `app/api/leads/route.ts` | startDate, limit 파라미터 추가 |
+
+### API startDate 지원 현황 (완료)
+
+| API | 지원 | 비고 |
+|-----|------|------|
+| `/api/dashboard/kpi` | ✅ | compare 모드 포함 |
+| `/api/dashboard/channel` | ✅ | |
+| `/api/dashboard/campaign` | ✅ | |
+| `/api/dashboard/funnel` | ✅ | |
+| `/api/dashboard/trend` | ✅ | 이번 작업에서 추가 |
+| `/api/content/analytics` | ✅ | 이번 작업에서 추가 |
+| `/api/leads` | ✅ | 이번 작업에서 추가 (limit 파라미터도 추가) |
+
+### 빌드 결과
+```
+✓ Build 성공
+✓ TypeScript 타입 검사 통과
+```
+
+---
+
 ## 향후 작업 가능 항목
 
 1. **추가 컴포넌트**: Popover, Tooltip, Progress, Slider

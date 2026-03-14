@@ -5,9 +5,14 @@ import { withClinicFilter, ClinicContext, apiError, apiSuccess } from '@/lib/api
  * 고객 기준 리드 조회 API (하이브리드 방식)
  * - 고객당 1행
  * - 각 고객의 모든 유입(leads) 이력 포함
+ * - startDate 파라미터로 기간 필터링 가능
  */
 export const GET = withClinicFilter(async (req: Request, { clinicId }: ClinicContext) => {
   const supabase = serverSupabase()
+  const url = new URL(req.url)
+  const startDate = url.searchParams.get('startDate')
+  const limitParam = url.searchParams.get('limit')
+  const limit = limitParam ? Math.min(parseInt(limitParam, 10) || 100, 500) : 100
 
   // 고객 기준으로 조회, leads를 포함
   let query = supabase
@@ -20,9 +25,10 @@ export const GET = withClinicFilter(async (req: Request, { clinicId }: ClinicCon
       bookings(*)
     `)
     .order('created_at', { ascending: false })
-    .limit(100)
+    .limit(limit)
 
   if (clinicId) query = query.eq('clinic_id', clinicId)
+  if (startDate) query = query.gte('created_at', startDate)
 
   const { data: customers, error } = await query
 

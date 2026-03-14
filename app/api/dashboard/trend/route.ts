@@ -3,12 +3,16 @@ import { withClinicFilter, ClinicContext, apiError, apiSuccess } from '@/lib/api
 
 export const GET = withClinicFilter(async (req: Request, { clinicId }: ClinicContext) => {
   const supabase = serverSupabase()
-  const eightWeeksAgo = new Date(Date.now() - 56 * 24 * 60 * 60 * 1000).toISOString()
+  const url = new URL(req.url)
+
+  // startDate 파라미터 지원 (기본값: 8주 전)
+  const defaultStart = new Date(Date.now() - 56 * 24 * 60 * 60 * 1000).toISOString()
+  const startDate = url.searchParams.get('startDate') || defaultStart
 
   let query = supabase
     .from('ad_campaign_stats')
     .select('stat_date, spend_amount, campaign_id')
-    .gte('stat_date', eightWeeksAgo)
+    .gte('stat_date', startDate)
     .order('stat_date')
 
   if (clinicId) query = query.eq('clinic_id', clinicId)
