@@ -118,3 +118,46 @@ export function getUtmMediumLabel(medium: string | null | undefined): string {
 
   return labels[medium.toLowerCase()] || medium
 }
+
+/**
+ * UTM 파라미터로 URL 빌드
+ */
+export interface BuildUtmUrlOptions {
+  baseUrl: string
+  source?: string
+  medium?: string
+  campaign?: string
+  content?: string
+  term?: string
+  adGroup?: string // content 앞에 prefix로 결합
+}
+
+export function buildUtmUrl(options: BuildUtmUrlOptions): string | null {
+  const { baseUrl, source, medium, campaign, content, term, adGroup } = options
+
+  if (!baseUrl?.trim()) return null
+
+  try {
+    const urlStr = baseUrl.trim().startsWith('http')
+      ? baseUrl.trim()
+      : 'https://' + baseUrl.trim()
+
+    const url = new URL(urlStr)
+
+    if (source) url.searchParams.set('utm_source', source)
+    if (medium) url.searchParams.set('utm_medium', medium)
+    if (campaign) url.searchParams.set('utm_campaign', campaign)
+
+    // adGroup + content 결합
+    const contentVal = adGroup && content
+      ? `${adGroup}_${content}`
+      : adGroup || content
+    if (contentVal) url.searchParams.set('utm_content', contentVal)
+
+    if (term) url.searchParams.set('utm_term', term)
+
+    return url.toString()
+  } catch {
+    return null
+  }
+}

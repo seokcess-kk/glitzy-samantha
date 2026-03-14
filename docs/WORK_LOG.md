@@ -280,6 +280,158 @@ First Load JS shared: 87.6 kB
 
 ---
 
+## P2: KPI 대시보드 개선 (2026-03-14)
+
+### 목표
+KPI 대시보드에 기간 선택, 채널별 성과 테이블, 전기 대비 변화율 표시 기능 추가
+
+### 변경 파일
+
+| 파일 | 변경 내용 |
+|------|----------|
+| `app/api/dashboard/kpi/route.ts` | compare 모드 추가, fetchMetrics 함수 추출, 전기 대비 변화율 계산 |
+| `app/(dashboard)/page.tsx` | 기간 선택 UI (Select), 채널별 테이블, KPI trend 연동 |
+
+### 구현 내용
+
+#### 1. KPI API 개선
+```typescript
+// compare=true 시 전기 데이터와 변화율 함께 반환
+GET /api/dashboard/kpi?startDate=...&compare=true
+
+// 응답 예시
+{
+  cpl: 25000,
+  roas: 1.5,
+  // ...
+  comparison: {
+    cpl: -5.2,    // 전기 대비 5.2% 감소 (좋음)
+    roas: 12.3,   // 전기 대비 12.3% 증가 (좋음)
+    // ...
+  }
+}
+```
+
+#### 2. 기간 선택 UI
+- Select 드롭다운: 7일 / 14일 / 30일 / 90일
+- 기간 변경 시 모든 API에 startDate 파라미터 전달
+
+#### 3. 채널별 성과 테이블
+- 채널, 리드, 광고비, 결제액, CPL, ROAS, 전환율 표시
+- 캠페인 테이블과 동일한 스타일
+
+#### 4. KPI 변화율 표시
+- StatsCard에 trend prop 전달
+- CPL/CAC: 낮아지면 좋음 (역방향 지표)
+- ROAS/매출/전환율: 높아지면 좋음
+
+### 코드 리뷰 후 수정
+
+| 우선순위 | 문제 | 수정 내용 |
+|---------|------|----------|
+| 높음 | content_posts 기간 필터 누락 | `.gte('created_at', start).lte('created_at', end)` 추가 |
+| 중간 | trend/funnel API에 startDate 미적용 | 모든 API에 startDate 파라미터 추가 |
+| 낮음 | TrendingUp 미사용 import | 제거 |
+| 낮음 | roas 0일 때 NaN 가능성 | `kpi.roas \|\| 0` 안전 처리 |
+
+### 빌드 결과
+```
+✓ Compiled successfully
+✓ TypeScript 타입 검사 통과
+✓ ESLint 경고 1건 (기존 useEffect 의존성)
+```
+
+---
+
+## P3: UTM 링크 생성기 기능 향상 (2026-03-14)
+
+### 목표
+UTM 링크 생성기를 로컬스토리지 기반에서 DB 기반으로 업그레이드, 캠페인 템플릿 및 QR 코드 생성 기능 추가
+
+### 신규 파일
+
+| 파일 | 용도 |
+|------|------|
+| `app/api/utm/templates/route.ts` | 템플릿 CRUD API (GET/POST) |
+| `app/api/utm/templates/[id]/route.ts` | 단일 템플릿 API (PUT/DELETE) |
+| `app/api/utm/links/route.ts` | 링크 히스토리 API (GET/POST) |
+| `app/api/utm/links/[id]/route.ts` | 단일 링크 API (DELETE) |
+| `app/(dashboard)/utm/components/TemplateSelector.tsx` | 템플릿 선택/저장 UI |
+| `app/(dashboard)/utm/components/QRCodeDialog.tsx` | QR 코드 생성 다이얼로그 |
+| `supabase/migrations/20240315_utm_templates_links.sql` | DB 테이블 생성 SQL |
+
+### 수정 파일
+
+| 파일 | 변경 내용 |
+|------|----------|
+| `lib/utm.ts` | `buildUtmUrl()` 함수 추가 |
+| `app/(dashboard)/utm/page.tsx` | DB 연동, 템플릿/QR 기능 통합 |
+
+### DB 테이블
+
+**utm_templates** (캠페인 템플릿)
+```sql
+CREATE TABLE utm_templates (
+  id SERIAL PRIMARY KEY,
+  clinic_id INTEGER NOT NULL REFERENCES clinics(id),
+  name VARCHAR(100) NOT NULL,
+  base_url VARCHAR(500),
+  utm_source, utm_medium, utm_campaign, utm_content, utm_term,
+  platform VARCHAR(30),
+  is_default BOOLEAN DEFAULT FALSE,
+  created_by INTEGER REFERENCES users(id),
+  created_at TIMESTAMP,
+  UNIQUE(clinic_id, name)
+);
+```
+
+**utm_links** (링크 히스토리)
+```sql
+CREATE TABLE utm_links (
+  id SERIAL PRIMARY KEY,
+  clinic_id INTEGER NOT NULL REFERENCES clinics(id),
+  original_url TEXT NOT NULL,
+  utm_source, utm_medium, utm_campaign, utm_content, utm_term,
+  label VARCHAR(100),
+  template_id INTEGER REFERENCES utm_templates(id),
+  created_by INTEGER REFERENCES users(id),
+  created_at TIMESTAMP
+);
+```
+
+### 설치 패키지
+```bash
+npm install qrcode.react
+```
+
+### 구현 기능
+- ✅ DB 기반 템플릿 저장/불러오기
+- ✅ 기본 템플릿 자동 적용 (is_default)
+- ✅ 중복 기본 템플릿 방지 (애플리케이션 레벨)
+- ✅ DB 기반 링크 히스토리 (디바이스 간 공유)
+- ✅ QR 코드 생성 (PNG/SVG 다운로드)
+- ✅ QR 코드 크기/색상 커스터마이징
+- ✅ 멀티테넌트 격리 (clinic_id 기반)
+- ✅ 삭제 확인 다이얼로그 (confirm → Dialog)
+
+### 코드 품질 개선 (리뷰 반영)
+- JSON 파싱 에러 핸들링 추가
+- limit 파라미터 NaN 처리
+- 사용하지 않는 import 제거 (X from lucide-react)
+- URL 빈 값 처리 (QRCodeDialog)
+
+### 빌드 결과
+```
+/utm    16.1 kB (총 155 kB)
+✓ Build 성공
+✓ Lint 통과
+```
+
+### 다음 단계
+⚠️ **DB 테이블 생성 필요**: `supabase/migrations/20240315_utm_templates_links.sql` 실행
+
+---
+
 ## 향후 작업 가능 항목
 
 1. **추가 컴포넌트**: Popover, Tooltip, Progress, Slider

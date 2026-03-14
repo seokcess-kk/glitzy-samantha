@@ -67,13 +67,14 @@ export async function POST(req: Request) {
     return apiError('유효하지 않은 URL 형식입니다.', 400)
   }
 
-  // clinic_id 검증 (제공된 경우)
-  let validClinicId: number | null = null
-  if (clinic_id !== undefined && clinic_id !== null && clinic_id !== '') {
-    validClinicId = parseId(clinic_id)
-    if (validClinicId === null) {
-      return apiError('유효하지 않은 clinic_id입니다.', 400)
-    }
+  // clinic_id 필수 검증
+  if (clinic_id === undefined || clinic_id === null || clinic_id === '') {
+    return apiError('clinic_id는 필수입니다.', 400)
+  }
+
+  const validClinicId = parseId(clinic_id)
+  if (validClinicId === null) {
+    return apiError('유효하지 않은 clinic_id입니다.', 400)
   }
 
   // 전화번호 정규화 (하이픈 추가)

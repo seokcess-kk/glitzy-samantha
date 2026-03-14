@@ -150,6 +150,16 @@ function LeadFormContent() {
         </Card>
       )}
 
+      {/* 병원 미선택 경고 */}
+      {!selectedClinicId && (
+        <Card variant="glass" className="p-4 mb-6 border-amber-500/30 bg-amber-500/10">
+          <div className="flex items-center gap-2">
+            <AlertCircle size={16} className="text-amber-400" />
+            <span className="text-sm text-amber-300">병원을 먼저 선택해주세요</span>
+          </div>
+        </Card>
+      )}
+
       {/* 리드 입력 폼 */}
       <Card variant="glass" className="p-6">
         <form onSubmit={handleSubmit} className="space-y-5">
@@ -242,7 +252,7 @@ function LeadFormContent() {
 
           <Button
             type="submit"
-            disabled={loading || !phoneNumber}
+            disabled={loading || !phoneNumber || !selectedClinicId}
             className="w-full bg-brand-600 hover:bg-brand-700"
           >
             {loading ? (

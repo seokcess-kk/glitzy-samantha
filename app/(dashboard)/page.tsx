@@ -5,11 +5,18 @@ import {
   XAxis, YAxis, CartesianGrid, Tooltip,
   ResponsiveContainer, PieChart, Pie, Cell
 } from '@/components/charts'
-import { TrendingUp, Bell, Settings, Search, RefreshCw, Users, ArrowRight } from 'lucide-react'
+import { Bell, Settings, Search, RefreshCw, Users, ArrowRight } from 'lucide-react'
 import { Card } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { Skeleton } from '@/components/ui/skeleton'
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select'
 import {
   Table,
   TableBody,
@@ -54,18 +61,21 @@ export default function DashboardPage() {
   const [campaigns, setCampaigns] = useState<any[]>([])
   const [loading, setLoading] = useState(true)
   const [lastUpdated, setLastUpdated] = useState<Date | null>(null)
+  const [days, setDays] = useState('30')
 
-  const fetchAll = async () => {
+  const fetchAll = async (selectedDays?: string) => {
+    const daysValue = selectedDays || days
     setLoading(true)
     try {
+      const startDate = new Date(Date.now() - Number(daysValue) * 24 * 60 * 60 * 1000).toISOString()
       const [kpiRes, trendRes, channelRes, contentRes, leadsRes, funnelRes, campaignRes] = await Promise.allSettled([
-        fetch('/api/dashboard/kpi').then(r => r.json()),
-        fetch('/api/dashboard/trend').then(r => r.json()),
-        fetch('/api/dashboard/channel').then(r => r.json()),
-        fetch('/api/content/analytics?groupBy=platform').then(r => r.json()),
-        fetch('/api/leads').then(r => r.json()),
-        fetch('/api/dashboard/funnel').then(r => r.json()),
-        fetch('/api/dashboard/campaign').then(r => r.json()),
+        fetch(`/api/dashboard/kpi?startDate=${startDate}&compare=true`).then(r => r.json()),
+        fetch(`/api/dashboard/trend?startDate=${startDate}`).then(r => r.json()),
+        fetch(`/api/dashboard/channel?startDate=${startDate}`).then(r => r.json()),
+        fetch(`/api/content/analytics?groupBy=platform&startDate=${startDate}`).then(r => r.json()),
+        fetch(`/api/leads?startDate=${startDate}`).then(r => r.json()),
+        fetch(`/api/dashboard/funnel?startDate=${startDate}`).then(r => r.json()),
+        fetch(`/api/dashboard/campaign?startDate=${startDate}`).then(r => r.json()),
       ])
       if (kpiRes.status === 'fulfilled') setKpi(kpiRes.value)
       if (trendRes.status === 'fulfilled') {
@@ -85,15 +95,63 @@ export default function DashboardPage() {
     }
   }
 
+  const handleDaysChange = (value: string) => {
+    setDays(value)
+    fetchAll(value)
+  }
+
   useEffect(() => { fetchAll() }, [])
 
+  // CPL, CAC는 낮을수록 좋음 (역방향 지표) - trend.isPositive 계산에 반영됨
   const kpiCards = kpi ? [
-    { label: 'CPL (DB 1건당 광고비)', value: `₩${kpi.cpl?.toLocaleString()}` },
-    { label: 'ROAS (광고비 대비 매출)', value: `${(kpi.roas * 100).toFixed(0)}%` },
-    { label: '예약 전환율', value: `${kpi.bookingRate}%` },
-    { label: '총 결제 매출', value: `₩${kpi.totalRevenue?.toLocaleString()}` },
-    { label: 'CAC (고객 획득 비용)', value: `₩${kpi.cac?.toLocaleString()}` },
-    { label: 'ARPC (결제 고객 평균 매출)', value: `₩${kpi.arpc?.toLocaleString()}` },
+    {
+      label: 'CPL (DB 1건당 광고비)',
+      value: `₩${kpi.cpl?.toLocaleString()}`,
+      trend: kpi.comparison?.cpl !== undefined ? {
+        value: Math.abs(kpi.comparison.cpl),
+        isPositive: kpi.comparison.cpl < 0  // CPL은 낮아지면 좋음
+      } : undefined
+    },
+    {
+      label: 'ROAS (광고비 대비 매출)',
+      value: `${((kpi.roas || 0) * 100).toFixed(0)}%`,
+      trend: kpi.comparison?.roas !== undefined ? {
+        value: Math.abs(kpi.comparison.roas),
+        isPositive: kpi.comparison.roas > 0
+      } : undefined
+    },
+    {
+      label: '예약 전환율',
+      value: `${kpi.bookingRate}%`,
+      trend: kpi.comparison?.bookingRate !== undefined ? {
+        value: Math.abs(kpi.comparison.bookingRate),
+        isPositive: kpi.comparison.bookingRate > 0
+      } : undefined
+    },
+    {
+      label: '총 결제 매출',
+      value: `₩${kpi.totalRevenue?.toLocaleString()}`,
+      trend: kpi.comparison?.totalRevenue !== undefined ? {
+        value: Math.abs(kpi.comparison.totalRevenue),
+        isPositive: kpi.comparison.totalRevenue > 0
+      } : undefined
+    },
+    {
+      label: 'CAC (고객 획득 비용)',
+      value: `₩${kpi.cac?.toLocaleString()}`,
+      trend: kpi.comparison?.cac !== undefined ? {
+        value: Math.abs(kpi.comparison.cac),
+        isPositive: kpi.comparison.cac < 0  // CAC는 낮아지면 좋음
+      } : undefined
+    },
+    {
+      label: 'ARPC (결제 고객 평균 매출)',
+      value: `₩${kpi.arpc?.toLocaleString()}`,
+      trend: kpi.comparison?.arpc !== undefined ? {
+        value: Math.abs(kpi.comparison.arpc),
+        isPositive: kpi.comparison.arpc > 0
+      } : undefined
+    },
   ] : Array(6).fill({ label: '로딩 중...', value: '-' })
 
   // 시술 비중
@@ -123,7 +181,17 @@ export default function DashboardPage() {
         description={lastUpdated ? `마지막 업데이트: ${lastUpdated.toLocaleTimeString('ko')}` : '데이터 로딩 중...'}
         actions={
           <>
-            <Button variant="glass" size="icon" onClick={fetchAll} disabled={loading}>
+            <Select value={days} onValueChange={handleDaysChange}>
+              <SelectTrigger className="w-[120px] bg-white/5 border-white/10 text-white">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                {[7, 14, 30, 90].map(d => (
+                  <SelectItem key={d} value={String(d)}>최근 {d}일</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            <Button variant="glass" size="icon" onClick={() => fetchAll()} disabled={loading}>
               <RefreshCw size={16} className={loading ? 'animate-spin' : ''} />
             </Button>
             <Button variant="glass" size="icon"><Search size={16} /></Button>
@@ -135,7 +203,9 @@ export default function DashboardPage() {
 
       {/* KPI Cards */}
       <div className="grid grid-cols-2 md:grid-cols-3 gap-3 md:gap-4 mb-6 md:mb-8">
-        {kpiCards.map((d, i) => <StatsCard key={i} label={d.label} value={d.value} loading={loading} />)}
+        {kpiCards.map((d, i) => (
+          <StatsCard key={i} label={d.label} value={d.value} loading={loading} trend={d.trend} />
+        ))}
       </div>
 
       {/* 광고비 추이 + 시술 비중 */}
@@ -254,6 +324,50 @@ export default function DashboardPage() {
           </div>
         )}
       </Card>
+
+      {/* 채널별 성과 */}
+      {channel.length > 0 && (
+        <Card variant="glass" className="p-6 mb-6">
+          <div className="flex items-center justify-between mb-5">
+            <h2 className="font-semibold text-white">채널별 성과</h2>
+            <Badge variant="default" className="bg-brand-600/20 text-brand-500 border-0">최근 {days}일</Badge>
+          </div>
+          <div className="overflow-x-auto -mx-2">
+            <Table className="min-w-[700px]">
+              <TableHeader>
+                <TableRow className="border-b border-white/5 hover:bg-transparent">
+                  <TableHead className="text-xs text-slate-500 uppercase tracking-wider font-medium">채널</TableHead>
+                  <TableHead className="text-xs text-slate-500 uppercase tracking-wider font-medium text-right">리드</TableHead>
+                  <TableHead className="text-xs text-slate-500 uppercase tracking-wider font-medium text-right">광고비</TableHead>
+                  <TableHead className="text-xs text-slate-500 uppercase tracking-wider font-medium text-right">결제액</TableHead>
+                  <TableHead className="text-xs text-slate-500 uppercase tracking-wider font-medium text-right">CPL</TableHead>
+                  <TableHead className="text-xs text-slate-500 uppercase tracking-wider font-medium text-right">ROAS</TableHead>
+                  <TableHead className="text-xs text-slate-500 uppercase tracking-wider font-medium text-right">전환율</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {channel.map((c: any) => (
+                  <TableRow key={c.channel} className="border-b border-white/5 hover:bg-white/[0.03]">
+                    <TableCell>
+                      <ChannelBadge channel={c.channel} />
+                    </TableCell>
+                    <TableCell className="text-right text-slate-300">{c.leads}</TableCell>
+                    <TableCell className="text-right text-slate-300">₩{c.spend?.toLocaleString() || 0}</TableCell>
+                    <TableCell className="text-right text-emerald-400 font-semibold">₩{c.revenue?.toLocaleString() || 0}</TableCell>
+                    <TableCell className="text-right text-slate-300">{c.cpl > 0 ? `₩${c.cpl.toLocaleString()}` : '-'}</TableCell>
+                    <TableCell className="text-right">
+                      <span className={c.roas >= 1 ? 'text-emerald-400' : 'text-red-400'}>
+                        {c.roas > 0 ? `${(c.roas * 100).toFixed(0)}%` : '-'}
+                      </span>
+                    </TableCell>
+                    <TableCell className="text-right text-slate-300">{c.conversionRate || 0}%</TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          </div>
+        </Card>
+      )}
 
       {/* 캠페인별 성과 */}
       {campaigns.length > 0 && (
