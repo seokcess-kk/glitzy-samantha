@@ -1,7 +1,7 @@
 'use client'
 import { useState, useEffect, Suspense } from 'react'
 import { useSearchParams, useRouter } from 'next/navigation'
-import { Megaphone, ArrowLeft, Phone, Clock, ChevronRight, RefreshCw, MessageCircle, FileText, User, ShieldCheck, PhoneCall } from 'lucide-react'
+import { Megaphone, ArrowLeft, Phone, Clock, ChevronRight, RefreshCw, MessageCircle, FileText, User, ShieldCheck, StickyNote } from 'lucide-react'
 import { useClinic } from '@/components/ClinicContext'
 import { Card } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
@@ -48,6 +48,7 @@ interface CampaignLead {
   created_at: string
   landing_page_id: number | null
   lead_status: string
+  notes: string | null
   custom_data: { survey?: Record<string, string>; marketing_consent?: boolean; name?: string } | null
   customer: { id: number; name: string; phone_number: string; first_source: string } | null
   landing_page: { id: number; name: string } | null
@@ -164,13 +165,24 @@ function CampaignList({ campaigns, loading, onSelect, onRefresh }: {
 
 // ─── 캠페인 상세 리드 목록 ───
 
-function LeadCard({ lead, onStatusChange }: { lead: CampaignLead; onStatusChange: (id: number, status: string) => void }) {
+function LeadCard({ lead, onStatusChange, onNotesChange }: {
+  lead: CampaignLead
+  onStatusChange: (id: number, status: string) => void
+  onNotesChange: (id: number, notes: string) => void
+}) {
+  const [editingNotes, setEditingNotes] = useState(false)
+  const [notesValue, setNotesValue] = useState(lead.notes || '')
   const survey = lead.custom_data?.survey
   const surveyEntries = survey ? Object.values(survey) : []
   const marketingConsent = lead.custom_data?.marketing_consent
   const leadName = lead.custom_data?.name || lead.customer?.name || '이름 없음'
   const status = lead.lead_status || 'new'
   const statusConfig = LEAD_STATUS_CONFIG[status] || LEAD_STATUS_CONFIG.new
+
+  const handleNotesSave = () => {
+    onNotesChange(lead.id, notesValue)
+    setEditingNotes(false)
+  }
 
   return (
     <div
@@ -232,6 +244,33 @@ function LeadCard({ lead, onStatusChange }: { lead: CampaignLead; onStatusChange
           </>
         )}
       </div>
+
+      {/* 3행: 메모 */}
+      <div className="pl-11 mt-2">
+        {editingNotes ? (
+          <div className="flex items-center gap-2">
+            <input
+              type="text"
+              value={notesValue}
+              onChange={e => setNotesValue(e.target.value)}
+              onKeyDown={e => e.key === 'Enter' && handleNotesSave()}
+              placeholder="메모 입력..."
+              className="flex-1 text-xs bg-white/5 border border-white/10 rounded-lg px-3 py-1.5 text-white placeholder-slate-600 focus:outline-none focus:border-brand-500"
+              autoFocus
+            />
+            <button onClick={handleNotesSave} className="text-[10px] text-brand-400 hover:text-brand-300 shrink-0">저장</button>
+            <button onClick={() => { setEditingNotes(false); setNotesValue(lead.notes || '') }} className="text-[10px] text-slate-500 hover:text-slate-400 shrink-0">취소</button>
+          </div>
+        ) : (
+          <button
+            onClick={() => setEditingNotes(true)}
+            className="flex items-center gap-1.5 text-[11px] text-slate-500 hover:text-slate-300 transition-colors"
+          >
+            <StickyNote size={10} />
+            {lead.notes || '메모 추가...'}
+          </button>
+        )}
+      </div>
     </div>
   )
 }
@@ -272,6 +311,22 @@ function CampaignDetail({ campaign, onBack }: { campaign: string; onBack: () => 
       setLeads(prev => prev.map(l => l.id === leadId ? { ...l, lead_status: newStatus } : l))
     } else {
       toast.error('상태 변경 실패')
+    }
+  }
+
+  const handleNotesChange = async (leadId: number, notes: string) => {
+    const params = new URLSearchParams()
+    if (selectedClinicId) params.set('clinic_id', String(selectedClinicId))
+    const res = await fetch(`/api/leads/${leadId}?${params}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ notes }),
+    })
+    if (res.ok) {
+      toast.success('메모가 저장되었습니다.')
+      setLeads(prev => prev.map(l => l.id === leadId ? { ...l, notes } : l))
+    } else {
+      toast.error('메모 저장 실패')
     }
   }
 
@@ -322,7 +377,7 @@ function CampaignDetail({ campaign, onBack }: { campaign: string; onBack: () => 
                 이 캠페인에서 유입된 리드가 없습니다.
               </Card>
             )
-            : leads.map(lead => <LeadCard key={lead.id} lead={lead} onStatusChange={handleStatusChange} />)
+            : leads.map(lead => <LeadCard key={lead.id} lead={lead} onStatusChange={handleStatusChange} onNotesChange={handleNotesChange} />)
         }
       </div>
     </>
