@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useEffect, useCallback, useMemo } from 'react'
-import { Copy, Check, Trash2, ExternalLink, ChevronDown, Link2, QrCode, RefreshCw, Database, FileText, Image } from 'lucide-react'
+import { Copy, Check, Trash2, ExternalLink, ChevronDown, Link2, QrCode, RefreshCw, Database, FileText, Image, ArrowLeft, Search } from 'lucide-react'
 import { toast } from 'sonner'
 import { Card } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
@@ -88,6 +88,188 @@ const DATE_FORMAT_OPTIONS: Intl.DateTimeFormatOptions = {
 }
 
 export default function UtmPage() {
+  const [view, setView] = useState<'list' | 'generator'>('list')
+  const [links, setLinks] = useState<UtmLink[]>([])
+  const [linksLoading, setLinksLoading] = useState(true)
+  const [historySearch, setHistorySearch] = useState('')
+  const [copiedId, setCopiedId] = useState<number | null>(null)
+
+  const fetchLinks = useCallback(async () => {
+    setLinksLoading(true)
+    try {
+      const res = await fetch('/api/utm/links?limit=100')
+      if (res.ok) {
+        const data = await res.json()
+        setLinks(data.links || [])
+      }
+    } catch {
+      // ignore
+    } finally {
+      setLinksLoading(false)
+    }
+  }, [])
+
+  useEffect(() => { fetchLinks() }, [fetchLinks])
+
+  const filteredLinks = useMemo(() => {
+    if (!historySearch) return links
+    const s = historySearch.toLowerCase()
+    return links.filter(item =>
+      item.label?.toLowerCase().includes(s) ||
+      item.utm_source?.toLowerCase().includes(s) ||
+      item.utm_campaign?.toLowerCase().includes(s) ||
+      item.utm_content?.toLowerCase().includes(s) ||
+      item.original_url?.toLowerCase().includes(s)
+    )
+  }, [links, historySearch])
+
+  const handleCopy = (link: UtmLink) => {
+    const url = new URL(link.original_url)
+    if (link.utm_source) url.searchParams.set('utm_source', link.utm_source)
+    if (link.utm_medium) url.searchParams.set('utm_medium', link.utm_medium)
+    if (link.utm_campaign) url.searchParams.set('utm_campaign', link.utm_campaign)
+    if (link.utm_content) url.searchParams.set('utm_content', link.utm_content)
+    if (link.utm_term) url.searchParams.set('utm_term', link.utm_term)
+    navigator.clipboard.writeText(url.toString())
+    setCopiedId(link.id)
+    toast.success('URL이 복사되었습니다.')
+    setTimeout(() => setCopiedId(null), 2000)
+  }
+
+  const handleDelete = async (id: number) => {
+    if (!confirm('이 링크를 삭제하시겠습니까?')) return
+    const res = await fetch(`/api/utm/links/${id}`, { method: 'DELETE' })
+    if (res.ok) {
+      toast.success('삭제되었습니다.')
+      setLinks(prev => prev.filter(l => l.id !== id))
+    } else {
+      toast.error('삭제 실패')
+    }
+  }
+
+  if (view === 'generator') {
+    return <UtmGenerator onBack={() => { setView('list'); fetchLinks() }} />
+  }
+
+  return (
+    <div className="max-w-4xl mx-auto">
+      <div className="flex items-center justify-between mb-6">
+        <div>
+          <h1 className="text-2xl font-bold text-white">UTM 생성</h1>
+          <p className="text-sm text-slate-400 mt-1">생성된 UTM 링크 목록 및 관리</p>
+        </div>
+        <Button onClick={() => setView('generator')} className="bg-brand-600 hover:bg-brand-700">
+          <Link2 size={14} /> UTM 생성
+        </Button>
+      </div>
+
+      {/* 검색 */}
+      <Card variant="glass" className="flex items-center px-3 py-2 mb-4">
+        <Search size={14} className="text-slate-500 mr-2" />
+        <input
+          type="text"
+          value={historySearch}
+          onChange={e => setHistorySearch(e.target.value)}
+          placeholder="URL, 캠페인, 소스, 콘텐츠 검색..."
+          className="bg-transparent border-0 text-sm text-white placeholder-slate-600 focus:outline-none w-full"
+        />
+      </Card>
+
+      {/* 목록 */}
+      <div className="space-y-2">
+        {linksLoading ? (
+          Array(5).fill(0).map((_, i) => (
+            <div key={i} className="h-16 rounded-2xl bg-white/[0.04] animate-pulse" />
+          ))
+        ) : filteredLinks.length === 0 ? (
+          <Card variant="glass" className="p-12 text-center">
+            <Link2 size={32} className="text-slate-600 mx-auto mb-3" />
+            <p className="text-slate-500 text-sm">
+              {historySearch ? '검색 결과가 없습니다.' : '생성된 UTM 링크가 없습니다.'}
+            </p>
+            {!historySearch && (
+              <Button onClick={() => setView('generator')} className="mt-4 bg-brand-600 hover:bg-brand-700" size="sm">
+                <Link2 size={14} /> 첫 번째 UTM 생성하기
+              </Button>
+            )}
+          </Card>
+        ) : (
+          filteredLinks.map(link => (
+            <div
+              key={link.id}
+              className="px-4 py-3 rounded-2xl"
+              style={{ background: 'rgba(255,255,255,0.04)', backdropFilter: 'blur(10px)', border: '1px solid rgba(255,255,255,0.08)' }}
+            >
+              {/* 1행: 라벨 + URL + 시간 + 액션 */}
+              <div className="flex items-center gap-3 mb-1.5">
+                {link.label && (
+                  <p className="text-sm font-semibold text-white truncate">{link.label}</p>
+                )}
+                <code className="text-xs text-brand-400 truncate flex-1">{link.original_url}</code>
+                <span className="text-[10px] text-slate-600 shrink-0">
+                  {new Date(link.created_at).toLocaleString('ko', DATE_FORMAT_OPTIONS)}
+                </span>
+                <button
+                  onClick={() => handleCopy(link)}
+                  className="text-slate-500 hover:text-white transition-colors shrink-0"
+                  aria-label="URL 복사"
+                >
+                  {copiedId === link.id ? <Check size={14} className="text-emerald-400" /> : <Copy size={14} />}
+                </button>
+                <a
+                  href={link.original_url}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-slate-500 hover:text-white transition-colors shrink-0"
+                  aria-label="새 탭에서 열기"
+                >
+                  <ExternalLink size={14} />
+                </a>
+                <button
+                  onClick={() => handleDelete(link.id)}
+                  className="text-slate-500 hover:text-red-400 transition-colors shrink-0"
+                  aria-label="삭제"
+                >
+                  <Trash2 size={14} />
+                </button>
+              </div>
+              {/* 2행: UTM 태그 */}
+              <div className="flex items-center gap-1.5 flex-wrap">
+                {link.utm_source && (
+                  <span className="text-[10px] px-2 py-0.5 rounded-full bg-blue-500/10 text-blue-400 border border-blue-500/20">
+                    {link.utm_source}
+                  </span>
+                )}
+                {link.utm_medium && (
+                  <span className="text-[10px] px-2 py-0.5 rounded-full bg-purple-500/10 text-purple-400 border border-purple-500/20">
+                    {link.utm_medium}
+                  </span>
+                )}
+                {link.utm_campaign && (
+                  <span className="text-[10px] px-2 py-0.5 rounded-full bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
+                    {link.utm_campaign}
+                  </span>
+                )}
+                {link.utm_content && (
+                  <span className="text-[10px] px-2 py-0.5 rounded-full bg-amber-500/10 text-amber-400 border border-amber-500/20">
+                    {link.utm_content}
+                  </span>
+                )}
+                {link.utm_term && (
+                  <span className="text-[10px] px-2 py-0.5 rounded-full bg-pink-500/10 text-pink-400 border border-pink-500/20">
+                    {link.utm_term}
+                  </span>
+                )}
+              </div>
+            </div>
+          ))
+        )}
+      </div>
+    </div>
+  )
+}
+
+function UtmGenerator({ onBack }: { onBack: () => void }) {
   // Form state
   const [baseUrl, setBaseUrl] = useState('')
   const [platform, setPlatform] = useState('meta')
@@ -472,7 +654,10 @@ export default function UtmPage() {
   return (
     <div className="max-w-4xl mx-auto">
       <div className="mb-6">
-        <h1 className="text-2xl font-bold text-white">UTM 생성기</h1>
+        <Button variant="ghost" size="sm" onClick={onBack} className="text-slate-400 hover:text-white mb-3">
+          <ArrowLeft size={14} /> UTM 목록
+        </Button>
+        <h1 className="text-2xl font-bold text-white">UTM 생성</h1>
         <p className="text-sm text-slate-400 mt-1">광고 매체 및 콘텐츠 유입 추적을 위한 UTM 파라미터 URL 생성</p>
       </div>
 

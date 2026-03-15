@@ -169,7 +169,7 @@ export default function Sidebar({ onClose }: { onClose?: () => void }) {
                 }`}
               >
                 <Link2 size={17} />
-                UTM 생성기
+                UTM 생성
               </Link>
               <Link
                 href="/admin/ad-creatives"
