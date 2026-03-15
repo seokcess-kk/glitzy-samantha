@@ -11,8 +11,12 @@ export const GET = withClinicFilter(async (req: Request, { clinicId }: ClinicCon
   const supabase = serverSupabase()
   const url = new URL(req.url)
   const startDate = url.searchParams.get('startDate')
+  const endDate = url.searchParams.get('endDate')
+  const landingPageId = url.searchParams.get('landing_page_id')
+  const utmCampaign = url.searchParams.get('utm_campaign')
   const limitParam = url.searchParams.get('limit')
-  const limit = limitParam ? Math.min(parseInt(limitParam, 10) || 100, 500) : 100
+  const hasFilter = !!(landingPageId || utmCampaign)
+  const limit = limitParam ? Math.min(parseInt(limitParam, 10) || 100, 500) : (hasFilter ? 500 : 100)
 
   // 고객 기준으로 조회, leads를 포함 (landing_page 정보 포함)
   let query = supabase
@@ -29,14 +33,24 @@ export const GET = withClinicFilter(async (req: Request, { clinicId }: ClinicCon
 
   if (clinicId) query = query.eq('clinic_id', clinicId)
   if (startDate) query = query.gte('created_at', startDate)
+  if (endDate) query = query.lte('created_at', endDate)
 
   const { data: customers, error } = await query
 
   if (error) return apiError(error.message, 500)
 
   // leads가 있는 고객만 필터링 + 정렬 (최근 리드 기준)
+  const lpId = landingPageId ? Number(landingPageId) : null
   const customersWithLeads = (customers || [])
     .filter(c => c.leads && c.leads.length > 0)
+    .filter(c => {
+      if (lpId) return c.leads.some((l: any) => l.landing_page_id === lpId)
+      return true
+    })
+    .filter(c => {
+      if (utmCampaign) return c.leads.some((l: any) => l.utm_campaign === utmCampaign)
+      return true
+    })
     .map(c => {
       // leads를 최신순 정렬
       const sortedLeads = [...c.leads].sort(

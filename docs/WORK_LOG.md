@@ -1136,10 +1136,154 @@ add7816 refactor: UTM 생성기 코드 품질 개선
 
 ---
 
+## P11: 랜딩 페이지 성과 대시보드 (2026-03-16)
+
+### 목표
+랜딩 페이지별 리드 수, 예약 전환율, 결제 전환율, 매출을 한눈에 확인
+
+### 신규 파일
+
+| 파일 | 용도 |
+|------|------|
+| `app/api/admin/landing-pages/stats/route.ts` | 랜딩 페이지별 성과 통계 API |
+| `app/api/landing-pages/route.ts` | 랜딩 페이지 목록 API (clinic_admin 사용 가능) |
+
+### 수정 파일
+
+| 파일 | 변경 내용 |
+|------|----------|
+| `app/(dashboard)/admin/landing-pages/page.tsx` | 테이블에 리드/예약/결제/매출 4개 컬럼 추가, 리드 수 클릭 시 leads 페이지로 이동 |
+
+### 구현 내용
+
+#### 성과 통계 API
+```
+GET /api/admin/landing-pages/stats?startDate=...&endDate=...
+→ [{ landing_page_id, lead_count, booking_count, paying_customers, revenue, booking_rate, conversion_rate }]
+```
+- leads, payments, bookings 3개 테이블 병렬 조회
+- 고객-LP 귀속: first-touch 방식 (최초 유입 LP에 예약/결제 귀속)
+- clinic_id 기반 멀티테넌트 격리
+
+#### 테이블 컬럼 추가
+| 컬럼 | 표시 | 클릭 동작 |
+|------|------|----------|
+| 리드 | `{count}건` | `/leads?landing_page_id={id}`로 이동 |
+| 예약 | `{count}({rate}%)` | - |
+| 결제 | `{count}({rate}%)` | - |
+| 매출 | `₩{amount}` | - |
+
+---
+
+## P12: 리드 페이지 필터 강화 (2026-03-16)
+
+### 목표
+랜딩 페이지별, 캠페인별 리드 필터링 기능 추가
+
+### 수정 파일
+
+| 파일 | 변경 내용 |
+|------|----------|
+| `app/api/leads/route.ts` | `landing_page_id`, `utm_campaign`, `endDate` 쿼리 파라미터 추가 |
+| `app/(dashboard)/leads/page.tsx` | 랜딩페이지/캠페인 필터 UI, URL 파라미터 연동, Suspense 래핑 |
+
+### 구현 내용
+
+#### API 필터 파라미터 추가
+```
+GET /api/leads?landing_page_id=1&utm_campaign=march_promo&endDate=2026-03-31
+```
+- 필터 적용 시 limit을 500으로 확대 (후필터링 결과 부족 방지)
+- 기존 `startDate`, `clinic_id` 파라미터와 병행 사용
+
+#### 필터 UI 추가
+- 채널 필터 (기존) + 랜딩페이지 필터 + 캠페인 필터
+- 캠페인 목록은 현재 데이터에서 자동 추출 (`useMemo`)
+- 필터 초기화 버튼 (활성 필터 1개 이상 시 표시)
+- URL `?landing_page_id=X` 파라미터 지원 (P11 연동)
+
+#### 크로스 페이지 연동
+```
+랜딩 페이지 관리 → 리드 수 클릭 → /leads?landing_page_id=X → 해당 LP 리드만 표시
+```
+
+### 코드 리뷰 후 수정
+
+| 우선순위 | 문제 | 수정 내용 |
+|---------|------|----------|
+| 높음 | 필터 적용 시 limit(100) 때문에 결과 부족 | 필터 있을 때 limit을 500으로 확대 |
+| 중간 | activeFilterCount에 채널 필터 미포함 | 채널 필터도 포함하도록 수정 |
+| 낮음 | 미사용 import (Users, TrendingUp) | 제거 |
+
+### 빌드 결과
+```
+/leads              7.29 kB (총 153 kB)
+/admin/landing-pages 3.1 kB (총 155 kB)
+
+✓ Build 성공
+✓ TypeScript 타입 검사 통과
+```
+
+---
+
+## E2E 테스트 추가 (2026-03-16)
+
+### 목표
+전체 대시보드 페이지에 대한 Playwright E2E 테스트 커버리지 확보
+
+### 구현 내용
+
+| 항목 | 수량 |
+|------|------|
+| 테스트 스펙 | 14개 파일 |
+| 테스트 케이스 | 106개 |
+| Page Object | 13개 |
+| CI 워크플로우 | GitHub Actions (e2e.yml) |
+
+### 테스트 구조
+```
+e2e/
+├── fixtures/auth.fixture.ts    # 인증 fixture (superadmin, clinic_admin)
+├── pages/                       # Page Object 패턴
+│   ├── login.page.ts
+│   ├── dashboard.page.ts
+│   ├── leads.page.ts
+│   ├── utm.page.ts
+│   ├── ads.page.ts
+│   ├── patients.page.ts
+│   ├── content.page.ts
+│   ├── press.page.ts
+│   ├── monitor.page.ts
+│   ├── chatbot.page.ts
+│   ├── lead-form.page.ts
+│   └── admin.page.ts           # Users, Clinics, AdCreatives, LandingPages
+├── tests/                       # 테스트 스펙
+│   ├── auth.spec.ts             # 로그인/로그아웃/리다이렉트
+│   ├── dashboard.spec.ts        # 대시보드 로드/네비게이션/멀티테넌트
+│   ├── leads.spec.ts            # 리드 목록/검색/필터/상세/멀티테넌트
+│   ├── utm.spec.ts              # UTM 생성/복사/히스토리/QR
+│   ├── landing-page.spec.ts     # 랜딩페이지 접근/iframe/UTM/반응형
+│   ├── ads.spec.ts              # 광고 KPI/필터/테이블/동기화
+│   ├── patients.spec.ts         # 예약 목록/캘린더/확장/리다이렉트
+│   ├── content.spec.ts          # 콘텐츠 KPI/필터/추가/검색
+│   ├── press.spec.ts            # 언론보도 통계/기사/동기화
+│   ├── monitor.spec.ts          # 모니터링 통계/위험도/분석
+│   ├── chatbot.spec.ts          # 챗봇 통계/리드/발송률
+│   ├── lead-form.spec.ts        # 리드폼 요소/UTM/경고
+│   └── admin.spec.ts            # 계정/병원/소재/랜딩 CRUD/접근제어
+└── utils/test-helpers.ts        # 토스트/API/날짜 헬퍼
+```
+
+### 설정 수정
+- `playwright.config.ts`: testMatch 정규식 버그 수정, testIgnore 추가
+- `.github/workflows/e2e.yml`: 인증/비인증 테스트 분리 실행
+
+---
+
 ## 향후 작업 가능 항목
 
-1. **추가 컴포넌트**: Popover, Tooltip, Progress, Slider
-2. **테스트 추가**: Jest, React Testing Library
-3. **Storybook**: 컴포넌트 문서화/테스트
-4. **E2E 테스트**: Playwright
+1. **광고 소재 성과 연동**: 소재별 리드 수, CPL, 전환율 표시
+2. **대시보드 드릴다운**: KPI 카드 클릭 → 채널별 상세
+3. **예약 페이지 유입 경로**: 채널/캠페인 컬럼 추가
+4. **단위 테스트**: Jest + React Testing Library
 5. **성능 모니터링**: Web Vitals 측정

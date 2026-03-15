@@ -3,6 +3,7 @@ import { useState, useEffect } from 'react'
 import { Plus, FileText, Copy, ExternalLink, Trash2, Pencil } from 'lucide-react'
 import { useSession } from 'next-auth/react'
 import { useRouter } from 'next/navigation'
+import Link from 'next/link'
 import { toast } from 'sonner'
 import { Card } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
@@ -54,6 +55,8 @@ export default function LandingPagesPage() {
   const [availableFiles, setAvailableFiles] = useState<string[]>([])
   const [clinics, setClinics] = useState<any[]>([])
   const [loading, setLoading] = useState(true)
+  const [stats, setStats] = useState<Record<number, { lead_count: number; booking_count: number; paying_customers: number; revenue: number; booking_rate: number; conversion_rate: number }>>({})
+
   const [dialogOpen, setDialogOpen] = useState(false)
   const [editing, setEditing] = useState<LandingPage | null>(null)
   const [form, setForm] = useState({ name: '', file_name: '', clinic_id: '', description: '', is_active: true })
@@ -66,9 +69,10 @@ export default function LandingPagesPage() {
   const fetchData = async () => {
     try {
       setLoading(true)
-      const [lpRes, cRes] = await Promise.all([
+      const [lpRes, cRes, statsRes] = await Promise.all([
         fetch('/api/admin/landing-pages?includeFiles=true').then(r => r.json()),
         fetch('/api/admin/clinics').then(r => r.json()),
+        fetch('/api/admin/landing-pages/stats').then(r => r.json()).catch(() => []),
       ])
       if (lpRes.landingPages) {
         setLandingPages(lpRes.landingPages)
@@ -77,6 +81,12 @@ export default function LandingPagesPage() {
         setLandingPages(Array.isArray(lpRes) ? lpRes : [])
       }
       setClinics(Array.isArray(cRes) ? cRes : [])
+      // 성과 통계를 landing_page_id 기준 맵으로 변환
+      if (Array.isArray(statsRes)) {
+        const map: Record<number, any> = {}
+        statsRes.forEach((s: any) => { map[s.landing_page_id] = s })
+        setStats(map)
+      }
     } catch {
       toast.error('데이터 로드 실패')
     } finally {
@@ -257,6 +267,10 @@ export default function LandingPagesPage() {
                 <TableHead className="text-xs text-slate-500 font-medium">파일명</TableHead>
                 <TableHead className="text-xs text-slate-500 font-medium">배정 병원</TableHead>
                 <TableHead className="text-xs text-slate-500 font-medium">URL</TableHead>
+                <TableHead className="text-xs text-slate-500 font-medium">리드</TableHead>
+                <TableHead className="text-xs text-slate-500 font-medium">예약</TableHead>
+                <TableHead className="text-xs text-slate-500 font-medium">결제</TableHead>
+                <TableHead className="text-xs text-slate-500 font-medium">매출</TableHead>
                 <TableHead className="text-xs text-slate-500 font-medium">상태</TableHead>
                 <TableHead className="text-xs text-slate-500 font-medium">작업</TableHead>
               </TableRow>
@@ -278,6 +292,39 @@ export default function LandingPagesPage() {
                         <ExternalLink size={12} />
                       </a>
                     </div>
+                  </TableCell>
+                  <TableCell>
+                    {stats[lp.id]?.lead_count ? (
+                      <Link
+                        href={`/leads?landing_page_id=${lp.id}`}
+                        className="text-brand-400 hover:text-brand-300 font-semibold transition-colors"
+                      >
+                        {stats[lp.id].lead_count}건
+                      </Link>
+                    ) : (
+                      <span className="text-slate-600 text-xs">-</span>
+                    )}
+                  </TableCell>
+                  <TableCell>
+                    {stats[lp.id]?.booking_count ? (
+                      <span className="text-blue-400 text-sm">{stats[lp.id].booking_count}<span className="text-slate-600 text-xs ml-1">({stats[lp.id].booking_rate}%)</span></span>
+                    ) : (
+                      <span className="text-slate-600 text-xs">-</span>
+                    )}
+                  </TableCell>
+                  <TableCell>
+                    {stats[lp.id]?.paying_customers ? (
+                      <span className="text-emerald-400 text-sm">{stats[lp.id].paying_customers}<span className="text-slate-600 text-xs ml-1">({stats[lp.id].conversion_rate}%)</span></span>
+                    ) : (
+                      <span className="text-slate-600 text-xs">-</span>
+                    )}
+                  </TableCell>
+                  <TableCell>
+                    {stats[lp.id]?.revenue ? (
+                      <span className="text-emerald-400 font-semibold text-sm">₩{stats[lp.id].revenue.toLocaleString()}</span>
+                    ) : (
+                      <span className="text-slate-600 text-xs">-</span>
+                    )}
                   </TableCell>
                   <TableCell>
                     <Badge variant={lp.is_active ? 'success' : 'secondary'}>

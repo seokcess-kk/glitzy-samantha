@@ -1,6 +1,7 @@
 'use client'
-import { useState, useEffect, useMemo } from 'react'
-import { Search, User, Phone, Calendar, TrendingUp, Users, Star, Filter, FileText, Info } from 'lucide-react'
+import { useState, useEffect, useMemo, Suspense } from 'react'
+import { useSearchParams } from 'next/navigation'
+import { Search, User, Phone, Calendar, TrendingUp, Users, Star, Filter, FileText, Info, X } from 'lucide-react'
 import { useClinic } from '@/components/ClinicContext'
 import { Card } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
@@ -203,7 +204,16 @@ function CustomerDetail({ lead }: { lead: any }) {
 }
 
 export default function LeadsPage() {
+  return (
+    <Suspense fallback={<div className="text-slate-500 text-center py-12">로딩 중...</div>}>
+      <LeadsContent />
+    </Suspense>
+  )
+}
+
+function LeadsContent() {
   const { selectedClinicId } = useClinic()
+  const searchParams = useSearchParams()
   const [leads, setLeads] = useState<any[]>([])
   const [loading, setLoading] = useState(true)
   const [search, setSearch] = useState('')
@@ -211,16 +221,32 @@ export default function LeadsPage() {
   const [tab, setTab] = useState<'all' | 'new' | 'revisit'>('all')
   const [channelFilter, setChannelFilter] = useState<string>('all')
   const [stageFilter, setStageFilter] = useState<string>('all')
+  const [landingPageFilter, setLandingPageFilter] = useState<string>(searchParams.get('landing_page_id') || 'all')
+  const [campaignFilter, setCampaignFilter] = useState<string>('all')
+  const [landingPages, setLandingPages] = useState<{ id: number; name: string }[]>([])
+
+  // 랜딩 페이지 목록 로드
+  useEffect(() => {
+    const qs = selectedClinicId ? `?clinic_id=${selectedClinicId}` : ''
+    fetch(`/api/landing-pages${qs}`)
+      .then(r => r.json())
+      .then(d => setLandingPages(Array.isArray(d) ? d : []))
+      .catch(() => {})
+  }, [selectedClinicId])
 
   useEffect(() => {
     setLoading(true)
-    const qs = selectedClinicId ? `?clinic_id=${selectedClinicId}` : ''
+    const params = new URLSearchParams()
+    if (selectedClinicId) params.set('clinic_id', String(selectedClinicId))
+    if (landingPageFilter !== 'all') params.set('landing_page_id', landingPageFilter)
+    if (campaignFilter !== 'all') params.set('utm_campaign', campaignFilter)
+    const qs = params.toString() ? `?${params.toString()}` : ''
     fetch(`/api/leads${qs}`)
       .then(r => r.json())
       .then(d => setLeads(Array.isArray(d) ? d : []))
       .catch(() => {})
       .finally(() => setLoading(false))
-  }, [selectedClinicId])
+  }, [selectedClinicId, landingPageFilter, campaignFilter])
 
   const channels = useMemo(() => {
     const set = new Set<string>()
@@ -230,6 +256,17 @@ export default function LeadsPage() {
     })
     return Array.from(set).sort()
   }, [leads])
+
+  const campaigns = useMemo(() => {
+    const set = new Set<string>()
+    leads.forEach(l => {
+      if (l.utm_campaign) set.add(l.utm_campaign)
+      l.leads?.forEach((lead: any) => { if (lead.utm_campaign) set.add(lead.utm_campaign) })
+    })
+    return Array.from(set).sort()
+  }, [leads])
+
+  const activeFilterCount = [channelFilter, landingPageFilter, campaignFilter].filter(f => f !== 'all').length
 
   const filtered = useMemo(() => {
     return leads.filter(l => {
@@ -327,11 +364,12 @@ export default function LeadsPage() {
           ))}
         </div>
 
-        {channels.length > 0 && (
-          <div className="flex items-center gap-2 ml-auto">
-            <Filter size={14} className="text-slate-500" />
+        <div className="flex items-center gap-2 ml-auto flex-wrap">
+          <Filter size={14} className="text-slate-500" />
+
+          {channels.length > 0 && (
             <Select value={channelFilter} onValueChange={setChannelFilter}>
-              <SelectTrigger className="w-[140px] glass-card border-0 text-white">
+              <SelectTrigger className="w-[130px] glass-card border-0 text-white text-xs">
                 <SelectValue placeholder="전체 채널" />
               </SelectTrigger>
               <SelectContent>
@@ -341,8 +379,47 @@ export default function LeadsPage() {
                 ))}
               </SelectContent>
             </Select>
-          </div>
-        )}
+          )}
+
+          {landingPages.length > 0 && (
+            <Select value={landingPageFilter} onValueChange={v => { setLandingPageFilter(v); setSelected(null) }}>
+              <SelectTrigger className="w-[150px] glass-card border-0 text-white text-xs">
+                <SelectValue placeholder="전체 랜딩페이지" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">전체 랜딩페이지</SelectItem>
+                {landingPages.map(lp => (
+                  <SelectItem key={lp.id} value={String(lp.id)}>{lp.name}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          )}
+
+          {campaigns.length > 0 && (
+            <Select value={campaignFilter} onValueChange={v => { setCampaignFilter(v); setSelected(null) }}>
+              <SelectTrigger className="w-[150px] glass-card border-0 text-white text-xs">
+                <SelectValue placeholder="전체 캠페인" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">전체 캠페인</SelectItem>
+                {campaigns.map(c => (
+                  <SelectItem key={c} value={c}>{c}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          )}
+
+          {activeFilterCount > 0 && (
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => { setLandingPageFilter('all'); setCampaignFilter('all'); setChannelFilter('all') }}
+              className="text-xs text-slate-400 hover:text-white"
+            >
+              <X size={12} /> 필터 초기화
+            </Button>
+          )}
+        </div>
       </div>
 
       {/* 모바일 Sheet - 모바일에서만 렌더링 */}
