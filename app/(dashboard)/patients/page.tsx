@@ -364,23 +364,21 @@ export default function PatientsPage() {
   const [createOpen, setCreateOpen] = useState(false)
   const [createForm, setCreateForm] = useState({
     name: '', phone_number: '',
-    registered_at: '', booking_date: '', booking_time: '',
+    booking_date: '', booking_time: '',
     source: 'walk-in', notes: '',
   })
   const [creating, setCreating] = useState(false)
 
   const initCreateForm = () => {
     const now = new Date()
-    // 현재 시각을 10분 단위로 올림
     const mins = Math.ceil(now.getMinutes() / 10) * 10
     now.setMinutes(mins, 0, 0)
     if (mins >= 60) now.setHours(now.getHours() + 1, 0, 0, 0)
-    const registered = new Date().toISOString().slice(0, 16)
     const dateStr = now.toISOString().slice(0, 10)
     const timeStr = `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`
     setCreateForm({
       name: '', phone_number: '',
-      registered_at: registered, booking_date: dateStr, booking_time: timeStr,
+      booking_date: dateStr, booking_time: timeStr,
       source: 'walk-in', notes: '',
     })
   }
@@ -521,34 +519,7 @@ export default function PatientsPage() {
                 />
               </div>
             </div>
-            <div className="grid grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <Label className="text-xs text-slate-400">등록 일시</Label>
-                <Input
-                  type="datetime-local"
-                  value={createForm.registered_at}
-                  disabled
-                  className="opacity-60"
-                />
-              </div>
-              <div className="space-y-2">
-                <Label className="text-xs text-slate-400">유입 경로</Label>
-                <Select value={createForm.source} onValueChange={v => setCreateForm(f => ({ ...f, source: v }))}>
-                  <SelectTrigger>
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="walk-in">방문 (Walk-in)</SelectItem>
-                    <SelectItem value="phone">전화 예약</SelectItem>
-                    <SelectItem value="kakao">카카오톡</SelectItem>
-                    <SelectItem value="naver">네이버 예약</SelectItem>
-                    <SelectItem value="referral">지인 소개</SelectItem>
-                    <SelectItem value="other">기타</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-            </div>
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-3 gap-4">
               <div className="space-y-2">
                 <Label className="text-xs text-slate-400">예약 날짜 *</Label>
                 <Input
@@ -572,6 +543,22 @@ export default function PatientsPage() {
                       const val = `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}`
                       return <SelectItem key={val} value={val}>{val}</SelectItem>
                     })}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-2">
+                <Label className="text-xs text-slate-400">유입 경로</Label>
+                <Select value={createForm.source} onValueChange={v => setCreateForm(f => ({ ...f, source: v }))}>
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="walk-in">방문 (Walk-in)</SelectItem>
+                    <SelectItem value="phone">전화 예약</SelectItem>
+                    <SelectItem value="kakao">카카오톡</SelectItem>
+                    <SelectItem value="naver">네이버 예약</SelectItem>
+                    <SelectItem value="referral">지인 소개</SelectItem>
+                    <SelectItem value="other">기타</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
