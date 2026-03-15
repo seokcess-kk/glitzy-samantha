@@ -177,10 +177,9 @@ export async function POST(req: Request) {
 
       if (clinic?.notify_enabled && clinic?.notify_phone && process.env.SOLAPI_API_KEY) {
         const { sendSms } = await import('@/lib/solapi')
-        const campaignLabel = finalUtm.utm_campaign || '직접유입'
         await sendSms({
           to: clinic.notify_phone,
-          text: `[${clinic.name}] 새 리드 유입\n이름: ${sanitizedName || '미입력'}\n연락처: ${normalizedPhone}\n캠페인: ${campaignLabel}`,
+          text: `[${clinic.name}] 상담 유입\n이름: ${sanitizedName || '미입력'}\n연락처: ${normalizedPhone}`,
         }).catch(() => {}) // 알림 실패가 리드 등록을 막지 않도록
       }
     } catch {
