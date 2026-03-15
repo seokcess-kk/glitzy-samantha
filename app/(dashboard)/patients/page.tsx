@@ -362,8 +362,28 @@ export default function PatientsPage() {
   const [currentMonth, setCurrentMonth] = useState(new Date())
   // 예약 등록 다이얼로그
   const [createOpen, setCreateOpen] = useState(false)
-  const [createForm, setCreateForm] = useState({ name: '', phone_number: '', booking_datetime: '', source: 'walk-in', notes: '' })
+  const [createForm, setCreateForm] = useState({
+    name: '', phone_number: '',
+    registered_at: '', booking_date: '', booking_time: '',
+    source: 'walk-in', notes: '',
+  })
   const [creating, setCreating] = useState(false)
+
+  const initCreateForm = () => {
+    const now = new Date()
+    // 현재 시각을 10분 단위로 올림
+    const mins = Math.ceil(now.getMinutes() / 10) * 10
+    now.setMinutes(mins, 0, 0)
+    if (mins >= 60) now.setHours(now.getHours() + 1, 0, 0, 0)
+    const registered = new Date().toISOString().slice(0, 16)
+    const dateStr = now.toISOString().slice(0, 10)
+    const timeStr = `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`
+    setCreateForm({
+      name: '', phone_number: '',
+      registered_at: registered, booking_date: dateStr, booking_time: timeStr,
+      source: 'walk-in', notes: '',
+    })
+  }
 
   const fetchBookings = useCallback(async () => {
     setLoading(true)
@@ -384,20 +404,30 @@ export default function PatientsPage() {
       toast.error('전화번호를 입력해주세요.')
       return
     }
+    if (!createForm.booking_date || !createForm.booking_time) {
+      toast.error('예약 일시를 입력해주세요.')
+      return
+    }
     setCreating(true)
     try {
+      const booking_datetime = `${createForm.booking_date}T${createForm.booking_time}:00`
       const qs = selectedClinicId ? `?clinic_id=${selectedClinicId}` : ''
       const res = await fetch(`/api/bookings${qs}`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(createForm),
+        body: JSON.stringify({
+          name: createForm.name,
+          phone_number: createForm.phone_number,
+          booking_datetime,
+          source: createForm.source,
+          notes: createForm.notes,
+        }),
       })
       if (!res.ok) {
         const err = await res.json()
         throw new Error(err.error)
       }
       toast.success('예약이 등록되었습니다.')
-      setCreateForm({ name: '', phone_number: '', booking_datetime: '', source: 'walk-in', notes: '' })
       setCreateOpen(false)
       fetchBookings()
     } catch (e: any) {
@@ -440,7 +470,7 @@ export default function PatientsPage() {
         description="예약 현황, 상담 기록 및 결제 내역 통합 관리"
         actions={
           <div className="flex items-center gap-2">
-            <Button size="sm" onClick={() => setCreateOpen(true)} className="bg-brand-600 hover:bg-brand-700">
+            <Button size="sm" onClick={() => { initCreateForm(); setCreateOpen(true) }} className="bg-brand-600 hover:bg-brand-700">
               <Plus size={14} /> 예약 등록
             </Button>
             <Card variant="glass" className="flex p-1 gap-1">
@@ -466,10 +496,7 @@ export default function PatientsPage() {
       />
 
       {/* 예약 등록 다이얼로그 */}
-      <Dialog open={createOpen} onOpenChange={(open) => {
-        setCreateOpen(open)
-        if (!open) setCreateForm({ name: '', phone_number: '', booking_datetime: '', source: 'walk-in', notes: '' })
-      }}>
+      <Dialog open={createOpen} onOpenChange={setCreateOpen}>
         <DialogContent>
           <DialogHeader>
             <DialogTitle>새 예약 등록</DialogTitle>
@@ -496,11 +523,12 @@ export default function PatientsPage() {
             </div>
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
-                <Label className="text-xs text-slate-400">예약 일시</Label>
+                <Label className="text-xs text-slate-400">등록 일시</Label>
                 <Input
                   type="datetime-local"
-                  value={createForm.booking_datetime}
-                  onChange={e => setCreateForm(f => ({ ...f, booking_datetime: e.target.value }))}
+                  value={createForm.registered_at}
+                  disabled
+                  className="opacity-60"
                 />
               </div>
               <div className="space-y-2">
@@ -516,6 +544,34 @@ export default function PatientsPage() {
                     <SelectItem value="naver">네이버 예약</SelectItem>
                     <SelectItem value="referral">지인 소개</SelectItem>
                     <SelectItem value="other">기타</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label className="text-xs text-slate-400">예약 날짜 *</Label>
+                <Input
+                  type="date"
+                  value={createForm.booking_date}
+                  min={new Date().toISOString().slice(0, 10)}
+                  onChange={e => setCreateForm(f => ({ ...f, booking_date: e.target.value }))}
+                />
+              </div>
+              <div className="space-y-2">
+                <Label className="text-xs text-slate-400">예약 시간 *</Label>
+                <Select value={createForm.booking_time} onValueChange={v => setCreateForm(f => ({ ...f, booking_time: v }))}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="시간 선택" />
+                  </SelectTrigger>
+                  <SelectContent className="max-h-60">
+                    {Array.from({ length: 13 * 6 }, (_, i) => {
+                      const h = Math.floor(i / 6) + 8
+                      const m = (i % 6) * 10
+                      if (h > 20) return null
+                      const val = `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}`
+                      return <SelectItem key={val} value={val}>{val}</SelectItem>
+                    })}
                   </SelectContent>
                 </Select>
               </div>
