@@ -167,7 +167,26 @@ export async function POST(req: Request) {
       .single()
     if (leadError) throw leadError
 
-    // 3. QStash로 5분 후 챗봇 발송 스케줄
+    // 3. 병원 담당자 SMS 알림 발송 (즉시, 솔라피)
+    try {
+      const { data: clinic } = await supabase
+        .from('clinics')
+        .select('notify_phone, notify_enabled, name')
+        .eq('id', customer.clinic_id || validClinicId)
+        .single()
+
+      if (clinic?.notify_enabled && clinic?.notify_phone && process.env.SOLAPI_API_KEY) {
+        const { sendSms } = await import('@/lib/solapi')
+        await sendSms({
+          to: clinic.notify_phone,
+          text: `[${clinic.name}] 상담 유입\n이름: ${sanitizedName || '미입력'}\n연락처: ${normalizedPhone}`,
+        }).catch(() => {}) // 알림 실패가 리드 등록을 막지 않도록
+      }
+    } catch {
+      // 알림 발송 실패는 무시 (리드 등록은 이미 완료)
+    }
+
+    // 4. QStash로 5분 후 챗봇 발송 스케줄
     if (process.env.QSTASH_TOKEN) {
       await qstash.publishJSON({
         url: `${process.env.NEXTAUTH_URL}/api/qstash/chatbot`,
@@ -178,7 +197,7 @@ export async function POST(req: Request) {
 
     return apiSuccess({
       success: true,
-      message: '리드가 등록되고 5분 내 챗봇 발송 스케줄이 설정되었습니다.',
+      message: '리드가 등록되고 담당자 알림 및 챗봇 발송이 스케줄되었습니다.',
       leadId: lead.id,
       customerId: customer.id,
       isNewCustomer: !existingCustomer,

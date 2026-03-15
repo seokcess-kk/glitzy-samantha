@@ -3,7 +3,7 @@ import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import { signOut } from 'next-auth/react'
 import { useSession } from 'next-auth/react'
-import { LayoutDashboard, Users, MessageCircle, BarChart2, LogOut, Activity, Calendar, Film, Link2, Scan, Newspaper, Settings, ChevronUp, User, FileEdit, LucideIcon, Building2, UserCog, FileText, Image } from 'lucide-react'
+import { LayoutDashboard, Users, MessageCircle, BarChart2, LogOut, Activity, Calendar, Film, Link2, Scan, Newspaper, Settings, ChevronUp, User, FileEdit, LucideIcon, Building2, UserCog, FileText, Image, Megaphone } from 'lucide-react'
 import { useClinic } from './ClinicContext'
 import { Button } from '@/components/ui/button'
 import {
@@ -44,6 +44,7 @@ const menuGroups: MenuGroup[] = [
   {
     label: '고객 관리',
     items: [
+      { href: '/campaigns', label: '캠페인 리드', icon: Megaphone },
       { href: '/leads', label: '고객(CDP)', icon: Users },
       { href: '/patients', label: '예약/결제', icon: Calendar },
       { href: '/chatbot', label: '챗봇 현황', icon: MessageCircle },
