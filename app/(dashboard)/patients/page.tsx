@@ -24,6 +24,14 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table'
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogFooter,
+} from '@/components/ui/dialog'
+import { Textarea } from '@/components/ui/textarea'
 import { PageHeader, StatusBadge, EmptyState } from '@/components/common'
 
 // 상수
@@ -352,6 +360,10 @@ export default function PatientsPage() {
   const [search, setSearch] = useState('')
   const [statusFilter, setStatusFilter] = useState('all')
   const [currentMonth, setCurrentMonth] = useState(new Date())
+  // 예약 등록 다이얼로그
+  const [createOpen, setCreateOpen] = useState(false)
+  const [createForm, setCreateForm] = useState({ name: '', phone_number: '', booking_datetime: '', source: 'walk-in', notes: '' })
+  const [creating, setCreating] = useState(false)
 
   const fetchBookings = useCallback(async () => {
     setLoading(true)
@@ -366,6 +378,34 @@ export default function PatientsPage() {
   }, [selectedClinicId])
 
   useEffect(() => { fetchBookings() }, [fetchBookings])
+
+  const handleCreate = async () => {
+    if (!createForm.phone_number) {
+      toast.error('전화번호를 입력해주세요.')
+      return
+    }
+    setCreating(true)
+    try {
+      const qs = selectedClinicId ? `?clinic_id=${selectedClinicId}` : ''
+      const res = await fetch(`/api/bookings${qs}`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(createForm),
+      })
+      if (!res.ok) {
+        const err = await res.json()
+        throw new Error(err.error)
+      }
+      toast.success('예약이 등록되었습니다.')
+      setCreateForm({ name: '', phone_number: '', booking_datetime: '', source: 'walk-in', notes: '' })
+      setCreateOpen(false)
+      fetchBookings()
+    } catch (e: any) {
+      toast.error(e.message || '예약 등록 실패')
+    } finally {
+      setCreating(false)
+    }
+  }
 
   const filtered = bookings.filter(b => {
     const matchSearch = !search || b.customer?.name?.includes(search) || b.customer?.phone_number?.includes(search)
@@ -397,28 +437,107 @@ export default function PatientsPage() {
     <>
       <PageHeader
         title="예약 / 결제 관리"
-        description="챗봇 확정 예약 현황, 상담 기록 및 결제 내역 통합 관리"
+        description="예약 현황, 상담 기록 및 결제 내역 통합 관리"
         actions={
-          <Card variant="glass" className="flex p-1 gap-1">
-            <Button
-              variant={view === 'list' ? 'default' : 'ghost'}
-              size="sm"
-              onClick={() => setView('list')}
-              className={view === 'list' ? 'bg-brand-600' : ''}
-            >
-              <List size={14} /> 목록
+          <div className="flex items-center gap-2">
+            <Button size="sm" onClick={() => setCreateOpen(true)} className="bg-brand-600 hover:bg-brand-700">
+              <Plus size={14} /> 예약 등록
             </Button>
-            <Button
-              variant={view === 'calendar' ? 'default' : 'ghost'}
-              size="sm"
-              onClick={() => setView('calendar')}
-              className={view === 'calendar' ? 'bg-brand-600' : ''}
-            >
-              <Calendar size={14} /> 캘린더
-            </Button>
-          </Card>
+            <Card variant="glass" className="flex p-1 gap-1">
+              <Button
+                variant={view === 'list' ? 'default' : 'ghost'}
+                size="sm"
+                onClick={() => setView('list')}
+                className={view === 'list' ? 'bg-brand-600' : ''}
+              >
+                <List size={14} /> 목록
+              </Button>
+              <Button
+                variant={view === 'calendar' ? 'default' : 'ghost'}
+                size="sm"
+                onClick={() => setView('calendar')}
+                className={view === 'calendar' ? 'bg-brand-600' : ''}
+              >
+                <Calendar size={14} /> 캘린더
+              </Button>
+            </Card>
+          </div>
         }
       />
+
+      {/* 예약 등록 다이얼로그 */}
+      <Dialog open={createOpen} onOpenChange={(open) => {
+        setCreateOpen(open)
+        if (!open) setCreateForm({ name: '', phone_number: '', booking_datetime: '', source: 'walk-in', notes: '' })
+      }}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>새 예약 등록</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4 py-4">
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label className="text-xs text-slate-400">이름</Label>
+                <Input
+                  value={createForm.name}
+                  onChange={e => setCreateForm(f => ({ ...f, name: e.target.value }))}
+                  placeholder="홍길동"
+                />
+              </div>
+              <div className="space-y-2">
+                <Label className="text-xs text-slate-400">전화번호 *</Label>
+                <Input
+                  type="tel"
+                  value={createForm.phone_number}
+                  onChange={e => setCreateForm(f => ({ ...f, phone_number: e.target.value }))}
+                  placeholder="010-1234-5678"
+                />
+              </div>
+            </div>
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label className="text-xs text-slate-400">예약 일시</Label>
+                <Input
+                  type="datetime-local"
+                  value={createForm.booking_datetime}
+                  onChange={e => setCreateForm(f => ({ ...f, booking_datetime: e.target.value }))}
+                />
+              </div>
+              <div className="space-y-2">
+                <Label className="text-xs text-slate-400">유입 경로</Label>
+                <Select value={createForm.source} onValueChange={v => setCreateForm(f => ({ ...f, source: v }))}>
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="walk-in">방문 (Walk-in)</SelectItem>
+                    <SelectItem value="phone">전화 예약</SelectItem>
+                    <SelectItem value="kakao">카카오톡</SelectItem>
+                    <SelectItem value="naver">네이버 예약</SelectItem>
+                    <SelectItem value="referral">지인 소개</SelectItem>
+                    <SelectItem value="other">기타</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+            <div className="space-y-2">
+              <Label className="text-xs text-slate-400">메모</Label>
+              <Textarea
+                value={createForm.notes}
+                onChange={e => setCreateForm(f => ({ ...f, notes: e.target.value }))}
+                placeholder="예약 관련 메모"
+                rows={2}
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="ghost" onClick={() => setCreateOpen(false)}>취소</Button>
+            <Button onClick={handleCreate} disabled={creating} className="bg-brand-600 hover:bg-brand-700">
+              {creating ? '등록 중...' : '예약 등록'}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       {/* 통계 카드 */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-3 md:gap-4 mb-6">
