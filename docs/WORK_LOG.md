@@ -1043,6 +1043,99 @@ d0b4ae6 fix: 랜딩 페이지 Hydration 에러 수정
 
 ---
 
+## P10: UTM 생성기 히스토리 UI 개선 및 코드 품질 개선 (2026-03-15)
+
+### 목표
+UTM 생성기에서 생성된 UTM 목록을 더 쉽게 확인하고 관리할 수 있도록 UI 개선 및 코드 품질 향상
+
+### 변경 파일
+
+| 파일 | 변경 내용 |
+|------|----------|
+| `app/(dashboard)/utm/page.tsx` | 히스토리 UI 개선, 코드 리팩토링 |
+
+### UI 개선 사항
+
+| 항목 | 변경 전 | 변경 후 |
+|------|--------|--------|
+| 기본 상태 | 접힘 | 펼침 |
+| 제목 | "URL 히스토리" | "생성된 UTM 목록" |
+| 검색 | 없음 | 라벨, 소스, 캠페인, 콘텐츠 검색 가능 |
+| UTM 표시 | URL만 표시 | source, medium, campaign, content 태그 표시 |
+| 시간 표시 | 날짜만 | 날짜 + 시간 상세 표시 |
+| 액션 | 복사, 불러오기 | 복사, 불러오기, 열기 |
+
+### 코드 품질 개선
+
+| 우선순위 | 문제 | 수정 내용 |
+|---------|------|----------|
+| 높음 | 필터 로직 중복 (2곳) | `filteredLinks` useMemo 변수로 통합 |
+| 높음 | 매 렌더링마다 필터링 재계산 | `useMemo`로 메모이제이션 적용 |
+| 중간 | handleLoadLink 쿼리 파라미터 손실 | UTM 제외 후 기존 쿼리(`?id=X`) 보존 |
+| 낮음 | 날짜 포맷 옵션 매번 생성 | `DATE_FORMAT_OPTIONS` 상수로 추출 |
+
+### 구현 코드
+
+#### 1. 필터링된 링크 메모이제이션
+```typescript
+const filteredLinks = useMemo(() => {
+  if (!historySearch) return links
+  const search = historySearch.toLowerCase()
+  return links.filter(item =>
+    item.label?.toLowerCase().includes(search) ||
+    item.utm_source?.toLowerCase().includes(search) ||
+    item.utm_campaign?.toLowerCase().includes(search) ||
+    item.utm_content?.toLowerCase().includes(search) ||
+    item.utm_medium?.toLowerCase().includes(search)
+  )
+}, [links, historySearch])
+```
+
+#### 2. handleLoadLink 쿼리 파라미터 보존
+```typescript
+function handleLoadLink(link: UtmLink) {
+  try {
+    const url = new URL(link.original_url)
+    // UTM 파라미터를 제외한 기존 쿼리 파라미터 보존 (예: ?id=X)
+    const baseParams = new URLSearchParams(url.search)
+    ;['utm_source', 'utm_medium', 'utm_campaign', 'utm_content', 'utm_term']
+      .forEach(p => baseParams.delete(p))
+    const baseQuery = baseParams.toString()
+    setBaseUrl(url.origin + url.pathname + (baseQuery ? '?' + baseQuery : ''))
+    // ... 나머지 설정
+  } catch {
+    toast.error('URL 파싱 실패')
+  }
+}
+```
+
+#### 3. 날짜 포맷 상수
+```typescript
+const DATE_FORMAT_OPTIONS: Intl.DateTimeFormatOptions = {
+  year: 'numeric',
+  month: 'short',
+  day: 'numeric',
+  hour: '2-digit',
+  minute: '2-digit',
+}
+```
+
+### 빌드 결과
+```
+/utm    17.8 kB (총 163 kB)
+
+✓ Build 성공
+✓ TypeScript 타입 검사 통과
+```
+
+### 커밋
+```
+de4ec90 feat: UTM 생성기 히스토리 UI 개선
+add7816 refactor: UTM 생성기 코드 품질 개선
+```
+
+---
+
 ## 향후 작업 가능 항목
 
 1. **추가 컴포넌트**: Popover, Tooltip, Progress, Slider
