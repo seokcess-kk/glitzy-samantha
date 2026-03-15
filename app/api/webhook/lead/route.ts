@@ -167,7 +167,7 @@ export async function POST(req: Request) {
       .single()
     if (leadError) throw leadError
 
-    // 3. 병원 담당자 알림 발송 (즉시)
+    // 3. 병원 담당자 SMS 알림 발송 (즉시, 솔라피)
     try {
       const { data: clinic } = await supabase
         .from('clinics')
@@ -175,23 +175,12 @@ export async function POST(req: Request) {
         .eq('id', customer.clinic_id || validClinicId)
         .single()
 
-      if (clinic?.notify_enabled && clinic?.notify_phone && process.env.KAKAO_API_KEY && process.env.KAKAO_SENDER_KEY) {
+      if (clinic?.notify_enabled && clinic?.notify_phone && process.env.SOLAPI_API_KEY) {
+        const { sendSms } = await import('@/lib/solapi')
         const campaignLabel = finalUtm.utm_campaign || '직접유입'
-        const notifyParams = new URLSearchParams({
-          apikey: process.env.KAKAO_API_KEY,
-          userid: process.env.KAKAO_USER_ID || '',
-          senderkey: process.env.KAKAO_SENDER_KEY,
-          tpl_code: process.env.KAKAO_NOTIFY_TEMPLATE_CODE || process.env.KAKAO_TEMPLATE_CODE || '',
-          sender: process.env.KAKAO_SENDER_NUMBER || '',
-          receiver_1: clinic.notify_phone,
-          recvname_1: '담당자',
-          subject_1: '새 리드 유입',
-          message_1: `[${clinic.name}] 새 리드가 유입되었습니다.\n\n이름: ${sanitizedName || '미입력'}\n연락처: ${normalizedPhone}\n캠페인: ${campaignLabel}\n\nMMI에서 확인하세요.`,
-        })
-        await fetch('https://kakaoapi.aligo.in/akv10/alimtalk/send/', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-          body: notifyParams,
+        await sendSms({
+          to: clinic.notify_phone,
+          text: `[${clinic.name}] 새 리드 유입\n이름: ${sanitizedName || '미입력'}\n연락처: ${normalizedPhone}\n캠페인: ${campaignLabel}`,
         }).catch(() => {}) // 알림 실패가 리드 등록을 막지 않도록
       }
     } catch {
