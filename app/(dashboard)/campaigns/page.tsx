@@ -1,13 +1,30 @@
 'use client'
 import { useState, useEffect, Suspense } from 'react'
 import { useSearchParams, useRouter } from 'next/navigation'
-import { Megaphone, ArrowLeft, Phone, Clock, ChevronRight, RefreshCw, MessageCircle, FileText, User, ShieldCheck } from 'lucide-react'
+import { Megaphone, ArrowLeft, Phone, Clock, ChevronRight, RefreshCw, MessageCircle, FileText, User, ShieldCheck, PhoneCall } from 'lucide-react'
 import { useClinic } from '@/components/ClinicContext'
 import { Card } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { Skeleton } from '@/components/ui/skeleton'
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select'
+import { toast } from 'sonner'
 import { PageHeader, ChannelBadge } from '@/components/common'
+
+const LEAD_STATUS_CONFIG: Record<string, { label: string; color: string }> = {
+  new:        { label: '신규',     color: 'bg-blue-500/20 text-blue-400 border-blue-500/30' },
+  no_answer:  { label: '부재',     color: 'bg-slate-500/20 text-slate-400 border-slate-500/30' },
+  consulted:  { label: '상담완료', color: 'bg-amber-500/20 text-amber-400 border-amber-500/30' },
+  booked:     { label: '예약완료', color: 'bg-emerald-500/20 text-emerald-400 border-emerald-500/30' },
+  hold:       { label: '보류',     color: 'bg-purple-500/20 text-purple-400 border-purple-500/30' },
+  rejected:   { label: '거절',     color: 'bg-red-500/20 text-red-400 border-red-500/30' },
+}
 
 interface CampaignSummary {
   campaign: string
@@ -30,6 +47,7 @@ interface CampaignLead {
   chatbot_sent_at: string | null
   created_at: string
   landing_page_id: number | null
+  lead_status: string
   custom_data: { survey?: Record<string, string>; marketing_consent?: boolean; name?: string } | null
   customer: { id: number; name: string; phone_number: string; first_source: string } | null
   landing_page: { id: number; name: string } | null
@@ -146,19 +164,21 @@ function CampaignList({ campaigns, loading, onSelect, onRefresh }: {
 
 // ─── 캠페인 상세 리드 목록 ───
 
-function LeadCard({ lead }: { lead: CampaignLead }) {
+function LeadCard({ lead, onStatusChange }: { lead: CampaignLead; onStatusChange: (id: number, status: string) => void }) {
   const survey = lead.custom_data?.survey
   const surveyEntries = survey ? Object.values(survey) : []
   const marketingConsent = lead.custom_data?.marketing_consent
   const leadName = lead.custom_data?.name || lead.customer?.name || '이름 없음'
+  const status = lead.lead_status || 'new'
+  const statusConfig = LEAD_STATUS_CONFIG[status] || LEAD_STATUS_CONFIG.new
 
   return (
     <div
       className="px-4 py-3 rounded-2xl"
       style={{ background: 'rgba(255,255,255,0.04)', backdropFilter: 'blur(10px)', border: '1px solid rgba(255,255,255,0.08)' }}
     >
-      {/* 1행: 기본 정보 */}
-      <div className="flex items-center gap-3 mb-2">
+      {/* 1행: 기본 정보 + 상태 */}
+      <div className="flex items-center gap-2 mb-2">
         <div className="w-8 h-8 rounded-full bg-brand-600/20 flex items-center justify-center text-brand-400 font-semibold text-sm shrink-0">
           {leadName[0] || <User size={14} />}
         </div>
@@ -168,20 +188,25 @@ function LeadCard({ lead }: { lead: CampaignLead }) {
           {lead.customer?.phone_number || '-'}
         </span>
         <ChannelBadge channel={lead.utm_source || '-'} />
-        {lead.chatbot_sent ? (
-          <Badge variant="success" className="text-[10px]">발송완료</Badge>
-        ) : (
-          <Badge variant="warning" className="text-[10px]">대기</Badge>
-        )}
         {marketingConsent !== undefined && (
           <span className={`flex items-center gap-1 text-[10px] shrink-0 ${marketingConsent ? 'text-emerald-500' : 'text-slate-600'}`}>
             <ShieldCheck size={10} />
             {marketingConsent ? '수신동의' : '미동의'}
           </span>
         )}
-        <span className="text-[10px] text-slate-600 ml-auto shrink-0">
+        <span className="text-[10px] text-slate-600 shrink-0 ml-auto">
           {new Date(lead.created_at).toLocaleString('ko', { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })}
         </span>
+        <Select value={status} onValueChange={v => onStatusChange(lead.id, v)}>
+          <SelectTrigger className={`w-[100px] h-7 text-[11px] font-semibold border rounded-full px-2.5 ${statusConfig.color}`}>
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent>
+            {Object.entries(LEAD_STATUS_CONFIG).map(([key, cfg]) => (
+              <SelectItem key={key} value={key}>{cfg.label}</SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
       </div>
 
       {/* 2행: 설문 응답 + 랜딩페이지 + 소재 */}
@@ -216,7 +241,7 @@ function CampaignDetail({ campaign, onBack }: { campaign: string; onBack: () => 
   const [leads, setLeads] = useState<CampaignLead[]>([])
   const [loading, setLoading] = useState(true)
 
-  useEffect(() => {
+  const fetchLeads = () => {
     setLoading(true)
     const params = new URLSearchParams({ campaign })
     if (selectedClinicId) params.set('clinic_id', String(selectedClinicId))
@@ -225,7 +250,30 @@ function CampaignDetail({ campaign, onBack }: { campaign: string; onBack: () => 
       .then(d => setLeads(d.leads || []))
       .catch(() => {})
       .finally(() => setLoading(false))
-  }, [campaign, selectedClinicId])
+  }
+
+  useEffect(() => { fetchLeads() }, [campaign, selectedClinicId])
+
+  const handleStatusChange = async (leadId: number, newStatus: string) => {
+    const params = new URLSearchParams()
+    if (selectedClinicId) params.set('clinic_id', String(selectedClinicId))
+    const res = await fetch(`/api/leads/${leadId}?${params}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ lead_status: newStatus }),
+    })
+    if (res.ok) {
+      const statusLabel = LEAD_STATUS_CONFIG[newStatus]?.label || newStatus
+      toast.success(`상태가 "${statusLabel}"(으)로 변경되었습니다.`)
+      if (newStatus === 'booked') {
+        toast.success('예약/결제 관리 페이지에 자동 등록되었습니다.')
+      }
+      // 로컬 상태 즉시 반영
+      setLeads(prev => prev.map(l => l.id === leadId ? { ...l, lead_status: newStatus } : l))
+    } else {
+      toast.error('상태 변경 실패')
+    }
+  }
 
   const sentCount = leads.filter(l => l.chatbot_sent).length
   const consentCount = leads.filter(l => l.custom_data?.marketing_consent).length
@@ -251,19 +299,16 @@ function CampaignDetail({ campaign, onBack }: { campaign: string; onBack: () => 
 
       {/* 요약 */}
       {!loading && leads.length > 0 && (
-        <div className="grid grid-cols-3 gap-3 mb-5">
-          <Card variant="glass" className="p-3 text-center">
-            <p className="text-lg font-bold text-brand-400">{leads.length}</p>
-            <p className="text-[10px] text-slate-500">전체 리드</p>
-          </Card>
-          <Card variant="glass" className="p-3 text-center">
-            <p className="text-lg font-bold text-emerald-400">{sentCount}</p>
-            <p className="text-[10px] text-slate-500">챗봇 발송</p>
-          </Card>
-          <Card variant="glass" className="p-3 text-center">
-            <p className="text-lg font-bold text-amber-400">{consentCount}</p>
-            <p className="text-[10px] text-slate-500">수신 동의</p>
-          </Card>
+        <div className="grid grid-cols-3 sm:grid-cols-6 gap-2 mb-5">
+          {Object.entries(LEAD_STATUS_CONFIG).map(([key, cfg]) => {
+            const count = leads.filter(l => (l.lead_status || 'new') === key).length
+            return (
+              <Card key={key} variant="glass" className="p-2.5 text-center">
+                <p className={`text-lg font-bold ${cfg.color.split(' ')[1]}`}>{count}</p>
+                <p className="text-[10px] text-slate-500">{cfg.label}</p>
+              </Card>
+            )
+          })}
         </div>
       )}
 
@@ -277,7 +322,7 @@ function CampaignDetail({ campaign, onBack }: { campaign: string; onBack: () => 
                 이 캠페인에서 유입된 리드가 없습니다.
               </Card>
             )
-            : leads.map(lead => <LeadCard key={lead.id} lead={lead} />)
+            : leads.map(lead => <LeadCard key={lead.id} lead={lead} onStatusChange={handleStatusChange} />)
         }
       </div>
     </>

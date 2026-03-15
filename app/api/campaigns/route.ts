@@ -20,7 +20,7 @@ export const GET = withClinicFilter(async (req: Request, { clinicId }: ClinicCon
       .from('leads')
       .select(`
         id, customer_id, utm_source, utm_medium, utm_campaign, utm_content,
-        chatbot_sent, chatbot_sent_at, created_at, landing_page_id, custom_data,
+        chatbot_sent, chatbot_sent_at, created_at, landing_page_id, custom_data, lead_status,
         customer:customers(id, name, phone_number, first_source),
         landing_page:landing_pages(id, name)
       `)
