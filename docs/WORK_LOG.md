@@ -892,6 +892,157 @@ ALTER TABLE ad_creatives ADD COLUMN IF NOT EXISTS utm_term VARCHAR(100);
 
 ---
 
+## P9: 랜딩 페이지 Hydration 에러 수정 (2026-03-15)
+
+### 목표
+`/lp?id=X` 랜딩 페이지 접근 시 발생하는 React Hydration 에러 수정
+
+### 문제 상황
+```
+Error: Hydration failed because the initial UI does not match what was rendered on the server.
+```
+
+서버 컴포넌트에서 `dangerouslySetInnerHTML`로 HTML을 직접 렌더링할 때, 서버와 클라이언트 간 렌더링 불일치로 인해 Hydration 에러 발생
+
+### 해결 방법
+iframe 방식으로 변경하여 HTML을 별도 API에서 서빙
+
+### 변경 파일
+
+| 파일 | 변경 내용 |
+|------|----------|
+| `app/lp/page.tsx` | 서버 컴포넌트 → 클라이언트 컴포넌트, iframe 방식으로 변경 |
+| `app/api/lp/render/route.ts` | 신규 - HTML 파일 서빙 API |
+
+### 구현 상세
+
+#### 1. 클라이언트 컴포넌트로 변경 (app/lp/page.tsx)
+```tsx
+'use client'
+
+import { useSearchParams } from 'next/navigation'
+import { Suspense } from 'react'
+
+function LandingPageContent() {
+  const searchParams = useSearchParams()
+  const lpId = searchParams.get('id')
+  const allParams = searchParams.toString()
+
+  return (
+    <iframe
+      src={`/api/lp/render?${allParams}`}
+      className="w-full h-screen border-0"
+      title="Landing Page"
+    />
+  )
+}
+
+export default function LandingPage() {
+  return (
+    <Suspense fallback={<div>로딩 중...</div>}>
+      <LandingPageContent />
+    </Suspense>
+  )
+}
+```
+
+#### 2. HTML 렌더링 API (app/api/lp/render/route.ts)
+```typescript
+export async function GET(req: NextRequest) {
+  const lpId = searchParams.get('id')
+
+  // DB에서 랜딩 페이지 조회
+  const { data: landingPage } = await supabase
+    .from('landing_pages')
+    .select('*, clinic:clinics(id, name)')
+    .eq('id', lpId)
+    .eq('is_active', true)
+    .single()
+
+  // HTML 파일 읽기
+  let htmlContent = fs.readFileSync(htmlPath, 'utf-8')
+
+  // 데이터 주입 (window.__LP_DATA__)
+  const dataScript = `
+  <script>
+    window.__LP_DATA__ = {
+      clinicId: ${landingPage.clinic_id || 'null'},
+      landingPageId: ${landingPage.id},
+      clinicName: "${clinicName}"
+    };
+  </script>`
+
+  htmlContent = htmlContent.replace('</head>', `${dataScript}</head>`)
+
+  return new NextResponse(htmlContent, {
+    headers: { 'Content-Type': 'text/html; charset=utf-8' },
+  })
+}
+```
+
+### 장점
+- Hydration 에러 완전 해결
+- 모든 쿼리 파라미터 (UTM 포함) iframe에 전달
+- 미들웨어 수정 불필요 (`/api` 경로는 이미 인증 제외)
+
+### 빌드 결과
+```
+/lp              763 B (총 88.3 kB)
+/api/lp/render   0 B (API 라우트)
+
+✓ Build 성공
+✓ TypeScript 타입 검사 통과
+```
+
+### 커밋
+```
+d0b4ae6 fix: 랜딩 페이지 Hydration 에러 수정
+```
+
+---
+
+## 전체 시스템 플로우 (완성)
+
+```
+┌─────────────────────────────────────────────────────────────────┐
+│                        슈퍼어드민 관리                           │
+├─────────────────────────────────────────────────────────────────┤
+│  1. 광고 소재 등록 (/admin/ad-creatives)                         │
+│     └─ UTM 전체 입력 (source, medium, campaign, content, term)  │
+│     └─ 랜딩 페이지 연결                                          │
+│                              ↓                                   │
+│  2. UTM 생성기 (/utm)                                            │
+│     └─ 소재 선택 → 모든 UTM 값 자동 적용                          │
+│     └─ 랜딩 페이지 URL 자동 생성                                  │
+│     └─ QR 코드 생성/복사                                         │
+└─────────────────────────────────────────────────────────────────┘
+                              ↓
+┌─────────────────────────────────────────────────────────────────┐
+│                        사용자 플로우                             │
+├─────────────────────────────────────────────────────────────────┤
+│  3. 광고 클릭 → 랜딩 페이지 (/lp?id=X&utm_source=...&...)        │
+│     └─ iframe으로 HTML 렌더링                                    │
+│     └─ window.__LP_DATA__ 주입 (clinicId, landingPageId)        │
+│                              ↓                                   │
+│  4. 설문 진행 & 폼 제출                                          │
+│     └─ /api/webhook/lead 호출                                   │
+│     └─ custom_data (설문 응답) JSONB 저장                        │
+│     └─ landing_page_id, UTM 파라미터 저장                        │
+└─────────────────────────────────────────────────────────────────┘
+                              ↓
+┌─────────────────────────────────────────────────────────────────┐
+│                        리드 관리                                 │
+├─────────────────────────────────────────────────────────────────┤
+│  5. 리드 관리 (/leads)                                           │
+│     └─ 유입 랜딩 페이지 표시                                      │
+│     └─ 설문 응답 표시 (step1~5)                                  │
+│     └─ 마케팅 수신 동의 표시                                      │
+│     └─ 고객 여정 타임라인                                        │
+└─────────────────────────────────────────────────────────────────┘
+```
+
+---
+
 ## 향후 작업 가능 항목
 
 1. **추가 컴포넌트**: Popover, Tooltip, Progress, Slider
