@@ -54,7 +54,7 @@ export const PATCH = withClinicFilter(async (req: Request, { clinicId }: ClinicC
         customer_id: lead.customer_id,
         clinic_id: lead.clinic_id,
         status: 'confirmed',
-        booking_date: new Date().toISOString(),
+        booking_datetime: new Date().toISOString(),
         notes: `캠페인 리드에서 예약 전환 (lead_id: ${leadId})`,
       })
     }
