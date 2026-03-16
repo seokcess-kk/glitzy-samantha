@@ -2,12 +2,12 @@
 import { useState, useEffect, useMemo } from 'react'
 import { useSession } from 'next-auth/react'
 import { useRouter } from 'next/navigation'
-import { TrendingUp, ChevronLeft, ChevronRight } from 'lucide-react'
+import { TrendingUp, ChevronLeft, ChevronRight, ExternalLink } from 'lucide-react'
 import { toast } from 'sonner'
 import { Card } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
-import { Badge } from '@/components/ui/badge'
 import { Skeleton } from '@/components/ui/skeleton'
+import { Label } from '@/components/ui/label'
 import {
   Select,
   SelectContent,
@@ -16,7 +16,7 @@ import {
   SelectValue,
 } from '@/components/ui/select'
 import { useClinic } from '@/components/ClinicContext'
-import { LineChart, ResponsiveContainer, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend } from '@/components/charts'
+import { LineChart, ResponsiveContainer, Line, XAxis, YAxis, CartesianGrid, Tooltip } from '@/components/charts'
 
 const CATEGORY_LABELS: Record<string, string> = {
   place: '네이버 플레이스',
@@ -37,7 +37,7 @@ export default function MonitoringPage() {
   const { data: session } = useSession()
   const router = useRouter()
   const user = session?.user as any
-  const { selectedClinicId } = useClinic()
+  const { selectedClinicId, setSelectedClinicId, clinics } = useClinic()
 
   const [category, setCategory] = useState('place')
   const [month, setMonth] = useState(() => {
@@ -75,28 +75,81 @@ export default function MonitoringPage() {
     fetchData()
   }, [month, category, selectedClinicId])
 
-  // 월 네비게이션
   const changeMonth = (delta: number) => {
     const [y, m] = month.split('-').map(Number)
     const d = new Date(y, m - 1 + delta)
     setMonth(`${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`)
   }
 
-  // 월의 일수
   const [year, mon] = month.split('-').map(Number)
   const daysInMonth = new Date(year, mon, 0).getDate()
   const days = Array.from({ length: daysInMonth }, (_, i) => i + 1)
 
-  // 순위 맵: keyword_id -> { day: ranking }
+  // 오늘 날짜 (현재 월인지 확인용)
+  const today = new Date()
+  const isCurrentMonth = today.getFullYear() === year && today.getMonth() + 1 === mon
+  const todayDay = today.getDate()
+
+  // 순위 맵: keyword_id -> { day: ranking } — 문자열 파싱으로 UTC 이슈 방지
   const rankMap = useMemo(() => {
     const map: Record<number, Record<number, { rank: number | null; url?: string }>> = {}
     for (const r of rankings) {
-      const day = new Date(r.rank_date).getDate()
+      const day = parseInt(r.rank_date.split('-')[2], 10)
       if (!map[r.keyword_id]) map[r.keyword_id] = {}
       map[r.keyword_id][day] = { rank: r.rank_position, url: r.url }
     }
     return map
   }, [rankings])
+
+  // 요약 지표 계산
+  const summary = useMemo(() => {
+    if (keywords.length === 0) return null
+
+    // 최신 순위 (가장 마지막 입력 날짜 기준)
+    let latestDay = 0
+    for (const r of rankings) {
+      const day = parseInt(r.rank_date.split('-')[2], 10)
+      if (day > latestDay) latestDay = day
+    }
+
+    let top3Count = 0
+    let top10Count = 0
+    let totalRank = 0
+    let rankedCount = 0
+
+    for (const kw of keywords) {
+      const rd = rankMap[kw.id]?.[latestDay]
+      if (rd?.rank != null) {
+        if (rd.rank <= 3) top3Count++
+        if (rd.rank <= 10) top10Count++
+        totalRank += rd.rank
+        rankedCount++
+      }
+    }
+
+    // 전월 마지막 날 대비 변동
+    const firstDay = Math.min(...rankings.map(r => parseInt(r.rank_date.split('-')[2], 10)))
+    let improvedCount = 0
+    let declinedCount = 0
+    for (const kw of keywords) {
+      const first = rankMap[kw.id]?.[firstDay]?.rank
+      const latest = rankMap[kw.id]?.[latestDay]?.rank
+      if (first != null && latest != null) {
+        if (latest < first) improvedCount++
+        else if (latest > first) declinedCount++
+      }
+    }
+
+    return {
+      avgRank: rankedCount > 0 ? (totalRank / rankedCount).toFixed(1) : '-',
+      top3Count,
+      top10Count,
+      totalKeywords: keywords.length,
+      improvedCount,
+      declinedCount,
+      latestDay,
+    }
+  }, [keywords, rankings, rankMap])
 
   // 차트 데이터
   const chartData = useMemo(() => {
@@ -111,7 +164,6 @@ export default function MonitoringPage() {
     })
   }, [keywords, rankMap, days])
 
-  // 차트 라인 색상
   const COLORS = ['#8b5cf6', '#06b6d4', '#f59e0b', '#ef4444', '#10b981', '#ec4899', '#3b82f6', '#f97316']
 
   if (user?.role === 'clinic_staff') return null
@@ -128,25 +180,51 @@ export default function MonitoringPage() {
 
       {/* 필터 */}
       <div className="flex items-center gap-4 mb-6 flex-wrap">
-        <div className="flex items-center gap-2">
-          <Button variant="ghost" size="icon" onClick={() => changeMonth(-1)} className="h-8 w-8">
-            <ChevronLeft size={16} />
-          </Button>
-          <span className="text-white font-medium min-w-[100px] text-center">{year}년 {mon}월</span>
-          <Button variant="ghost" size="icon" onClick={() => changeMonth(1)} className="h-8 w-8">
-            <ChevronRight size={16} />
-          </Button>
+        <div className="space-y-1">
+          <Label className="text-xs text-slate-500">병원</Label>
+          <Select
+            value={selectedClinicId ? String(selectedClinicId) : '_none'}
+            onValueChange={v => setSelectedClinicId(v === '_none' ? null : Number(v))}
+          >
+            <SelectTrigger className="w-[200px] bg-white/5 border-white/10 text-white">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="_none">전체 병원</SelectItem>
+              {clinics.map(c => (
+                <SelectItem key={c.id} value={String(c.id)}>{c.name}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
         </div>
-        <Select value={category} onValueChange={setCategory}>
-          <SelectTrigger className="w-[160px] bg-white/5 border-white/10 text-white">
-            <SelectValue />
-          </SelectTrigger>
-          <SelectContent>
+        <div className="space-y-1">
+          <Label className="text-xs text-slate-500">월</Label>
+          <div className="flex items-center gap-1">
+            <Button variant="ghost" size="icon" onClick={() => changeMonth(-1)} className="h-10 w-8">
+              <ChevronLeft size={16} />
+            </Button>
+            <span className="text-white font-medium min-w-[100px] text-center text-sm">{year}년 {mon}월</span>
+            <Button variant="ghost" size="icon" onClick={() => changeMonth(1)} className="h-10 w-8">
+              <ChevronRight size={16} />
+            </Button>
+          </div>
+        </div>
+        <div className="space-y-1">
+          <Label className="text-xs text-slate-500">카테고리</Label>
+          <div className="flex gap-1">
             {CATEGORY_LIST.map(c => (
-              <SelectItem key={c} value={c}>{CATEGORY_LABELS[c]}</SelectItem>
+              <Button
+                key={c}
+                variant={category === c ? 'default' : 'ghost'}
+                size="sm"
+                onClick={() => setCategory(c)}
+                className={category === c ? 'bg-brand-600 hover:bg-brand-700 text-white' : 'text-slate-400 hover:text-white'}
+              >
+                {CATEGORY_LABELS[c]}
+              </Button>
             ))}
-          </SelectContent>
-        </Select>
+          </div>
+        </div>
       </div>
 
       {loading ? (
@@ -159,6 +237,33 @@ export default function MonitoringPage() {
         </Card>
       ) : (
         <>
+          {/* 요약 카드 */}
+          {summary && (
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-6">
+              <Card variant="glass" className="p-4 text-center">
+                <p className="text-[10px] text-slate-500 uppercase tracking-wider mb-1">평균 순위</p>
+                <p className="text-2xl font-bold text-white">{summary.avgRank}<span className="text-sm text-slate-500 font-normal">위</span></p>
+              </Card>
+              <Card variant="glass" className="p-4 text-center">
+                <p className="text-[10px] text-slate-500 uppercase tracking-wider mb-1">TOP 3</p>
+                <p className="text-2xl font-bold text-emerald-400">{summary.top3Count}<span className="text-sm text-slate-500 font-normal"> / {summary.totalKeywords}</span></p>
+              </Card>
+              <Card variant="glass" className="p-4 text-center">
+                <p className="text-[10px] text-slate-500 uppercase tracking-wider mb-1">TOP 10</p>
+                <p className="text-2xl font-bold text-yellow-400">{summary.top10Count}<span className="text-sm text-slate-500 font-normal"> / {summary.totalKeywords}</span></p>
+              </Card>
+              <Card variant="glass" className="p-4 text-center">
+                <p className="text-[10px] text-slate-500 uppercase tracking-wider mb-1">월간 변동</p>
+                <div className="flex items-center justify-center gap-2">
+                  <span className="text-emerald-400 font-bold">{summary.improvedCount}</span>
+                  <span className="text-slate-600 text-xs">상승</span>
+                  <span className="text-red-400 font-bold">{summary.declinedCount}</span>
+                  <span className="text-slate-600 text-xs">하락</span>
+                </div>
+              </Card>
+            </div>
+          )}
+
           {/* 월간 순위 테이블 */}
           <Card variant="glass" className="p-4 mb-6 overflow-x-auto">
             <h3 className="text-sm font-semibold text-white mb-3">월간 순위 테이블</h3>
@@ -167,7 +272,14 @@ export default function MonitoringPage() {
                 <tr>
                   <th className="sticky left-0 bg-[#0f0f23] text-left px-2 py-2 text-slate-500 font-medium border-b border-white/5 min-w-[120px] z-10">키워드</th>
                   {days.map(d => (
-                    <th key={d} className="text-center px-1 py-2 text-slate-500 font-medium border-b border-white/5 min-w-[36px]">{d}</th>
+                    <th
+                      key={d}
+                      className={`text-center px-1 py-2 font-medium border-b border-white/5 min-w-[36px] ${
+                        isCurrentMonth && d === todayDay ? 'text-brand-400' : isCurrentMonth && d > todayDay ? 'text-slate-700' : 'text-slate-500'
+                      }`}
+                    >
+                      {d}
+                    </th>
                   ))}
                 </tr>
               </thead>
@@ -178,10 +290,15 @@ export default function MonitoringPage() {
                     {days.map(d => {
                       const rd = rankMap[kw.id]?.[d]
                       const rank = rd?.rank
+                      const isFuture = isCurrentMonth && d > todayDay
                       return (
-                        <td key={d} className="text-center px-1 py-2">
+                        <td key={d} className={`text-center px-1 py-2 ${isFuture ? 'opacity-20' : ''}`}>
                           {rank != null ? (
-                            <span className={`inline-flex items-center justify-center w-7 h-6 rounded text-[10px] font-bold ${getRankColor(rank)}`} title={rd?.url || undefined}>
+                            <span
+                              className={`inline-flex items-center justify-center w-7 h-6 rounded text-[10px] font-bold ${getRankColor(rank)} ${rd?.url ? 'cursor-pointer' : ''}`}
+                              title={rd?.url || undefined}
+                              onClick={() => rd?.url && window.open(rd.url, '_blank')}
+                            >
                               {rank}
                             </span>
                           ) : (

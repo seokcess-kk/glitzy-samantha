@@ -2,7 +2,7 @@
 import { useState, useEffect } from 'react'
 import { useSession } from 'next-auth/react'
 import { useRouter } from 'next/navigation'
-import { FileEdit, Save } from 'lucide-react'
+import { FileEdit, Save, ChevronLeft, ChevronRight } from 'lucide-react'
 import { toast } from 'sonner'
 import { Card } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
@@ -30,6 +30,7 @@ interface KeywordEntry {
   category: string
   rank_position: string
   url: string
+  prev_rank: number | null // 전일 순위
 }
 
 export default function MonitoringInputPage() {
@@ -43,12 +44,18 @@ export default function MonitoringInputPage() {
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
 
-  // 역할 가드: superadmin, agency_staff만 접근
   useEffect(() => {
     if (user && user.role !== 'superadmin' && user.role !== 'agency_staff') {
       router.replace('/monitoring')
     }
   }, [user, router])
+
+  // 날짜 이동
+  const changeDate = (delta: number) => {
+    const d = new Date(date)
+    d.setDate(d.getDate() + delta)
+    setDate(d.toISOString().split('T')[0])
+  }
 
   // 키워드 + 기존 순위 로드
   useEffect(() => {
@@ -66,18 +73,26 @@ export default function MonitoringInputPage() {
         const kwData = await kwRes.json()
         const keywords = Array.isArray(kwData) ? kwData : []
 
-        // 기존 순위 조회
+        // 기존 순위 조회 (해당 월 전체)
         const month = date.slice(0, 7)
         const rankParams = new URLSearchParams({ clinic_id: String(selectedClinicId), month })
         const rankRes = await fetch(`/api/monitoring/rankings?${rankParams}`)
         const rankData = await rankRes.json()
         const existingRankings = rankData.rankings || []
 
-        // 날짜별 기존 데이터 매핑
+        // 선택 날짜 및 전일 데이터 매핑
+        const prevDate = new Date(date)
+        prevDate.setDate(prevDate.getDate() - 1)
+        const prevDateStr = prevDate.toISOString().split('T')[0]
+
         const rankMap: Record<number, { rank: number | null; url?: string }> = {}
+        const prevRankMap: Record<number, number | null> = {}
         for (const r of existingRankings) {
           if (r.rank_date === date) {
             rankMap[r.keyword_id] = { rank: r.rank_position, url: r.url }
+          }
+          if (r.rank_date === prevDateStr) {
+            prevRankMap[r.keyword_id] = r.rank_position
           }
         }
 
@@ -87,6 +102,7 @@ export default function MonitoringInputPage() {
           category: kw.category,
           rank_position: rankMap[kw.id]?.rank?.toString() || '',
           url: rankMap[kw.id]?.url || '',
+          prev_rank: prevRankMap[kw.id] ?? null,
         }))
 
         setEntries(newEntries)
@@ -130,6 +146,26 @@ export default function MonitoringInputPage() {
         throw new Error(data.error || '저장 실패')
       }
       toast.success(`${data.count}개 순위가 저장되었습니다.`)
+      // 저장 후 데이터 refetch — prev_rank 등 최신 상태 반영
+      setDate(d => d) // trigger re-fetch via useEffect
+      // force re-fetch by toggling a dep
+      const month = date.slice(0, 7)
+      const rankParams = new URLSearchParams({ clinic_id: String(selectedClinicId!), month })
+      const rankRes = await fetch(`/api/monitoring/rankings?${rankParams}`)
+      const rankData = await rankRes.json()
+      const existingRankings = rankData.rankings || []
+
+      const rankMap: Record<number, { rank: number | null; url?: string }> = {}
+      for (const r of existingRankings) {
+        if (r.rank_date === date) {
+          rankMap[r.keyword_id] = { rank: r.rank_position, url: r.url }
+        }
+      }
+      setEntries(prev => prev.map(e => ({
+        ...e,
+        rank_position: rankMap[e.keyword_id]?.rank?.toString() || e.rank_position,
+        url: rankMap[e.keyword_id]?.url || e.url,
+      })))
     } catch (e: any) {
       toast.error(e.message || '저장 실패')
     } finally {
@@ -143,6 +179,10 @@ export default function MonitoringInputPage() {
     acc[entry.category].push({ ...entry, _idx: idx })
     return acc
   }, {} as Record<string, (KeywordEntry & { _idx: number })[]>)
+
+  // 날짜 포맷
+  const dateObj = new Date(date + 'T00:00:00')
+  const dayOfWeek = ['일', '월', '화', '수', '목', '금', '토'][dateObj.getDay()]
 
   if (user && user.role !== 'superadmin' && user.role !== 'agency_staff') return null
 
@@ -177,12 +217,23 @@ export default function MonitoringInputPage() {
         </div>
         <div className="space-y-1">
           <Label className="text-xs text-slate-500">날짜</Label>
-          <Input
-            type="date"
-            value={date}
-            onChange={e => setDate(e.target.value)}
-            className="w-[180px] bg-white/5 border-white/10 text-white"
-          />
+          <div className="flex items-center gap-1">
+            <Button variant="ghost" size="icon" onClick={() => changeDate(-1)} className="h-10 w-8">
+              <ChevronLeft size={16} />
+            </Button>
+            <Input
+              type="date"
+              value={date}
+              onChange={e => setDate(e.target.value)}
+              className="w-[160px] bg-white/5 border-white/10 text-white text-center"
+            />
+            <Button variant="ghost" size="icon" onClick={() => changeDate(1)} className="h-10 w-8">
+              <ChevronRight size={16} />
+            </Button>
+          </div>
+        </div>
+        <div className="mt-5">
+          <span className="text-sm text-slate-400">({dayOfWeek})</span>
         </div>
       </div>
 
@@ -200,9 +251,23 @@ export default function MonitoringInputPage() {
             <Card key={cat} variant="glass" className="p-5 mb-4">
               <h3 className="text-sm font-semibold text-white mb-4">{CATEGORY_LABELS[cat] || cat}</h3>
               <div className="space-y-3">
+                {/* 헤더 */}
+                <div className="flex items-center gap-3 text-[10px] text-slate-600 uppercase tracking-wider flex-wrap">
+                  <span className="min-w-[140px] shrink-0">키워드</span>
+                  <span className="w-[50px] text-center">전일</span>
+                  <span className="w-[90px] text-center">순위</span>
+                  {cat === 'smartblock' && <span className="flex-1 min-w-[200px]">URL</span>}
+                </div>
                 {items.map((entry) => (
                   <div key={entry.keyword_id} className="flex items-center gap-3 flex-wrap">
                     <span className="text-sm text-slate-300 min-w-[140px] shrink-0">{entry.keyword}</span>
+                    <span className={`w-[50px] text-center text-xs font-medium ${
+                      entry.prev_rank == null ? 'text-slate-700' :
+                      entry.prev_rank <= 3 ? 'text-emerald-400' :
+                      entry.prev_rank <= 10 ? 'text-yellow-400' : 'text-red-400'
+                    }`}>
+                      {entry.prev_rank ?? '-'}
+                    </span>
                     <Input
                       type="number"
                       min="1"
