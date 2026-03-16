@@ -14,7 +14,7 @@ const BUCKET = 'creatives'
 
 function sanitizeFileName(raw: string, mimeType: string): string {
   const nameOnly = raw.replace(/\.[^.]+$/, '')
-  const safe = nameOnly.replace(/[^a-zA-Z0-9가-힣_-]/g, '_').replace(/_{2,}/g, '_')
+  const safe = nameOnly.replace(/[^a-zA-Z0-9_-]/g, '_').replace(/_{2,}/g, '_')
   const ext = ALLOWED_TYPES[mimeType] || '.bin'
   return (safe || 'creative') + ext
 }
