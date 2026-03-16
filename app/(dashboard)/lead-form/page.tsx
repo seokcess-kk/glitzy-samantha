@@ -13,6 +13,7 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Skeleton } from '@/components/ui/skeleton'
 import { Badge } from '@/components/ui/badge'
+import { PageHeader } from '@/components/common'
 
 function LeadFormContent() {
   const searchParams = useSearchParams()
@@ -107,12 +108,7 @@ function LeadFormContent() {
 
   return (
     <div className="max-w-2xl mx-auto">
-      <div className="mb-6">
-        <h1 className="text-2xl font-bold text-white">리드 수집 테스트</h1>
-        <p className="text-sm text-slate-400 mt-1">
-          URL에 UTM 파라미터를 추가하여 유입 추적을 테스트할 수 있습니다.
-        </p>
-      </div>
+      <PageHeader title="리드 수집" description="URL에 UTM 파라미터를 추가하여 유입 추적을 테스트할 수 있습니다." />
 
       {/* UTM 파라미터 표시 */}
       {hasUtmParams && (

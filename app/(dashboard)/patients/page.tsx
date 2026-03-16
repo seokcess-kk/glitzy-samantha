@@ -33,6 +33,7 @@ import {
 } from '@/components/ui/dialog'
 import { Textarea } from '@/components/ui/textarea'
 import { PageHeader, StatusBadge, EmptyState } from '@/components/common'
+import { formatDate, formatDateTime, formatTime } from '@/lib/date'
 
 // 상수
 const STATUS_CONFIG: Record<string, { label: string; variant: 'info' | 'success' | 'default' | 'secondary' | 'destructive' }> = {
@@ -220,9 +221,9 @@ function PaymentSection({ customerId, payments, onSave }: { customerId: number; 
         <Table className="mb-4">
           <TableHeader>
             <TableRow className="border-b border-white/5 hover:bg-transparent">
-              <TableHead className="text-xs text-slate-500 font-medium">시술명</TableHead>
-              <TableHead className="text-xs text-slate-500 font-medium">금액</TableHead>
-              <TableHead className="text-xs text-slate-500 font-medium">결제일</TableHead>
+              <TableHead className="text-xs text-slate-500 uppercase tracking-wider font-medium">시술명</TableHead>
+              <TableHead className="text-xs text-slate-500 uppercase tracking-wider font-medium">금액</TableHead>
+              <TableHead className="text-xs text-slate-500 uppercase tracking-wider font-medium">결제일</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
@@ -230,7 +231,7 @@ function PaymentSection({ customerId, payments, onSave }: { customerId: number; 
               <TableRow key={p.id} className="border-b border-white/5">
                 <TableCell className="text-white">{p.treatment_name}</TableCell>
                 <TableCell className="text-emerald-400 font-semibold">₩{Number(p.payment_amount).toLocaleString()}</TableCell>
-                <TableCell className="text-slate-400 text-xs">{new Date(p.payment_date).toLocaleDateString('ko')}</TableCell>
+                <TableCell className="text-slate-400 text-xs">{formatDate(p.payment_date)}</TableCell>
               </TableRow>
             ))}
           </TableBody>
@@ -305,7 +306,7 @@ function BookingRow({ booking, onRefresh }: { booking: any; onRefresh: () => voi
         </div>
         <div className="w-44 shrink-0 text-xs text-slate-400 flex items-center gap-1">
           <Clock size={11} />
-          {booking.booking_datetime ? new Date(booking.booking_datetime).toLocaleString('ko', { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' }) : '-'}
+          {booking.booking_datetime ? formatDateTime(booking.booking_datetime) : '-'}
         </div>
         <div className="w-20 shrink-0">
           <Badge variant={cfg.variant}>{cfg.label}</Badge>
@@ -688,7 +689,7 @@ export default function PatientsPage() {
                       return (
                         <div key={b.id} className="text-[10px] truncate">
                           <Badge variant={c.variant} className="text-[10px] px-1 py-0">
-                            {new Date(b.booking_datetime).toLocaleTimeString('ko', { hour: '2-digit', minute: '2-digit' })} {b.customer?.name}
+                            {formatTime(b.booking_datetime)} {b.customer?.name}
                           </Badge>
                         </div>
                       )

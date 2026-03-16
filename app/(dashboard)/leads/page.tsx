@@ -22,6 +22,7 @@ import {
   SheetTitle,
 } from '@/components/ui/sheet'
 import { PageHeader, ChannelBadge, CustomerJourney } from '@/components/common'
+import { formatDate } from '@/lib/date'
 
 // 퍼널 단계 정의
 type FunnelStage = 'lead' | 'booked' | 'visited' | 'consulted' | 'paid'
@@ -124,7 +125,7 @@ function CustomerDetail({ lead }: { lead: any }) {
           </div>
           <div className="flex items-center gap-4 text-xs text-slate-500">
             <span className="flex items-center gap-1"><Phone size={11} />{c?.phone_number}</span>
-            <span className="flex items-center gap-1"><Calendar size={11} />{new Date(lead.created_at).toLocaleDateString('ko')}</span>
+            <span className="flex items-center gap-1"><Calendar size={11} />{formatDate(lead.created_at)}</span>
           </div>
         </div>
         {totalPayment > 0 && (

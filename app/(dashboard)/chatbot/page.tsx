@@ -14,6 +14,7 @@ import {
   TableRow,
 } from '@/components/ui/table'
 import { PageHeader, StatsCard, ChannelBadge } from '@/components/common'
+import { formatDateTime } from '@/lib/date'
 
 
 export default function ChatbotPage() {
@@ -99,7 +100,7 @@ export default function ChatbotPage() {
                     <TableCell>
                       <ChannelBadge channel={c?.first_source || '-'} />
                     </TableCell>
-                    <TableCell className="text-slate-400 text-xs">{new Date(lead.created_at).toLocaleString('ko')}</TableCell>
+                    <TableCell className="text-slate-400 text-xs">{formatDateTime(lead.created_at)}</TableCell>
                     <TableCell>
                       {lead.chatbot_sent ? (
                         <Badge variant="success" className="gap-1">
@@ -112,7 +113,7 @@ export default function ChatbotPage() {
                       )}
                     </TableCell>
                     <TableCell className="text-slate-400 text-xs">
-                      {lead.chatbot_sent_at ? new Date(lead.chatbot_sent_at).toLocaleString('ko') : '-'}
+                      {lead.chatbot_sent_at ? formatDateTime(lead.chatbot_sent_at) : '-'}
                     </TableCell>
                   </TableRow>
                 )

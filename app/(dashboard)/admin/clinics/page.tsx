@@ -5,6 +5,7 @@ import { useSession } from 'next-auth/react'
 import { useRouter } from 'next/navigation'
 import { toast } from 'sonner'
 import { Card } from '@/components/ui/card'
+import { Skeleton } from '@/components/ui/skeleton'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { Input } from '@/components/ui/input'
@@ -25,6 +26,8 @@ import {
   DialogTitle,
   DialogFooter,
 } from '@/components/ui/dialog'
+import { formatDate } from '@/lib/date'
+import { EmptyState, PageHeader } from '@/components/common'
 
 export default function ClinicsPage() {
   const { data: session } = useSession()
@@ -163,13 +166,7 @@ export default function ClinicsPage() {
 
   return (
     <>
-      <div className="mb-8">
-        <div className="flex items-center gap-3 mb-2">
-          <Building2 className="text-brand-400" size={24} />
-          <h1 className="text-2xl font-bold text-white">병원 관리</h1>
-        </div>
-        <p className="text-sm text-slate-400">병원 고객사 등록 및 관리</p>
-      </div>
+      <PageHeader icon={Building2} title="병원 관리" description="병원 고객사 등록 및 관리" />
 
       <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
         <DialogContent>
@@ -274,9 +271,9 @@ export default function ClinicsPage() {
           </Button>
         </div>
         {loading ? (
-          <p className="text-slate-500 text-sm py-4 text-center">로딩 중...</p>
+          <div className="space-y-2">{Array(3).fill(0).map((_, i) => <Skeleton key={i} className="h-12 rounded-xl" />)}</div>
         ) : clinics.length === 0 ? (
-          <p className="text-slate-500 text-sm py-4 text-center">등록된 병원이 없습니다.</p>
+          <EmptyState icon={Building2} title="등록된 병원이 없습니다." />
         ) : (
           <Table>
             <TableHeader>
@@ -298,7 +295,7 @@ export default function ClinicsPage() {
                     <TableCell className="text-slate-500 text-xs">#{c.id}</TableCell>
                     <TableCell className="text-white font-medium">{c.name}</TableCell>
                     <TableCell className="text-slate-400 font-mono text-xs">{c.slug}</TableCell>
-                    <TableCell className="text-slate-400 text-xs">{new Date(c.created_at).toLocaleDateString('ko')}</TableCell>
+                    <TableCell className="text-slate-400 text-xs">{formatDate(c.created_at)}</TableCell>
                     <TableCell>
                       {c.notify_enabled && phones.length > 0 ? (
                         <div className="flex flex-col gap-0.5">

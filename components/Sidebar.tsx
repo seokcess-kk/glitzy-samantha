@@ -4,7 +4,7 @@ import { usePathname } from 'next/navigation'
 import { signOut } from 'next-auth/react'
 import { useSession } from 'next-auth/react'
 import { useState, useEffect } from 'react'
-import { LayoutDashboard, Users, MessageCircle, BarChart2, LogOut, Activity, Calendar, Film, Link2, Scan, Newspaper, Settings, ChevronUp, User, FileEdit, LucideIcon, Building2, UserCog, FileText, Image, Megaphone, TrendingUp } from 'lucide-react'
+import { LayoutDashboard, Users, MessageCircle, BarChart2, LogOut, Activity, Calendar, Film, Link2, Scan, Newspaper, Settings, ChevronUp, User, FileEdit, ClipboardList, LucideIcon, Building2, UserCog, FileText, Image, Megaphone, TrendingUp } from 'lucide-react'
 import { useClinic } from './ClinicContext'
 import { Button } from '@/components/ui/button'
 import {
@@ -60,7 +60,7 @@ const menuGroups: MenuGroup[] = [
       { href: '/leads', label: '고객(CDP)', icon: Users, menuKey: 'leads' },
       { href: '/patients', label: '예약/결제', icon: Calendar, menuKey: 'patients' },
       { href: '/chatbot', label: '챗봇 현황', icon: MessageCircle, menuKey: 'chatbot' },
-      { href: '/lead-form', label: '리드 등록', icon: FileEdit, minRole: 3, menuKey: 'lead-form' },
+      { href: '/lead-form', label: '리드 수집', icon: ClipboardList, minRole: 3, menuKey: 'lead-form' },
     ]
   },
   {
@@ -161,13 +161,6 @@ export default function Sidebar({ onClose }: { onClose?: () => void }) {
         </div>
       )}
 
-      {/* 비슈퍼어드민 & 비agency_staff: 담당 병원 표시 */}
-      {!isSuperAdmin && !isAgencyStaff && user?.clinic_id && (
-        <div className="px-4 py-3 border-b border-white/5">
-          <p className="text-[10px] text-slate-600 uppercase tracking-widest mb-1">담당 병원</p>
-          <p className="text-xs text-slate-300 font-medium">{user.name}</p>
-        </div>
-      )}
 
       {/* 네비게이션 */}
       <nav className="flex-1 px-3 py-4 overflow-y-auto">
@@ -329,11 +322,6 @@ export default function Sidebar({ onClose }: { onClose?: () => void }) {
             <DropdownMenuLabel>
               {user?.name || user?.username}
             </DropdownMenuLabel>
-            <DropdownMenuSeparator />
-            <DropdownMenuItem disabled className="opacity-50">
-              <Settings size={14} />
-              설정 (준비 중)
-            </DropdownMenuItem>
             <DropdownMenuSeparator />
             <DropdownMenuItem
               onClick={() => signOut({ callbackUrl: '/login' })}

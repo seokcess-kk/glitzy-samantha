@@ -6,6 +6,7 @@ import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { toast } from 'sonner'
 import { Card } from '@/components/ui/card'
+import { Skeleton } from '@/components/ui/skeleton'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { Input } from '@/components/ui/input'
@@ -34,6 +35,7 @@ import {
   DialogTitle,
   DialogFooter,
 } from '@/components/ui/dialog'
+import { ConfirmDialog, EmptyState, PageHeader } from '@/components/common'
 
 interface LandingPage {
   id: number
@@ -64,6 +66,7 @@ export default function LandingPagesPage() {
   const [fileMode, setFileMode] = useState<'select' | 'upload'>('select')
   const [uploadFile, setUploadFile] = useState<File | null>(null)
   const [uploading, setUploading] = useState(false)
+  const [deleteTarget, setDeleteTarget] = useState<number | null>(null)
 
   useEffect(() => {
     if (user && user.role !== 'superadmin') router.replace('/')
@@ -172,16 +175,21 @@ export default function LandingPagesPage() {
     setDialogOpen(true)
   }
 
-  const handleDelete = async (id: number) => {
-    if (!confirm('이 랜딩 페이지를 삭제하시겠습니까?')) return
+  const handleDelete = (id: number) => {
+    setDeleteTarget(id)
+  }
+
+  const confirmDelete = async () => {
+    if (deleteTarget === null) return
     try {
-      const res = await fetch(`/api/admin/landing-pages/${id}`, { method: 'DELETE' })
+      const res = await fetch(`/api/admin/landing-pages/${deleteTarget}`, { method: 'DELETE' })
       if (!res.ok) throw new Error('삭제 실패')
       toast.success('삭제되었습니다.')
       fetchData()
     } catch {
       toast.error('삭제 실패')
     }
+    setDeleteTarget(null)
   }
 
   const copyUrl = (id: number) => {
@@ -194,13 +202,14 @@ export default function LandingPagesPage() {
 
   return (
     <>
-      <div className="mb-8">
-        <div className="flex items-center gap-3 mb-2">
-          <FileText className="text-brand-400" size={24} />
-          <h1 className="text-2xl font-bold text-white">랜딩 페이지</h1>
-        </div>
-        <p className="text-sm text-slate-400">랜딩 페이지 등록 및 병원 배정</p>
-      </div>
+      <ConfirmDialog
+        open={deleteTarget !== null}
+        onOpenChange={(open) => !open && setDeleteTarget(null)}
+        title="삭제 확인"
+        description="정말 삭제하시겠습니까? 이 작업은 되돌릴 수 없습니다."
+        onConfirm={confirmDelete}
+      />
+      <PageHeader icon={FileText} title="랜딩 페이지" description="랜딩 페이지 등록 및 병원 배정" />
 
       <Dialog open={dialogOpen} onOpenChange={(open) => {
         setDialogOpen(open)
@@ -353,9 +362,9 @@ export default function LandingPagesPage() {
           </Button>
         </div>
         {loading ? (
-          <p className="text-slate-500 text-sm py-4 text-center">로딩 중...</p>
+          <div className="space-y-2">{Array(3).fill(0).map((_, i) => <Skeleton key={i} className="h-12 rounded-xl" />)}</div>
         ) : landingPages.length === 0 ? (
-          <p className="text-slate-500 text-sm py-4 text-center">등록된 랜딩 페이지가 없습니다.</p>
+          <EmptyState icon={FileText} title="등록된 랜딩 페이지가 없습니다." />
         ) : (
           <Table>
             <TableHeader>

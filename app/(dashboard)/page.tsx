@@ -204,9 +204,9 @@ export default function DashboardPage() {
             <Button variant="glass" size="icon" onClick={() => fetchAll()} disabled={loading}>
               <RefreshCw size={16} className={loading ? 'animate-spin' : ''} />
             </Button>
-            <Button variant="glass" size="icon"><Search size={16} /></Button>
-            <Button variant="glass" size="icon"><Bell size={16} /></Button>
-            <Button variant="glass" size="icon"><Settings size={16} /></Button>
+            <Button variant="glass" size="icon" disabled className="opacity-50 cursor-not-allowed"><Search size={16} /></Button>
+            <Button variant="glass" size="icon" disabled className="opacity-50 cursor-not-allowed"><Bell size={16} /></Button>
+            <Button variant="glass" size="icon" disabled className="opacity-50 cursor-not-allowed"><Settings size={16} /></Button>
           </>
         }
       />

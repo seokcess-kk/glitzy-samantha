@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation'
 import { TrendingUp, Plus, Power } from 'lucide-react'
 import { toast } from 'sonner'
 import { Card } from '@/components/ui/card'
+import { Skeleton } from '@/components/ui/skeleton'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { Input } from '@/components/ui/input'
@@ -32,6 +33,7 @@ import {
   TableRow,
 } from '@/components/ui/table'
 import { useClinic } from '@/components/ClinicContext'
+import { EmptyState, PageHeader } from '@/components/common'
 
 const CATEGORY_LABELS: Record<string, string> = {
   place: '네이버 플레이스',
@@ -135,13 +137,7 @@ export default function MonitoringKeywordsPage() {
 
   return (
     <>
-      <div className="mb-8">
-        <div className="flex items-center gap-3 mb-2">
-          <TrendingUp className="text-brand-400" size={24} />
-          <h1 className="text-2xl font-bold text-white">키워드 관리</h1>
-        </div>
-        <p className="text-sm text-slate-400">순위 모니터링 키워드 등록 및 관리</p>
-      </div>
+      <PageHeader icon={TrendingUp} title="키워드 관리" description="순위 모니터링 키워드 등록 및 관리" />
 
       {/* 병원 선택 */}
       <div className="mb-6">
@@ -205,7 +201,7 @@ export default function MonitoringKeywordsPage() {
         </Card>
       ) : loading ? (
         <Card variant="glass" className="p-6">
-          <p className="text-slate-500 text-sm text-center">로딩 중...</p>
+          <div className="space-y-2">{Array(3).fill(0).map((_, i) => <Skeleton key={i} className="h-12 rounded-xl" />)}</div>
         </Card>
       ) : (
         <>
@@ -217,7 +213,7 @@ export default function MonitoringKeywordsPage() {
 
           {Object.keys(grouped).length === 0 ? (
             <Card variant="glass" className="p-12 text-center">
-              <p className="text-slate-500">등록된 키워드가 없습니다.</p>
+              <EmptyState icon={TrendingUp} title="등록된 키워드가 없습니다." />
             </Card>
           ) : (
             Object.entries(grouped).map(([cat, items]: [string, any[]]) => (
@@ -226,9 +222,9 @@ export default function MonitoringKeywordsPage() {
                 <Table>
                   <TableHeader>
                     <TableRow className="border-b border-white/5 hover:bg-transparent">
-                      <TableHead className="text-xs text-slate-500">키워드</TableHead>
-                      <TableHead className="text-xs text-slate-500 w-[100px]">상태</TableHead>
-                      <TableHead className="text-xs text-slate-500 w-[80px]">활성화</TableHead>
+                      <TableHead className="text-xs text-slate-500 uppercase tracking-wider font-medium">키워드</TableHead>
+                      <TableHead className="text-xs text-slate-500 uppercase tracking-wider font-medium w-[100px]">상태</TableHead>
+                      <TableHead className="text-xs text-slate-500 uppercase tracking-wider font-medium w-[80px]">활성화</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>

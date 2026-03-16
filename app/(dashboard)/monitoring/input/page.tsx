@@ -17,6 +17,7 @@ import {
   SelectValue,
 } from '@/components/ui/select'
 import { useClinic } from '@/components/ClinicContext'
+import { PageHeader } from '@/components/common'
 
 const CATEGORY_LABELS: Record<string, string> = {
   place: '네이버 플레이스',
@@ -180,13 +181,7 @@ export default function MonitoringInputPage() {
 
   return (
     <>
-      <div className="mb-8">
-        <div className="flex items-center gap-3 mb-2">
-          <FileEdit className="text-brand-400" size={24} />
-          <h1 className="text-2xl font-bold text-white">순위 입력</h1>
-        </div>
-        <p className="text-sm text-slate-400">일별 순위를 입력하세요</p>
-      </div>
+      <PageHeader icon={FileEdit} title="순위 입력" description="일별 순위를 입력하세요" />
 
       {/* 병원 + 날짜 선택 */}
       <div className="flex items-center gap-4 mb-6 flex-wrap">

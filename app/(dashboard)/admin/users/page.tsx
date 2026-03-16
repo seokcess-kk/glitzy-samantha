@@ -5,6 +5,7 @@ import { useSession } from 'next-auth/react'
 import { useRouter } from 'next/navigation'
 import { toast } from 'sonner'
 import { Card } from '@/components/ui/card'
+import { Skeleton } from '@/components/ui/skeleton'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { Input } from '@/components/ui/input'
@@ -32,6 +33,9 @@ import {
   DialogTitle,
   DialogFooter,
 } from '@/components/ui/dialog'
+import { formatDate } from '@/lib/date'
+import { EmptyState } from '@/components/common'
+import { PageHeader } from '@/components/common'
 
 const ROLE_LABELS: Record<string, string> = {
   superadmin: '슈퍼어드민',
@@ -203,13 +207,7 @@ export default function UsersPage() {
 
   return (
     <>
-      <div className="mb-8">
-        <div className="flex items-center gap-3 mb-2">
-          <UserCog className="text-brand-400" size={24} />
-          <h1 className="text-2xl font-bold text-white">계정 관리</h1>
-        </div>
-        <p className="text-sm text-slate-400">사용자 계정 생성 및 권한 관리</p>
-      </div>
+      <PageHeader icon={UserCog} title="계정 관리" description="사용자 계정 생성 및 권한 관리" />
 
       {/* 계정 생성 다이얼로그 */}
       <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
@@ -366,9 +364,9 @@ export default function UsersPage() {
           </Button>
         </div>
         {loading ? (
-          <p className="text-slate-500 text-sm py-4 text-center">로딩 중...</p>
+          <div className="space-y-2">{Array(3).fill(0).map((_, i) => <Skeleton key={i} className="h-12 rounded-xl" />)}</div>
         ) : users.length === 0 ? (
-          <p className="text-slate-500 text-sm py-4 text-center">등록된 계정이 없습니다.</p>
+          <EmptyState icon={UserCog} title="등록된 계정이 없습니다." />
         ) : (
           <Table>
             <TableHeader>
@@ -395,7 +393,7 @@ export default function UsersPage() {
                   </Badge>
                 </TableCell>
                 <TableCell className="text-slate-400 text-xs">{u.clinic?.name || (u.role === 'agency_staff' ? '다중 배정' : '-')}</TableCell>
-                <TableCell className="text-slate-400 text-xs">{new Date(u.created_at).toLocaleDateString('ko')}</TableCell>
+                <TableCell className="text-slate-400 text-xs">{formatDate(u.created_at)}</TableCell>
                 <TableCell>
                   <Badge variant={u.is_active ? 'success' : 'secondary'}>
                     {u.is_active ? '활성' : '비활성'}

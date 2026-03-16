@@ -5,6 +5,7 @@ import { useSession } from 'next-auth/react'
 import { useRouter } from 'next/navigation'
 import { toast } from 'sonner'
 import { Card } from '@/components/ui/card'
+import { Skeleton } from '@/components/ui/skeleton'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { Input } from '@/components/ui/input'
@@ -24,6 +25,8 @@ import {
   DialogTitle,
   DialogFooter,
 } from '@/components/ui/dialog'
+import { formatDate } from '@/lib/date'
+import { EmptyState, PageHeader } from '@/components/common'
 
 export default function StaffPage() {
   const { data: session } = useSession()
@@ -104,13 +107,7 @@ export default function StaffPage() {
 
   return (
     <>
-      <div className="mb-8">
-        <div className="flex items-center gap-3 mb-2">
-          <UserCog className="text-brand-400" size={24} />
-          <h1 className="text-2xl font-bold text-white">담당자 관리</h1>
-        </div>
-        <p className="text-sm text-slate-400">병원 담당자 계정 생성 및 관리</p>
-      </div>
+      <PageHeader icon={UserCog} title="담당자 관리" description="병원 담당자 계정 생성 및 관리" />
 
       <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
         <DialogContent>
@@ -157,15 +154,15 @@ export default function StaffPage() {
           </Button>
         </div>
         {loading ? (
-          <p className="text-slate-500 text-sm py-4 text-center">로딩 중...</p>
+          <div className="space-y-2">{Array(3).fill(0).map((_, i) => <Skeleton key={i} className="h-12 rounded-xl" />)}</div>
         ) : staff.length === 0 ? (
-          <p className="text-slate-500 text-sm py-4 text-center">등록된 담당자가 없습니다.</p>
+          <EmptyState icon={UserCog} title="등록된 담당자가 없습니다." />
         ) : (
           <Table>
             <TableHeader>
               <TableRow className="border-b border-white/5 hover:bg-transparent">
                 {['아이디', '생성일', '상태', '활성화'].map(h => (
-                  <TableHead key={h} className="text-xs text-slate-500 font-medium">{h}</TableHead>
+                  <TableHead key={h} className="text-xs text-slate-500 uppercase tracking-wider font-medium">{h}</TableHead>
                 ))}
               </TableRow>
             </TableHeader>
@@ -173,7 +170,7 @@ export default function StaffPage() {
               {staff.map((s: any) => (
                 <TableRow key={s.id} className="border-b border-white/5">
                   <TableCell className="text-white font-medium">{s.username}</TableCell>
-                  <TableCell className="text-slate-400 text-xs">{new Date(s.created_at).toLocaleDateString('ko')}</TableCell>
+                  <TableCell className="text-slate-400 text-xs">{formatDate(s.created_at)}</TableCell>
                   <TableCell>
                     <Badge variant={s.is_active ? 'success' : 'secondary'}>
                       {s.is_active ? '활성' : '비활성'}

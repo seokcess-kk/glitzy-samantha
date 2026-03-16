@@ -17,6 +17,7 @@ import {
   TableRow,
 } from '@/components/ui/table'
 import { PageHeader, StatsCard } from '@/components/common'
+import { formatDate } from '@/lib/date'
 
 const RISK_CONFIG = {
   safe:    { label: '안전',  variant: 'success' as const, bar: 'bg-emerald-500' },
@@ -79,7 +80,7 @@ function AuditRow({ post, onAnalyze }: { post: any; onAnalyze: (id: number) => P
           )}
         </TableCell>
         <TableCell className="text-xs text-slate-500">
-          {audit?.analyzed_at ? new Date(audit.analyzed_at).toLocaleDateString('ko') : '—'}
+          {audit?.analyzed_at ? formatDate(audit.analyzed_at) : '—'}
         </TableCell>
         <TableCell>
           <div className="flex items-center gap-2">

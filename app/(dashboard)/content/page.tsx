@@ -26,7 +26,8 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog'
-import { PageHeader, StatsCard } from '@/components/common'
+import { PageHeader, StatsCard, ConfirmDialog } from '@/components/common'
+import { formatDate } from '@/lib/date'
 
 // ─── 상수 ─────────────────────────────────────────────────
 const PLATFORM_CONFIG: Record<string, { label: string; variant: "meta" | "google" | "tiktok" | "naver" | "secondary"; hasApi: boolean; statFields: string[]; chartColor: string }> = {
@@ -292,7 +293,7 @@ function ContentRow({ post, onDelete, onRefresh }: { post: any; onDelete: (id: n
           {post.utm_campaign && <span className="text-[10px] text-brand-400">{post.utm_campaign}</span>}
         </TableCell>
         <TableCell className="text-slate-400 text-xs whitespace-nowrap">
-          {post.published_at ? new Date(post.published_at).toLocaleDateString('ko') : '-'}
+          {post.published_at ? formatDate(post.published_at) : '-'}
         </TableCell>
         <TableCell className="text-slate-300 text-xs text-right">
           {latestStat.views > 0 ? latestStat.views.toLocaleString() : <span className="text-slate-600">-</span>}
@@ -353,6 +354,7 @@ export default function ContentPage() {
   const [groupBy, setGroupBy] = useState<'campaign' | 'month' | 'post'>('campaign')
   const [showAddModal, setShowAddModal] = useState(false)
   const [searchQuery, setSearchQuery] = useState('')
+  const [deleteTarget, setDeleteTarget] = useState<number | null>(null)
 
   const fetchPosts = useCallback(async () => {
     setLoading(true)
@@ -408,11 +410,16 @@ export default function ContentPage() {
     }
   }
 
-  const handleDelete = async (id: number) => {
-    if (!confirm('콘텐츠를 삭제하시겠습니까?')) return
-    await fetch('/api/content/posts', { method: 'DELETE', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ id }) })
+  const handleDelete = (id: number) => {
+    setDeleteTarget(id)
+  }
+
+  const confirmDelete = async () => {
+    if (deleteTarget === null) return
+    await fetch('/api/content/posts', { method: 'DELETE', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ id: deleteTarget }) })
     fetchPosts()
     toast.success('콘텐츠가 삭제되었습니다.')
+    setDeleteTarget(null)
   }
 
   const getLatestStat = (p: any) => (p.stats || []).sort((a: any, b: any) => b.stat_date?.localeCompare(a.stat_date))[0] || {}
@@ -439,6 +446,13 @@ export default function ContentPage() {
 
   return (
     <>
+      <ConfirmDialog
+        open={deleteTarget !== null}
+        onOpenChange={(open) => !open && setDeleteTarget(null)}
+        title="삭제 확인"
+        description="정말 삭제하시겠습니까? 이 작업은 되돌릴 수 없습니다."
+        onConfirm={confirmDelete}
+      />
       <AddContentModal open={showAddModal} onClose={() => setShowAddModal(false)} onSaved={fetchPosts} clinicId={selectedClinicId} />
 
       {/* 헤더 */}
@@ -580,7 +594,7 @@ export default function ContentPage() {
               <TableHeader>
                 <TableRow>
                   {['구분', '포스트', '예산', 'DB 유입', '결제 매출', 'CPL', 'ROAS'].map(h => (
-                    <TableHead key={h}>{h}</TableHead>
+                    <TableHead key={h} className="text-xs text-slate-500 uppercase tracking-wider font-medium">{h}</TableHead>
                   ))}
                 </TableRow>
               </TableHeader>
@@ -637,13 +651,13 @@ export default function ContentPage() {
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead>플랫폼</TableHead>
-                  <TableHead>제목 / UTM</TableHead>
-                  <TableHead>발행일</TableHead>
-                  <TableHead className="text-right">조회수</TableHead>
-                  <TableHead className="text-right">참여수</TableHead>
-                  <TableHead className="text-right">예산</TableHead>
-                  <TableHead></TableHead>
+                  <TableHead className="text-xs text-slate-500 uppercase tracking-wider font-medium">플랫폼</TableHead>
+                  <TableHead className="text-xs text-slate-500 uppercase tracking-wider font-medium">제목 / UTM</TableHead>
+                  <TableHead className="text-xs text-slate-500 uppercase tracking-wider font-medium">발행일</TableHead>
+                  <TableHead className="text-xs text-slate-500 uppercase tracking-wider font-medium text-right">조회수</TableHead>
+                  <TableHead className="text-xs text-slate-500 uppercase tracking-wider font-medium text-right">참여수</TableHead>
+                  <TableHead className="text-xs text-slate-500 uppercase tracking-wider font-medium text-right">예산</TableHead>
+                  <TableHead className="text-xs text-slate-500 uppercase tracking-wider font-medium"></TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>

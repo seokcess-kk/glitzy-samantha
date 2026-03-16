@@ -16,6 +16,7 @@ import {
 } from '@/components/ui/select'
 import { toast } from 'sonner'
 import { PageHeader, ChannelBadge } from '@/components/common'
+import { formatDateTime } from '@/lib/date'
 
 const LEAD_STATUS_CONFIG: Record<string, { label: string; color: string }> = {
   new:        { label: '신규',     color: 'bg-blue-500/20 text-blue-400 border-blue-500/30' },
@@ -207,7 +208,7 @@ function LeadCard({ lead, onStatusChange, onNotesChange }: {
           </span>
         )}
         <span className="text-[10px] text-slate-600 shrink-0 ml-auto">
-          {new Date(lead.created_at).toLocaleString('ko', { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })}
+          {formatDateTime(lead.created_at)}
         </span>
         <Select value={status} onValueChange={v => onStatusChange(lead.id, v)}>
           <SelectTrigger className={`w-[100px] h-7 text-[11px] font-semibold border rounded-full px-2.5 ${statusConfig.color}`}>
@@ -303,9 +304,10 @@ function CampaignDetail({ campaign, onBack }: { campaign: string; onBack: () => 
     })
     if (res.ok) {
       const statusLabel = LEAD_STATUS_CONFIG[newStatus]?.label || newStatus
-      toast.success(`상태가 "${statusLabel}"(으)로 변경되었습니다.`)
       if (newStatus === 'booked') {
-        toast.success('예약/결제 관리 페이지에 자동 등록되었습니다.')
+        toast.success(`상태가 '${statusLabel}'(으)로 변경되었습니다. 예약/결제 관리 페이지에 자동 등록되었습니다.`)
+      } else {
+        toast.success(`상태가 '${statusLabel}'(으)로 변경되었습니다.`)
       }
       // 로컬 상태 즉시 반영
       setLeads(prev => prev.map(l => l.id === leadId ? { ...l, lead_status: newStatus } : l))
