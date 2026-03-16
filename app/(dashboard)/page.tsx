@@ -5,7 +5,7 @@ import {
   XAxis, YAxis, CartesianGrid, Tooltip,
   ResponsiveContainer, PieChart, Pie, Cell
 } from '@/components/charts'
-import { Bell, Settings, Search, RefreshCw, Users, ArrowRight } from 'lucide-react'
+import { Bell, Settings, Search, RefreshCw, Users, ArrowRight, TrendingUp, PieChart as PieChartIcon, Filter, Inbox, BarChart3 } from 'lucide-react'
 import { useSession } from 'next-auth/react'
 import { useRouter } from 'next/navigation'
 import { Card } from '@/components/ui/card'
@@ -212,14 +212,14 @@ export default function DashboardPage() {
       />
 
       {/* KPI Cards */}
-      <div className="grid grid-cols-2 md:grid-cols-3 gap-3 md:gap-4 mb-6 md:mb-8">
+      <div className="grid grid-cols-2 md:grid-cols-3 gap-3 md:gap-4 mb-8 md:mb-10">
         {kpiCards.map((d, i) => (
           <StatsCard key={i} label={d.label} value={d.value} loading={loading} trend={d.trend} />
         ))}
       </div>
 
       {/* 광고비 추이 + 시술 비중 */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 mb-6">
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 mb-10">
         <Card variant="glass" className="lg:col-span-2 p-6">
           <div className="flex items-center justify-between mb-5">
             <h2 className="font-semibold text-white">광고비 추이</h2>
@@ -244,8 +244,10 @@ export default function DashboardPage() {
               </AreaChart>
             </ResponsiveContainer>
           ) : (
-            <div className="h-[220px] flex items-center justify-center text-slate-500 text-sm">
-              광고 데이터를 수집하면 추이 그래프가 표시됩니다.
+            <div className="h-[220px] flex flex-col gap-3 items-center justify-center text-slate-400 text-sm">
+              <TrendingUp size={32} className="text-slate-600 mb-2" />
+              <span>진행 중인 광고 캠페인이 없습니다.</span>
+              <span className="text-xs text-slate-500">데이터 연동 후 추이 그래프가 여기에 표시됩니다.</span>
             </div>
           )}
         </Card>
@@ -275,21 +277,23 @@ export default function DashboardPage() {
               </ul>
             </>
           ) : (
-            <div className="h-[160px] flex items-center justify-center text-slate-500 text-xs text-center">
-              병원 데이터 입력 후<br />시술 비중이 표시됩니다.
+            <div className="h-[160px] flex flex-col gap-2 items-center justify-center text-slate-400 text-xs text-center">
+              <PieChartIcon size={28} className="text-slate-600 mb-1" />
+              <span>결제 데이터가 없습니다.</span>
+              <span className="text-slate-500">병원 데이터 입력 후 시술 비중이 표시됩니다.</span>
             </div>
           )}
         </Card>
       </div>
 
       {/* 퍼널 분석 */}
-      <Card variant="glass" className="p-6 mb-6">
+      <Card variant="glass" className="p-6 mb-10">
         <div className="flex items-center justify-between mb-5">
           <div className="flex items-center gap-2">
             <Users size={18} className="text-brand-400" />
             <h2 className="font-semibold text-white">전환 퍼널</h2>
           </div>
-          <span className="text-xs text-slate-500">리드 → 결제 전환율</span>
+          <span className="text-xs text-slate-400">리드 → 결제 전환율</span>
         </div>
         {loading ? (
           <Skeleton className="h-[120px] rounded-xl" />
@@ -309,12 +313,12 @@ export default function DashboardPage() {
                     {stage.count}
                   </div>
                   <p className="text-xs font-medium text-slate-300">{stage.label}</p>
-                  <p className="text-[10px] text-slate-500">{stage.rate}%</p>
+                  <p className="text-[11px] text-slate-400">{stage.rate}%</p>
                 </div>
                 {i < funnel.funnel.stages.length - 1 && (
                   <div className="flex flex-col items-center text-slate-600 shrink-0">
                     <ArrowRight size={16} />
-                    <span className="text-[10px] text-slate-500 mt-0.5">
+                    <span className="text-[11px] text-slate-400 mt-0.5">
                       {stage.dropoff > 0 ? `-${stage.dropoff}%` : ''}
                     </span>
                   </div>
@@ -323,13 +327,14 @@ export default function DashboardPage() {
             ))}
           </div>
         ) : (
-          <div className="h-[120px] flex items-center justify-center text-slate-500 text-sm">
-            리드 데이터가 쌓이면 퍼널이 표시됩니다.
+          <div className="h-[120px] flex flex-col gap-2 items-center justify-center text-slate-400 text-sm">
+            <Filter size={28} className="text-slate-600 mb-1" />
+            <span>퍼널을 분석할 리드 데이터가 부족합니다.</span>
           </div>
         )}
         {funnel?.funnel?.totalConversionRate > 0 && (
           <div className="mt-4 pt-4 border-t border-white/5 flex items-center justify-between">
-            <span className="text-xs text-slate-500">전체 전환율 (리드 → 결제)</span>
+            <span className="text-xs text-slate-400">전체 전환율 (리드 → 결제)</span>
             <span className="text-lg font-bold text-emerald-400">{funnel.funnel.totalConversionRate}%</span>
           </div>
         )}
@@ -337,7 +342,7 @@ export default function DashboardPage() {
 
       {/* 채널별 성과 */}
       {channel.length > 0 && (
-        <Card variant="glass" className="p-6 mb-6">
+        <Card variant="glass" className="p-6 mb-10">
           <div className="flex items-center justify-between mb-5">
             <h2 className="font-semibold text-white">채널별 성과</h2>
             <Badge variant="default" className="bg-brand-600/20 text-brand-500 border-0">최근 {days}일</Badge>
@@ -345,19 +350,19 @@ export default function DashboardPage() {
           <div className="overflow-x-auto -mx-2">
             <Table className="min-w-[700px]">
               <TableHeader>
-                <TableRow className="border-b border-white/5 hover:bg-transparent">
-                  <TableHead className="text-xs text-slate-500 uppercase tracking-wider font-medium">채널</TableHead>
-                  <TableHead className="text-xs text-slate-500 uppercase tracking-wider font-medium text-right">리드</TableHead>
-                  <TableHead className="text-xs text-slate-500 uppercase tracking-wider font-medium text-right">광고비</TableHead>
-                  <TableHead className="text-xs text-slate-500 uppercase tracking-wider font-medium text-right">결제액</TableHead>
-                  <TableHead className="text-xs text-slate-500 uppercase tracking-wider font-medium text-right">CPL</TableHead>
-                  <TableHead className="text-xs text-slate-500 uppercase tracking-wider font-medium text-right">ROAS</TableHead>
-                  <TableHead className="text-xs text-slate-500 uppercase tracking-wider font-medium text-right">전환율</TableHead>
+                <TableRow className="border-b border-white/5 hover:bg-transparent bg-black/20">
+                  <TableHead className="text-xs text-slate-400 uppercase tracking-wider font-semibold">채널</TableHead>
+                  <TableHead className="text-xs text-slate-400 uppercase tracking-wider font-semibold text-right">리드</TableHead>
+                  <TableHead className="text-xs text-slate-400 uppercase tracking-wider font-semibold text-right">광고비</TableHead>
+                  <TableHead className="text-xs text-slate-400 uppercase tracking-wider font-semibold text-right">결제액</TableHead>
+                  <TableHead className="text-xs text-slate-400 uppercase tracking-wider font-semibold text-right">CPL</TableHead>
+                  <TableHead className="text-xs text-slate-400 uppercase tracking-wider font-semibold text-right">ROAS</TableHead>
+                  <TableHead className="text-xs text-slate-400 uppercase tracking-wider font-semibold text-right">전환율</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {channel.map((c: any) => (
-                  <TableRow key={c.channel} className="border-b border-white/5 hover:bg-white/[0.03]">
+                  <TableRow key={c.channel} className="border-b border-white/5 hover:bg-white/[0.03] transition-colors">
                     <TableCell>
                       <ChannelBadge channel={c.channel} />
                     </TableCell>
@@ -381,7 +386,7 @@ export default function DashboardPage() {
 
       {/* 캠페인별 성과 */}
       {campaigns.length > 0 && (
-        <Card variant="glass" className="p-6 mb-6">
+        <Card variant="glass" className="p-6 mb-10">
           <div className="flex items-center justify-between mb-5">
             <h2 className="font-semibold text-white">캠페인별 성과</h2>
             <Badge variant="default" className="bg-brand-600/20 text-brand-500 border-0">Top {Math.min(campaigns.length, 5)}</Badge>
@@ -389,19 +394,19 @@ export default function DashboardPage() {
           <div className="overflow-x-auto -mx-2">
             <Table className="min-w-[700px]">
               <TableHeader>
-                <TableRow className="border-b border-white/5 hover:bg-transparent">
-                  <TableHead className="text-xs text-slate-500 uppercase tracking-wider font-medium">캠페인</TableHead>
-                  <TableHead className="text-xs text-slate-500 uppercase tracking-wider font-medium">채널</TableHead>
-                  <TableHead className="text-xs text-slate-500 uppercase tracking-wider font-medium text-right">리드</TableHead>
-                  <TableHead className="text-xs text-slate-500 uppercase tracking-wider font-medium text-right">결제</TableHead>
-                  <TableHead className="text-xs text-slate-500 uppercase tracking-wider font-medium text-right">CPL</TableHead>
-                  <TableHead className="text-xs text-slate-500 uppercase tracking-wider font-medium text-right">ROAS</TableHead>
-                  <TableHead className="text-xs text-slate-500 uppercase tracking-wider font-medium text-right">전환율</TableHead>
+                <TableRow className="border-b border-white/5 hover:bg-transparent bg-black/20">
+                  <TableHead className="text-xs text-slate-400 uppercase tracking-wider font-semibold">캠페인</TableHead>
+                  <TableHead className="text-xs text-slate-400 uppercase tracking-wider font-semibold">채널</TableHead>
+                  <TableHead className="text-xs text-slate-400 uppercase tracking-wider font-semibold text-right">리드</TableHead>
+                  <TableHead className="text-xs text-slate-400 uppercase tracking-wider font-semibold text-right">결제</TableHead>
+                  <TableHead className="text-xs text-slate-400 uppercase tracking-wider font-semibold text-right">CPL</TableHead>
+                  <TableHead className="text-xs text-slate-400 uppercase tracking-wider font-semibold text-right">ROAS</TableHead>
+                  <TableHead className="text-xs text-slate-400 uppercase tracking-wider font-semibold text-right">전환율</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {campaigns.slice(0, 5).map((c: any) => (
-                  <TableRow key={c.campaign} className="border-b border-white/5 hover:bg-white/[0.03]">
+                  <TableRow key={c.campaign} className="border-b border-white/5 hover:bg-white/[0.03] transition-colors">
                     <TableCell className="font-medium text-white truncate max-w-[150px]" title={c.campaign}>{c.campaign}</TableCell>
                     <TableCell>
                       <ChannelBadge channel={c.channel} />
@@ -425,12 +430,12 @@ export default function DashboardPage() {
 
       {/* CPL / ROAS 차트 */}
       {(allCplData.length > 0 || allRoasData.length > 0) && (
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-10">
           {/* CPL 차트 */}
           <Card variant="glass" className="p-6">
             <div className="flex items-center justify-between mb-1">
               <h2 className="font-semibold text-white text-sm">매체별 CPL 비교</h2>
-              <span className="text-[10px] text-slate-500">광고 + 콘텐츠</span>
+              <span className="text-[11px] text-slate-400">광고 + 콘텐츠</span>
             </div>
             <p className="text-xs text-slate-500 mb-4">DB 1건 획득 비용</p>
             {allCplData.length > 0 ? (
@@ -465,7 +470,10 @@ export default function DashboardPage() {
                 </div>
               </>
             ) : (
-              <div className="h-[200px] flex items-center justify-center text-slate-600 text-xs">CPL 데이터 없음</div>
+              <div className="h-[200px] flex flex-col gap-2 items-center justify-center text-slate-500 text-xs">
+                <BarChart3 size={24} className="text-slate-600 opacity-50" />
+                <span>CPL 데이터 없음</span>
+              </div>
             )}
           </Card>
 
@@ -473,7 +481,7 @@ export default function DashboardPage() {
           <Card variant="glass" className="p-6">
             <div className="flex items-center justify-between mb-1">
               <h2 className="font-semibold text-white text-sm">매체별 ROAS 비교</h2>
-              <span className="text-[10px] text-slate-500">광고 + 콘텐츠</span>
+              <span className="text-[11px] text-slate-400">광고 + 콘텐츠</span>
             </div>
             <p className="text-xs text-slate-500 mb-4">예산 대비 매출 (100% 이상 = 흑자)</p>
             {allRoasData.length > 0 ? (
@@ -510,7 +518,10 @@ export default function DashboardPage() {
                 </div>
               </>
             ) : (
-              <div className="h-[200px] flex items-center justify-center text-slate-600 text-xs">ROAS 데이터 없음</div>
+              <div className="h-[200px] flex flex-col gap-2 items-center justify-center text-slate-500 text-xs">
+                <BarChart3 size={24} className="text-slate-600 opacity-50" />
+                <span>ROAS 데이터 없음</span>
+              </div>
             )}
           </Card>
         </div>
@@ -527,9 +538,9 @@ export default function DashboardPage() {
           <div className="overflow-x-auto -mx-2">
             <Table className="min-w-[600px]">
               <TableHeader>
-                <TableRow className="border-b border-white/5 hover:bg-transparent">
+                <TableRow className="border-b border-white/5 hover:bg-transparent bg-black/20">
                   {['고객명', '유입 채널', '챗봇 발송', '상담 상태', '결제 금액', '시술명'].map(h => (
-                    <TableHead key={h} className="text-xs text-slate-500 uppercase tracking-wider font-medium">{h}</TableHead>
+                    <TableHead key={h} className="text-xs text-slate-400 uppercase tracking-wider font-semibold">{h}</TableHead>
                   ))}
                 </TableRow>
               </TableHeader>
@@ -539,7 +550,7 @@ export default function DashboardPage() {
                   const consult = c?.consultations?.[0]
                   const payment = c?.payments?.[0]
                   return (
-                    <TableRow key={lead.id} className="border-b border-white/5 hover:bg-white/[0.03]">
+                    <TableRow key={lead.id} className="border-b border-white/5 hover:bg-white/[0.03] transition-colors">
                       <TableCell className="font-medium text-white">{c?.name ? c.name.slice(0, 1) + '*' + c.name.slice(-1) : '-'}</TableCell>
                       <TableCell>
                         <ChannelBadge channel={c?.first_source || '-'} />
@@ -559,7 +570,11 @@ export default function DashboardPage() {
             </Table>
           </div>
         ) : (
-          <p className="text-slate-500 text-sm text-center py-8">인입된 고객 데이터가 없습니다.</p>
+          <div className="flex flex-col items-center justify-center py-12 text-slate-400 gap-3">
+            <Inbox size={36} className="text-slate-600 mb-2" />
+            <p className="text-sm font-medium">인입된 고객 데이터가 없습니다.</p>
+            <p className="text-xs text-slate-500">새로운 리드가 들어오면 이곳에 나타납니다.</p>
+          </div>
         )}
       </Card>
     </>

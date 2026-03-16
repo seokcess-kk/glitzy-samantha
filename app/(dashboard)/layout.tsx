@@ -9,30 +9,36 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
 
   return (
     <ClinicProvider>
-      <div className="flex h-screen overflow-hidden">
+      <div className="flex h-screen overflow-hidden relative bg-background">
+
+        {/* 배경 다이나믹 드롭 섀도우 / 글로우 */}
+        <div className="absolute inset-0 overflow-hidden pointer-events-none z-0">
+          <div className="absolute top-[-20%] left-[-10%] w-[60%] h-[60%] bg-gradient-to-br from-brand-600/10 via-brand-600/5 to-transparent rounded-full blur-3xl mix-blend-screen" />
+          <div className="absolute bottom-[-20%] right-[-10%] w-[60%] h-[60%] bg-gradient-to-tl from-purple-600/5 via-brand-500/5 to-transparent rounded-full blur-3xl mix-blend-screen" />
+        </div>
 
         {/* 모바일 오버레이 */}
         {sidebarOpen && (
           <div
-            className="fixed inset-0 z-20 bg-black/60 md:hidden"
+            className="fixed inset-0 z-40 bg-black/60 md:hidden backdrop-blur-sm transition-all"
             onClick={() => setSidebarOpen(false)}
           />
         )}
 
         {/* 사이드바 — 모바일: 슬라이드인, 데스크탑: 항상 표시 */}
         <div className={`
-          w-60 shrink-0 fixed md:static inset-y-0 left-0 z-30
-          transition-transform duration-200 ease-in-out
+          w-60 shrink-0 fixed md:static inset-y-0 left-0 z-50 md:z-30
+          transition-transform duration-300 ease-in-out
           md:translate-x-0
           ${sidebarOpen ? 'translate-x-0' : '-translate-x-full'}
         `}>
           <Sidebar onClose={() => setSidebarOpen(false)} />
         </div>
 
-        <div className="flex-1 flex flex-col overflow-hidden min-w-0">
+        <div className="flex-1 flex flex-col overflow-hidden min-w-0 relative z-10">
           {/* 모바일 상단 바 */}
           <div
-            className="md:hidden flex items-center gap-3 px-4 py-3 border-b border-white/5 shrink-0"
+            className="md:hidden flex items-center gap-3 px-4 py-3 border-b border-white/5 shrink-0 bg-background/80 backdrop-blur-md"
             style={{ background: 'rgba(255,255,255,0.02)' }}
           >
             <button
