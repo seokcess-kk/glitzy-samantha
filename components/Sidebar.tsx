@@ -188,7 +188,11 @@ export default function Sidebar({ onClose }: { onClose?: () => void }) {
               {/* 그룹 아이템 */}
               <div className="space-y-1">
                 {visibleItems.map(({ href, label, icon: Icon }) => {
-                  const isActive = pathname === href || (href !== '/' && pathname.startsWith(href + '/'))
+                  const exactMatch = pathname === href
+                  const prefixMatch = href !== '/' && pathname.startsWith(href + '/')
+                  // 같은 그룹 내 더 구체적인 경로가 매칭되면 상위 경로는 비활성화
+                  const overridden = !exactMatch && prefixMatch && visibleItems.some(other => other.href !== href && pathname.startsWith(other.href) && other.href.startsWith(href + '/'))
+                  const isActive = exactMatch || (prefixMatch && !overridden)
                   return (
                     <Link
                       key={href}
