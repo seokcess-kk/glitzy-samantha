@@ -1,5 +1,7 @@
 'use client'
 import { useState, useEffect, useCallback } from 'react'
+import { useSession } from 'next-auth/react'
+import { useRouter } from 'next/navigation'
 import { RefreshCw, Plus, Trash2, Eye, Heart, MessageCircle, Share2, Bookmark, ExternalLink, Check, AlertCircle, X, Search } from 'lucide-react'
 import { useClinic } from '@/components/ClinicContext'
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Cell } from '@/components/charts'
@@ -334,6 +336,14 @@ function ContentRow({ post, onDelete, onRefresh }: { post: any; onDelete: (id: n
 
 // ─── 메인 페이지 ──────────────────────────────────────────
 export default function ContentPage() {
+  const { data: session } = useSession()
+  const router = useRouter()
+  const user = session?.user as any
+
+  useEffect(() => {
+    if (user?.role === 'clinic_staff') router.replace('/patients')
+  }, [user, router])
+
   const { selectedClinicId } = useClinic()
   const [posts, setPosts] = useState<any[]>([])
   const [analytics, setAnalytics] = useState<any[]>([])

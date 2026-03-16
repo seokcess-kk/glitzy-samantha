@@ -1,5 +1,7 @@
 'use client'
 import { useState, useEffect, useCallback } from 'react'
+import { useSession } from 'next-auth/react'
+import { useRouter } from 'next/navigation'
 import { RefreshCw, Scan, AlertTriangle, CheckCircle, AlertCircle, ChevronDown, ChevronUp } from 'lucide-react'
 import { useClinic } from '@/components/ClinicContext'
 import { Card } from '@/components/ui/card'
@@ -129,6 +131,14 @@ function AuditRow({ post, onAnalyze }: { post: any; onAnalyze: (id: number) => P
 }
 
 export default function MonitorPage() {
+  const { data: session } = useSession()
+  const router = useRouter()
+  const user = session?.user as any
+
+  useEffect(() => {
+    if (user?.role === 'clinic_staff') router.replace('/patients')
+  }, [user, router])
+
   const { selectedClinicId } = useClinic()
   const [posts, setPosts] = useState<any[]>([])
   const [loading, setLoading] = useState(true)

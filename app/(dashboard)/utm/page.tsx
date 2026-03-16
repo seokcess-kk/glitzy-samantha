@@ -1,6 +1,8 @@
 'use client'
 
 import { useState, useEffect, useCallback, useMemo } from 'react'
+import { useSession } from 'next-auth/react'
+import { useRouter } from 'next/navigation'
 import { Copy, Check, Trash2, ExternalLink, ChevronDown, Link2, QrCode, RefreshCw, Database, FileText, Image, ArrowLeft, Search } from 'lucide-react'
 import { toast } from 'sonner'
 import { Card } from '@/components/ui/card'
@@ -88,6 +90,14 @@ const DATE_FORMAT_OPTIONS: Intl.DateTimeFormatOptions = {
 }
 
 export default function UtmPage() {
+  const { data: session } = useSession()
+  const router = useRouter()
+  const user = session?.user as any
+
+  useEffect(() => {
+    if (user && user.role !== 'superadmin') router.replace('/')
+  }, [user, router])
+
   const [view, setView] = useState<'list' | 'generator'>('list')
   const [links, setLinks] = useState<UtmLink[]>([])
   const [linksLoading, setLinksLoading] = useState(true)
@@ -146,6 +156,8 @@ export default function UtmPage() {
       toast.error('삭제 실패')
     }
   }
+
+  if (user?.role !== 'superadmin') return null
 
   if (view === 'generator') {
     return <UtmGenerator onBack={() => { setView('list'); fetchLinks() }} />

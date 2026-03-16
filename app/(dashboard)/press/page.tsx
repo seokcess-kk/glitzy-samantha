@@ -1,5 +1,7 @@
 'use client'
 import { useState, useEffect, useCallback } from 'react'
+import { useSession } from 'next-auth/react'
+import { useRouter } from 'next/navigation'
 import { RefreshCw, Newspaper, ExternalLink, Play } from 'lucide-react'
 import { useClinic } from '@/components/ClinicContext'
 import { Card } from '@/components/ui/card'
@@ -20,6 +22,14 @@ function groupByDate(articles: any[]): Record<string, any[]> {
 }
 
 export default function PressPage() {
+  const { data: session } = useSession()
+  const router = useRouter()
+  const user = session?.user as any
+
+  useEffect(() => {
+    if (user?.role === 'clinic_staff') router.replace('/patients')
+  }, [user, router])
+
   const { selectedClinicId } = useClinic()
   const [articles, setArticles] = useState<any[]>([])
   const [loading, setLoading] = useState(true)

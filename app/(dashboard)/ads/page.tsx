@@ -1,5 +1,7 @@
 'use client'
 import { useState, useEffect, useCallback } from 'react'
+import { useSession } from 'next-auth/react'
+import { useRouter } from 'next/navigation'
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from '@/components/charts'
 import { RefreshCw, Play, Calendar } from 'lucide-react'
 import { toast } from 'sonner'
@@ -33,6 +35,14 @@ const PLATFORM_COLORS: Record<string, string> = {
 }
 
 export default function AdsPage() {
+  const { data: session } = useSession()
+  const router = useRouter()
+  const user = session?.user as any
+
+  useEffect(() => {
+    if (user?.role === 'clinic_staff') router.replace('/patients')
+  }, [user, router])
+
   const { selectedClinicId } = useClinic()
   const [stats, setStats] = useState<any[]>([])
   const [channelData, setChannelData] = useState<any[]>([])

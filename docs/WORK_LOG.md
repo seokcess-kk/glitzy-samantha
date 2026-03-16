@@ -45,6 +45,9 @@ shadcn/ui 기반 UI/UX 개선 및 기능 개발 작업 기록.
 | `20260316_landing_pages_random_id.sql` | landing_pages ID 8자리 랜덤으로 변경 | ⚠️ |
 | `20260316_leads_landing_page_on_delete.sql` | leads FK ON DELETE SET NULL 추가 | ⚠️ |
 | `20260316_lead_raw_logs.sql` | 리드 원본 로그 테이블 (유실 방지) | ⚠️ |
+| `20260316_clinic_notify_phones.sql` | 병원 알림 연락처 최대 3개 (TEXT[]) | ⚠️ |
+| `20260316_sms_send_logs.sql` | SMS 발송 로그 테이블 | ⚠️ |
+| `20260316_clinic_staff_activity.sql` | 활동 추적 컬럼 + activity_logs 테이블 | ⚠️ |
 
 ---
 

@@ -1,7 +1,8 @@
 'use client'
 
 import { useState, useEffect, Suspense } from 'react'
-import { useSearchParams } from 'next/navigation'
+import { useSession } from 'next-auth/react'
+import { useSearchParams, useRouter } from 'next/navigation'
 import { Send, CheckCircle, AlertCircle, Loader2, Link2, Tag } from 'lucide-react'
 import { useClinic } from '@/components/ClinicContext'
 import { getUtmSourceLabel, getUtmMediumLabel } from '@/lib/utm'
@@ -341,6 +342,16 @@ function LoadingFallback() {
 }
 
 export default function LeadFormPage() {
+  const { data: session } = useSession()
+  const router = useRouter()
+  const user = session?.user as any
+
+  useEffect(() => {
+    if (user && user.role !== 'superadmin') router.replace('/')
+  }, [user, router])
+
+  if (user?.role !== 'superadmin') return null
+
   return (
     <Suspense fallback={<LoadingFallback />}>
       <LeadFormContent />
