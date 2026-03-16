@@ -9,6 +9,13 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Skeleton } from '@/components/ui/skeleton'
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select'
 import { useClinic } from '@/components/ClinicContext'
 
 const CATEGORY_LABELS: Record<string, string> = {
@@ -29,7 +36,7 @@ export default function MonitoringInputPage() {
   const { data: session } = useSession()
   const router = useRouter()
   const user = session?.user as any
-  const { selectedClinicId, clinics } = useClinic()
+  const { selectedClinicId, setSelectedClinicId, clinics } = useClinic()
 
   const [date, setDate] = useState(() => new Date().toISOString().split('T')[0])
   const [entries, setEntries] = useState<KeywordEntry[]>([])
@@ -149,8 +156,24 @@ export default function MonitoringInputPage() {
         <p className="text-sm text-slate-400">일별 순위를 입력하세요</p>
       </div>
 
-      {/* 날짜 선택 */}
+      {/* 병원 + 날짜 선택 */}
       <div className="flex items-center gap-4 mb-6 flex-wrap">
+        <div className="space-y-1">
+          <Label className="text-xs text-slate-500">병원</Label>
+          <Select
+            value={selectedClinicId?.toString() ?? ''}
+            onValueChange={v => setSelectedClinicId(v ? Number(v) : null)}
+          >
+            <SelectTrigger className="w-[200px] bg-white/5 border-white/10 text-white">
+              <SelectValue placeholder="병원 선택" />
+            </SelectTrigger>
+            <SelectContent>
+              {clinics.map(c => (
+                <SelectItem key={c.id} value={String(c.id)}>{c.name}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
         <div className="space-y-1">
           <Label className="text-xs text-slate-500">날짜</Label>
           <Input
@@ -160,9 +183,6 @@ export default function MonitoringInputPage() {
             className="w-[180px] bg-white/5 border-white/10 text-white"
           />
         </div>
-        {!selectedClinicId && (
-          <p className="text-sm text-yellow-400 mt-5">병원을 선택해주세요.</p>
-        )}
       </div>
 
       {loading ? (
