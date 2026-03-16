@@ -32,10 +32,10 @@ type ClinicHandler = (req: Request, context: ClinicContext) => Promise<NextRespo
 type SuperAdminHandler = (req: Request, context: AuthContext) => Promise<NextResponse>
 type ClinicAdminHandler = (req: Request, context: ClinicContext) => Promise<NextResponse>
 
-// 인증 실패 응답
-const UNAUTHORIZED = NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-const FORBIDDEN_SUPERADMIN = NextResponse.json({ error: 'Forbidden: superadmin only' }, { status: 403 })
-const FORBIDDEN_CLINIC_ADMIN = NextResponse.json({ error: 'Forbidden: clinic_admin 이상 권한 필요' }, { status: 403 })
+// 인증 실패 응답 (매번 새 Response 생성 — Response body는 1회만 소비 가능)
+const UNAUTHORIZED = () => NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+const FORBIDDEN_SUPERADMIN = () => NextResponse.json({ error: 'Forbidden: superadmin only' }, { status: 403 })
+const FORBIDDEN_CLINIC_ADMIN = () => NextResponse.json({ error: 'Forbidden: clinic_admin 이상 권한 필요' }, { status: 403 })
 
 /**
  * 세션에서 인증된 사용자 추출
@@ -66,7 +66,7 @@ async function getAssignedClinicIds(userId: string): Promise<number[]> {
 export function withAuth(handler: AuthHandler) {
   return async (req: Request): Promise<NextResponse> => {
     const user = await getAuthUser()
-    if (!user) return UNAUTHORIZED
+    if (!user) return UNAUTHORIZED()
     return handler(req, { user })
   }
 }
@@ -81,7 +81,7 @@ export function withAuth(handler: AuthHandler) {
 export function withClinicFilter(handler: ClinicHandler) {
   return async (req: Request): Promise<NextResponse> => {
     const user = await getAuthUser()
-    if (!user) return UNAUTHORIZED
+    if (!user) return UNAUTHORIZED()
 
     const clinicId = await getClinicId(req.url)
 
@@ -102,8 +102,8 @@ export function withClinicFilter(handler: ClinicHandler) {
 export function withSuperAdmin(handler: SuperAdminHandler) {
   return async (req: Request): Promise<NextResponse> => {
     const user = await getAuthUser()
-    if (!user) return UNAUTHORIZED
-    if (user.role !== 'superadmin') return FORBIDDEN_SUPERADMIN
+    if (!user) return UNAUTHORIZED()
+    if (user.role !== 'superadmin') return FORBIDDEN_SUPERADMIN()
     return handler(req, { user })
   }
 }
@@ -116,8 +116,8 @@ export function withSuperAdmin(handler: SuperAdminHandler) {
 export function withClinicAdmin(handler: ClinicAdminHandler) {
   return async (req: Request): Promise<NextResponse> => {
     const user = await getAuthUser()
-    if (!user) return UNAUTHORIZED
-    if (user.role !== 'superadmin' && user.role !== 'clinic_admin') return FORBIDDEN_CLINIC_ADMIN
+    if (!user) return UNAUTHORIZED()
+    if (user.role !== 'superadmin' && user.role !== 'clinic_admin') return FORBIDDEN_CLINIC_ADMIN()
 
     const clinicId = await getClinicId(req.url)
     return handler(req, { user, clinicId, assignedClinicIds: null })

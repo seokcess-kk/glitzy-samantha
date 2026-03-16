@@ -159,8 +159,10 @@ export default function AdCreativesPage() {
       const formData = new FormData()
       formData.append('file', file)
       const res = await fetch('/api/admin/ad-creatives/upload', { method: 'POST', body: formData })
-      const data = await res.json()
-      if (!res.ok) throw new Error(data.error)
+      const text = await res.text()
+      let data: any
+      try { data = JSON.parse(text) } catch { throw new Error('서버 응답 오류') }
+      if (!res.ok) throw new Error(data.error || '업로드 실패')
 
       setForm(f => ({ ...f, file_name: data.fileName, file_type: data.fileType }))
       // 미리보기
