@@ -1,5 +1,5 @@
 import { serverSupabase } from '@/lib/supabase'
-import { withClinicFilter, ClinicContext, apiError, apiSuccess } from '@/lib/api-middleware'
+import { withClinicFilter, ClinicContext, applyClinicFilter, apiError, apiSuccess } from '@/lib/api-middleware'
 import { parseId, sanitizeString } from '@/lib/security'
 import { logActivity } from '@/lib/activity-log'
 
@@ -10,7 +10,7 @@ const VALID_LEAD_STATUSES = ['new', 'no_answer', 'consulted', 'booked', 'hold', 
  * - lead_status, notes 변경
  * - "booked" 상태로 변경 시 bookings 테이블에 자동 생성 (메모 포함)
  */
-export const PATCH = withClinicFilter(async (req: Request, { user, clinicId }: ClinicContext) => {
+export const PATCH = withClinicFilter(async (req: Request, { user, clinicId, assignedClinicIds }: ClinicContext) => {
   const supabase = serverSupabase()
   const url = new URL(req.url)
   const id = url.pathname.split('/').pop()
@@ -31,7 +31,9 @@ export const PATCH = withClinicFilter(async (req: Request, { user, clinicId }: C
 
   // 리드 조회 (clinic_id 권한 확인 포함)
   let query = supabase.from('leads').select('id, customer_id, clinic_id, lead_status, notes').eq('id', leadId)
-  if (clinicId) query = query.eq('clinic_id', clinicId)
+  const filtered = applyClinicFilter(query, { clinicId, assignedClinicIds })
+  if (filtered === null) return apiError('접근 권한이 없습니다.', 403)
+  query = filtered
 
   const { data: lead, error: fetchError } = await query.single()
   if (fetchError || !lead) return apiError('리드를 찾을 수 없습니다.', 404)

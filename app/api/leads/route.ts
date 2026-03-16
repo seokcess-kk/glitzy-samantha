@@ -1,5 +1,5 @@
 import { serverSupabase } from '@/lib/supabase'
-import { withClinicFilter, ClinicContext, apiError, apiSuccess } from '@/lib/api-middleware'
+import { withClinicFilter, ClinicContext, applyClinicFilter, apiError, apiSuccess } from '@/lib/api-middleware'
 
 /**
  * 고객 기준 리드 조회 API (하이브리드 방식)
@@ -7,7 +7,7 @@ import { withClinicFilter, ClinicContext, apiError, apiSuccess } from '@/lib/api
  * - 각 고객의 모든 유입(leads) 이력 포함
  * - startDate 파라미터로 기간 필터링 가능
  */
-export const GET = withClinicFilter(async (req: Request, { clinicId }: ClinicContext) => {
+export const GET = withClinicFilter(async (req: Request, { clinicId, assignedClinicIds }: ClinicContext) => {
   const supabase = serverSupabase()
   const url = new URL(req.url)
   const startDate = url.searchParams.get('startDate')
@@ -31,7 +31,9 @@ export const GET = withClinicFilter(async (req: Request, { clinicId }: ClinicCon
     .order('created_at', { ascending: false })
     .limit(limit)
 
-  if (clinicId) query = query.eq('clinic_id', clinicId)
+  const filtered = applyClinicFilter(query, { clinicId, assignedClinicIds })
+  if (filtered === null) return apiSuccess([])
+  query = filtered
   if (startDate) query = query.gte('created_at', startDate)
   if (endDate) query = query.lte('created_at', endDate)
 

@@ -12,11 +12,11 @@
 // );
 
 import { serverSupabase } from '@/lib/supabase'
-import { withClinicFilter, ClinicContext, apiError, apiSuccess } from '@/lib/api-middleware'
+import { withClinicFilter, ClinicContext, applyClinicFilter, apiError, apiSuccess } from '@/lib/api-middleware'
 import { checkClinicAccess, parseId } from '@/lib/security'
 
 // GET /api/content/audit  — list posts with their latest audit
-export const GET = withClinicFilter(async (req: Request, { clinicId }: ClinicContext) => {
+export const GET = withClinicFilter(async (req: Request, { clinicId, assignedClinicIds }: ClinicContext) => {
   const supabase = serverSupabase()
 
   // 텍스트 기반 콘텐츠만 분석 대상: 네이버 블로그, 인스타그램 피드 (reels 제외)
@@ -28,7 +28,9 @@ export const GET = withClinicFilter(async (req: Request, { clinicId }: ClinicCon
     .order('published_at', { ascending: false })
     .limit(100)
 
-  if (clinicId) query = query.eq('clinic_id', clinicId)
+  const filtered = applyClinicFilter(query, { clinicId, assignedClinicIds })
+  if (filtered === null) return apiSuccess([])
+  query = filtered
 
   const { data, error } = await query
   if (error) return apiError(error.message, 500)

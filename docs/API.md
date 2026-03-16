@@ -18,7 +18,9 @@ MMI 대시보드의 REST API 엔드포인트 문서입니다.
 | 역할 | 권한 |
 |------|------|
 | `superadmin` | 전체 병원 데이터 접근, 병원/계정 관리 |
+| `agency_staff` | 배정된 병원 데이터 접근, 계정별 메뉴 권한 제한 |
 | `clinic_admin` | 자신의 clinic_id 데이터만 접근 |
+| `clinic_staff` | 예약/결제, 고객, 리드, 챗봇만 접근 |
 
 ---
 
@@ -27,7 +29,7 @@ MMI 대시보드의 REST API 엔드포인트 문서입니다.
 ### Query Parameters
 | 파라미터 | 타입 | 설명 |
 |---------|------|------|
-| `clinic_id` | number | 병원 ID (superadmin만 사용 가능) |
+| `clinic_id` | number | 병원 ID (superadmin, agency_staff 사용 가능) |
 | `startDate` | string | 시작일 (ISO 8601) |
 | `endDate` | string | 종료일 (ISO 8601) |
 
@@ -395,13 +397,170 @@ Google 뉴스에서 언론보도를 수집합니다.
 
 사용자를 생성합니다.
 
-**Request Body:**
+**Request Body (clinic_admin/clinic_staff):**
 ```json
 {
   "username": "admin_mirae",
   "password": "초기비밀번호",
   "role": "clinic_admin",
   "clinic_id": 1
+}
+```
+
+**Request Body (agency_staff):**
+```json
+{
+  "username": "agency_kim",
+  "password": "초기비밀번호",
+  "role": "agency_staff",
+  "assigned_clinic_ids": [1, 2, 3],
+  "menu_permissions": ["dashboard", "monitoring", "monitoring-input"]
+}
+```
+
+### GET /api/admin/users/{id}/permissions
+
+agency_staff 계정의 병원 배정 및 메뉴 권한을 조회합니다.
+
+**Response:**
+```json
+{
+  "assigned_clinic_ids": [1, 2],
+  "menu_permissions": ["dashboard", "monitoring"]
+}
+```
+
+### PUT /api/admin/users/{id}/permissions
+
+agency_staff 계정의 병원 배정 및 메뉴 권한을 수정합니다.
+
+**Request Body:**
+```json
+{
+  "assigned_clinic_ids": [1, 2, 3],
+  "menu_permissions": ["dashboard", "campaigns", "monitoring", "monitoring-input"]
+}
+```
+
+---
+
+## 내 정보 API
+
+### GET /api/my/clinics
+
+현재 로그인 사용자의 접근 가능 병원 목록을 조회합니다.
+- superadmin: 전체 활성 병원
+- agency_staff: 배정된 병원만
+- clinic_admin/staff: 자기 병원만
+
+### GET /api/my/menu-permissions
+
+현재 로그인 사용자의 메뉴 권한을 조회합니다.
+
+**Response:**
+```json
+{
+  "all": false,
+  "permissions": ["dashboard", "monitoring", "monitoring-input"]
+}
+```
+
+---
+
+## 순위 모니터링 API
+
+### GET /api/monitoring/keywords
+
+모니터링 키워드 목록을 조회합니다.
+
+**Query Parameters:**
+- `clinic_id` (optional)
+- `active_only` (optional): `true`이면 활성 키워드만
+
+**Response:**
+```json
+[
+  {
+    "id": 1,
+    "clinic_id": 1,
+    "keyword": "강남 성형외과",
+    "category": "place",
+    "is_active": true
+  }
+]
+```
+
+### POST /api/monitoring/keywords (superadmin)
+
+키워드를 등록합니다.
+
+**Request Body:**
+```json
+{
+  "clinic_id": 1,
+  "keyword": "강남 성형외과",
+  "category": "place"
+}
+```
+
+### PATCH /api/monitoring/keywords (superadmin)
+
+키워드를 수정합니다.
+
+**Request Body:**
+```json
+{
+  "id": 1,
+  "is_active": false
+}
+```
+
+### GET /api/monitoring/rankings
+
+월간 순위 데이터를 조회합니다.
+
+**Query Parameters:**
+- `month` (필수): `YYYY-MM`
+- `category` (optional): `place` | `website` | `smartblock`
+- `clinic_id` (optional)
+
+**Response:**
+```json
+{
+  "keywords": [
+    { "id": 1, "keyword": "강남 성형외과", "category": "place", "clinic_id": 1 }
+  ],
+  "rankings": [
+    { "keyword_id": 1, "rank_date": "2026-03-01", "rank_position": 3, "url": null }
+  ]
+}
+```
+
+### POST /api/monitoring/rankings
+
+단건 순위를 입력합니다 (UPSERT).
+
+**Request Body:**
+```json
+{
+  "keyword_id": 1,
+  "rank_date": "2026-03-16",
+  "rank_position": 3,
+  "url": "https://..."
+}
+```
+
+### POST /api/monitoring/rankings/bulk
+
+일괄 순위를 입력합니다 (UPSERT, 최대 200개).
+
+**Request Body:**
+```json
+{
+  "rankings": [
+    { "keyword_id": 1, "rank_date": "2026-03-16", "rank_position": 3 },
+    { "keyword_id": 2, "rank_date": "2026-03-16", "rank_position": 5, "url": "https://..." }
+  ]
 }
 ```
 

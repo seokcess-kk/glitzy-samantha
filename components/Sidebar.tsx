@@ -3,7 +3,8 @@ import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import { signOut } from 'next-auth/react'
 import { useSession } from 'next-auth/react'
-import { LayoutDashboard, Users, MessageCircle, BarChart2, LogOut, Activity, Calendar, Film, Link2, Scan, Newspaper, Settings, ChevronUp, User, FileEdit, LucideIcon, Building2, UserCog, FileText, Image, Megaphone } from 'lucide-react'
+import { useState, useEffect } from 'react'
+import { LayoutDashboard, Users, MessageCircle, BarChart2, LogOut, Activity, Calendar, Film, Link2, Scan, Newspaper, Settings, ChevronUp, User, FileEdit, LucideIcon, Building2, UserCog, FileText, Image, Megaphone, TrendingUp } from 'lucide-react'
 import { useClinic } from './ClinicContext'
 import { Button } from '@/components/ui/button'
 import {
@@ -23,12 +24,13 @@ import {
 } from '@/components/ui/dropdown-menu'
 
 // 메뉴 타입 정의
-// minRole: 1=clinic_staff, 2=clinic_admin, 3=superadmin
+// minRole: 1=clinic_staff, 2=clinic_admin/agency_staff, 3=superadmin
 interface MenuItem {
   href: string
   label: string
   icon: LucideIcon
   minRole?: number
+  menuKey?: string // agency_staff 메뉴 권한 필터용
 }
 
 interface MenuGroup {
@@ -39,6 +41,7 @@ interface MenuGroup {
 
 const ROLE_LEVEL: Record<string, number> = {
   clinic_staff: 1,
+  agency_staff: 2,
   clinic_admin: 2,
   superadmin: 3,
 }
@@ -47,27 +50,35 @@ const ROLE_LEVEL: Record<string, number> = {
 const menuGroups: MenuGroup[] = [
   {
     items: [
-      { href: '/', label: '대시보드', icon: LayoutDashboard, minRole: 2 },
+      { href: '/', label: '대시보드', icon: LayoutDashboard, minRole: 2, menuKey: 'dashboard' },
     ]
   },
   {
     label: '고객 관리',
     items: [
-      { href: '/campaigns', label: '캠페인 리드', icon: Megaphone },
-      { href: '/leads', label: '고객(CDP)', icon: Users },
-      { href: '/patients', label: '예약/결제', icon: Calendar },
-      { href: '/chatbot', label: '챗봇 현황', icon: MessageCircle },
-      { href: '/lead-form', label: '리드 등록', icon: FileEdit, minRole: 3 },
+      { href: '/campaigns', label: '캠페인 리드', icon: Megaphone, menuKey: 'campaigns' },
+      { href: '/leads', label: '고객(CDP)', icon: Users, menuKey: 'leads' },
+      { href: '/patients', label: '예약/결제', icon: Calendar, menuKey: 'patients' },
+      { href: '/chatbot', label: '챗봇 현황', icon: MessageCircle, menuKey: 'chatbot' },
+      { href: '/lead-form', label: '리드 등록', icon: FileEdit, minRole: 3, menuKey: 'lead-form' },
     ]
   },
   {
     label: '마케팅 분석',
     minRole: 2,
     items: [
-      { href: '/ads', label: '광고 성과', icon: BarChart2 },
-      { href: '/content', label: '콘텐츠 분석', icon: Film },
-      { href: '/monitor', label: '콘텐츠 모니터링', icon: Scan },
-      { href: '/press', label: '언론보도', icon: Newspaper },
+      { href: '/ads', label: '광고 성과', icon: BarChart2, menuKey: 'ads' },
+      { href: '/content', label: '콘텐츠 분석', icon: Film, menuKey: 'content' },
+      { href: '/monitor', label: '콘텐츠 모니터링', icon: Scan, menuKey: 'monitor' },
+      { href: '/press', label: '언론보도', icon: Newspaper, menuKey: 'press' },
+    ]
+  },
+  {
+    label: '순위 모니터링',
+    minRole: 2,
+    items: [
+      { href: '/monitoring', label: '순위 현황', icon: TrendingUp, menuKey: 'monitoring' },
+      { href: '/monitoring/input', label: '순위 입력', icon: FileEdit, minRole: 2, menuKey: 'monitoring-input' },
     ]
   },
 ]
@@ -80,9 +91,37 @@ export default function Sidebar({ onClose }: { onClose?: () => void }) {
   const userLevel = ROLE_LEVEL[userRole] || 1
   const isSuperAdmin = userRole === 'superadmin'
   const isClinicAdmin = userRole === 'clinic_admin'
+  const isAgencyStaff = userRole === 'agency_staff'
 
   const { selectedClinicId, setSelectedClinicId, clinics } = useClinic()
   const selectedClinic = clinics.find(c => c.id === selectedClinicId)
+
+  // agency_staff 메뉴 권한
+  const [menuPermissions, setMenuPermissions] = useState<string[]>([])
+  const [menuLoaded, setMenuLoaded] = useState(false)
+
+  useEffect(() => {
+    if (isAgencyStaff) {
+      fetch('/api/my/menu-permissions')
+        .then(r => r.json())
+        .then(d => {
+          if (d.all) setMenuPermissions([])
+          else setMenuPermissions(d.permissions || [])
+          setMenuLoaded(true)
+        })
+        .catch(() => setMenuLoaded(true))
+    } else {
+      setMenuLoaded(true)
+    }
+  }, [isAgencyStaff])
+
+  // 메뉴 필터: agency_staff는 허용된 menuKey만 표시
+  const filterMenuItem = (item: MenuItem): boolean => {
+    if (!isAgencyStaff) return true
+    if (!item.menuKey) return true
+    if (menuPermissions.length === 0 && menuLoaded) return true // 권한 미설정 시 전체 허용
+    return menuPermissions.includes(item.menuKey)
+  }
 
   return (
     <aside className="w-60 h-screen flex flex-col border-r border-white/5 shrink-0 bg-[#0b0b18]">
@@ -97,8 +136,8 @@ export default function Sidebar({ onClose }: { onClose?: () => void }) {
         </div>
       </div>
 
-      {/* 슈퍼어드민: 클리닉 스위처 */}
-      {isSuperAdmin && (
+      {/* 슈퍼어드민 / agency_staff: 클리닉 스위처 */}
+      {(isSuperAdmin || isAgencyStaff) && (
         <div className="px-3 py-3 border-b border-white/5">
           <p className="text-[10px] text-slate-600 uppercase tracking-widest mb-2 px-1">병원 선택</p>
           <Select
@@ -109,7 +148,7 @@ export default function Sidebar({ onClose }: { onClose?: () => void }) {
               <SelectValue placeholder="전체 병원" />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="all">전체 병원</SelectItem>
+              {isSuperAdmin && <SelectItem value="all">전체 병원</SelectItem>}
               {clinics.map(c => (
                 <SelectItem key={c.id} value={String(c.id)}>{c.name}</SelectItem>
               ))}
@@ -121,8 +160,8 @@ export default function Sidebar({ onClose }: { onClose?: () => void }) {
         </div>
       )}
 
-      {/* 비슈퍼어드민: 담당 병원 표시 */}
-      {!isSuperAdmin && user?.clinic_id && (
+      {/* 비슈퍼어드민 & 비agency_staff: 담당 병원 표시 */}
+      {!isSuperAdmin && !isAgencyStaff && user?.clinic_id && (
         <div className="px-4 py-3 border-b border-white/5">
           <p className="text-[10px] text-slate-600 uppercase tracking-widest mb-1">담당 병원</p>
           <p className="text-xs text-slate-300 font-medium">{user.name}</p>
@@ -131,39 +170,45 @@ export default function Sidebar({ onClose }: { onClose?: () => void }) {
 
       {/* 네비게이션 */}
       <nav className="flex-1 px-3 py-4 overflow-y-auto">
-        {menuGroups.filter(g => userLevel >= (g.minRole || 1)).map((group, groupIndex) => (
-          <div key={groupIndex}>
-            {/* 그룹 헤더 */}
-            {group.label && (
-              <div className="pt-4 pb-1">
-                <p className="text-[10px] text-slate-600 uppercase tracking-widest px-3">
-                  {group.label}
-                </p>
+        {menuGroups.filter(g => userLevel >= (g.minRole || 1)).map((group, groupIndex) => {
+          const visibleItems = group.items
+            .filter(item => userLevel >= (item.minRole || 1))
+            .filter(filterMenuItem)
+          if (visibleItems.length === 0) return null
+          return (
+            <div key={groupIndex}>
+              {/* 그룹 헤더 */}
+              {group.label && (
+                <div className="pt-4 pb-1">
+                  <p className="text-[10px] text-slate-600 uppercase tracking-widest px-3">
+                    {group.label}
+                  </p>
+                </div>
+              )}
+              {/* 그룹 아이템 */}
+              <div className="space-y-1">
+                {visibleItems.map(({ href, label, icon: Icon }) => {
+                  const isActive = pathname === href || (href !== '/' && pathname.startsWith(href + '/'))
+                  return (
+                    <Link
+                      key={href}
+                      href={href}
+                      onClick={onClose}
+                      className={`flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-all ${
+                        isActive
+                          ? 'bg-brand-600/20 text-brand-400'
+                          : 'text-slate-400 hover:text-white hover:bg-white/[0.05]'
+                      }`}
+                    >
+                      <Icon size={17} />
+                      {label}
+                    </Link>
+                  )
+                })}
               </div>
-            )}
-            {/* 그룹 아이템 */}
-            <div className="space-y-1">
-              {group.items.filter(item => userLevel >= (item.minRole || 1)).map(({ href, label, icon: Icon }) => {
-                const isActive = href === '/' ? pathname === '/' : pathname.startsWith(href)
-                return (
-                  <Link
-                    key={href}
-                    href={href}
-                    onClick={onClose}
-                    className={`flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-all ${
-                      isActive
-                        ? 'bg-brand-600/20 text-brand-400'
-                        : 'text-slate-400 hover:text-white hover:bg-white/[0.05]'
-                    }`}
-                  >
-                    <Icon size={17} />
-                    {label}
-                  </Link>
-                )
-              })}
             </div>
-          </div>
-        ))}
+          )
+        })}
 
         {/* clinic_admin 전용: 담당자 관리 */}
         {isClinicAdmin && (
@@ -230,6 +275,18 @@ export default function Sidebar({ onClose }: { onClose?: () => void }) {
                 랜딩 페이지
               </Link>
               <Link
+                href="/monitoring/keywords"
+                onClick={onClose}
+                className={`flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-all ${
+                  pathname === '/monitoring/keywords'
+                    ? 'bg-brand-600/20 text-brand-400'
+                    : 'text-slate-400 hover:text-white hover:bg-white/[0.05]'
+                }`}
+              >
+                <TrendingUp size={17} />
+                키워드 관리
+              </Link>
+              <Link
                 href="/admin/clinics"
                 onClick={onClose}
                 className={`flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-all ${
@@ -268,7 +325,9 @@ export default function Sidebar({ onClose }: { onClose?: () => void }) {
               </div>
               <div className="flex-1 min-w-0">
                 <p className="text-sm text-white font-medium truncate">{user?.name || user?.username}</p>
-                <p className="text-[10px] text-slate-500">{isSuperAdmin ? '슈퍼어드민' : isClinicAdmin ? '병원 관리자' : '병원 담당자'}</p>
+                <p className="text-[10px] text-slate-500">
+                  {isSuperAdmin ? '슈퍼어드민' : isAgencyStaff ? '실행사 담당자' : isClinicAdmin ? '병원 관리자' : '병원 담당자'}
+                </p>
               </div>
               <ChevronUp size={14} className="text-slate-500 shrink-0" />
             </button>

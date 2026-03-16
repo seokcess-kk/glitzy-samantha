@@ -5,7 +5,7 @@ import bcrypt from 'bcryptjs'
 import { serverSupabase } from './supabase'
 
 // 사용자 역할 타입
-type UserRole = 'superadmin' | 'clinic_admin' | 'clinic_staff'
+type UserRole = 'superadmin' | 'clinic_admin' | 'clinic_staff' | 'agency_staff'
 
 // 확장된 User 타입
 interface ExtendedUser extends User {

@@ -41,6 +41,7 @@ npm run analyze  # 번들 크기 분석 (브라우저에서 시각화)
 ### 멀티테넌트 구조
 ```
 슈퍼어드민 (Glitzy)
+├── 실행사 담당자 (agency_staff) ← 다중 병원 배정, 메뉴 권한 제한
 ├── 병원 A (clinic_id: 1)
 │   ├── 병원 관리자 (clinic_admin) ← 전체 데이터 조회, 담당자 관리
 │   └── 병원 담당자 (clinic_staff) ← 예약/결제/고객/리드만
@@ -48,10 +49,11 @@ npm run analyze  # 번들 크기 분석 (브라우저에서 시각화)
 └── 병원 C (clinic_id: 3)
 ```
 
-### 역할 기반 접근 (3단계)
+### 역할 기반 접근 (4단계)
 | 역할 | 권한 |
 |------|------|
 | `superadmin` | 전체 병원 접근, 병원/계정 관리, `?clinic_id=X`로 특정 병원 조회 |
+| `agency_staff` | 다중 병원 배정(`user_clinic_assignments`), 계정별 메뉴 권한(`user_menu_permissions`), `?clinic_id=X`로 배정된 병원만 조회 |
 | `clinic_admin` | 자신의 병원 전체 데이터, KPI/광고/콘텐츠, 담당자 계정 관리 |
 | `clinic_staff` | 예약/결제, 고객(CDP), 캠페인 리드, 챗봇만 접근 (광고/KPI 차단) |
 
@@ -245,6 +247,10 @@ const { success, logId, error } = await sendSmsWithLog(supabase, {
 | `lead_raw_logs` | 리드 원본 로그 (유실 방지, 멱등성 키) |
 | `sms_send_logs` | SMS 발송 로그 (재시도 추적) |
 | `activity_logs` | 활동 이력 (누가 무엇을 변경했는지) |
+| `user_clinic_assignments` | agency_staff 다중 병원 배정 |
+| `user_menu_permissions` | agency_staff 메뉴 권한 |
+| `monitoring_keywords` | 순위 모니터링 키워드 (place/website/smartblock) |
+| `monitoring_rankings` | 일별 순위 데이터 (keyword_id + rank_date UNIQUE) |
 
 ### 멀티테넌트 필터링 (필수)
 ```typescript

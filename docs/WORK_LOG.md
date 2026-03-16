@@ -13,12 +13,19 @@ shadcn/ui 기반 UI/UX 개선 및 기능 개발 작업 기록.
 |------|------|----------|------|------|
 | Phase 1: 초기 설정 | ~2026-03-14 | shadcn/ui, 접근성, 번들 최적화, 문서화 (Phase 1~9) | 완료 | [상세](work-log/phase1-setup.md) |
 | Phase 2: 핵심 기능 | 2026-03-14~16 | KPI, UTM, 랜딩, 소재, 어드민 분리, 리드 필터 (P2~P12) | 완료 | [상세](work-log/phase2-features.md) |
-| Phase 3: 운영 기능 | 2026-03-16~ | 캠페인, 알림, 상태관리, 예약 등록, UTM 개편 (P13~P17) | 진행중 | [상세](work-log/phase3-operations.md) |
+| Phase 3: 운영 기능 | 2026-03-16~ | 캠페인, 알림, 상태관리, 예약 등록, UTM 개편 (P13~P17) | 완료 | [상세](work-log/phase3-operations.md) |
+| Phase 4: 모니터링 + 역할 | 2026-03-16~ | 순위 모니터링, agency_staff 역할, 메뉴 권한 (P18) | 완료 | [상세](work-log/phase4-monitoring.md) |
 | E2E 테스트 | 2026-03-16 | Playwright 106개 테스트 | 완료 | [상세](work-log/e2e-tests.md) |
 
 ---
 
-## 최신 작업 (Phase 3)
+## 최신 작업 (Phase 4)
+
+| # | 작업 | 핵심 내용 | 날짜 |
+|---|------|----------|------|
+| P18 | 순위 모니터링 + agency_staff | DB 4테이블, agency_staff 역할, 메뉴 권한, 순위 CRUD, 월간 테이블+차트 | 03-16 |
+
+## Phase 3 작업
 
 | # | 작업 | 핵심 내용 | 커밋 | 날짜 |
 |---|------|----------|------|------|
@@ -48,6 +55,7 @@ shadcn/ui 기반 UI/UX 개선 및 기능 개발 작업 기록.
 | `20260316_clinic_notify_phones.sql` | 병원 알림 연락처 최대 3개 (TEXT[]) | ⚠️ |
 | `20260316_sms_send_logs.sql` | SMS 발송 로그 테이블 | ⚠️ |
 | `20260316_clinic_staff_activity.sql` | 활동 추적 컬럼 + activity_logs 테이블 | ⚠️ |
+| `20260316_monitoring_agency.sql` | agency_staff 배정/권한 + 모니터링 키워드/순위 테이블 | ⚠️ |
 
 ---
 

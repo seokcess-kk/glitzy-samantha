@@ -5,13 +5,22 @@ import { withClinicFilter, ClinicContext, apiError, apiSuccess } from '@/lib/api
  * 랜딩 페이지별 성과 통계 API
  * - 리드 수, 예약 전환율, 결제 전환율, 매출
  */
-export const GET = withClinicFilter(async (req: Request, { clinicId }: ClinicContext) => {
+export const GET = withClinicFilter(async (req: Request, { clinicId, assignedClinicIds }: ClinicContext) => {
   const supabase = serverSupabase()
   const url = new URL(req.url)
   const startDate = url.searchParams.get('startDate')
   const endDate = url.searchParams.get('endDate')
 
-  const applyClinic = <T>(q: T): T => clinicId ? (q as any).eq('clinic_id', clinicId) : q
+  // agency_staff 배정 병원 0개 → 빈 결과
+  if (assignedClinicIds !== null && assignedClinicIds.length === 0) {
+    return apiSuccess([])
+  }
+
+  const applyClinic = <T>(q: T): T => {
+    if (clinicId) return (q as any).eq('clinic_id', clinicId)
+    if (assignedClinicIds !== null && assignedClinicIds.length > 0) return (q as any).in('clinic_id', assignedClinicIds)
+    return q
+  }
   const applyDate = <T>(q: T, field: string): T => {
     let query = q
     if (startDate) query = (query as any).gte(field, startDate)

@@ -11,9 +11,9 @@
 // );
 
 import { serverSupabase } from '@/lib/supabase'
-import { withClinicFilter, ClinicContext, apiError, apiSuccess } from '@/lib/api-middleware'
+import { withClinicFilter, ClinicContext, applyClinicFilter, apiError, apiSuccess } from '@/lib/api-middleware'
 
-export const GET = withClinicFilter(async (req: Request, { clinicId }: ClinicContext) => {
+export const GET = withClinicFilter(async (req: Request, { clinicId, assignedClinicIds }: ClinicContext) => {
   const supabase = serverSupabase()
 
   let query = supabase
@@ -22,7 +22,9 @@ export const GET = withClinicFilter(async (req: Request, { clinicId }: ClinicCon
     .order('published_at', { ascending: false })
     .limit(200)
 
-  if (clinicId) query = query.eq('clinic_id', clinicId)
+  const filtered = applyClinicFilter(query, { clinicId, assignedClinicIds })
+  if (filtered === null) return apiSuccess([])
+  query = filtered
 
   const { data, error } = await query
   if (error) return apiError(error.message, 500)

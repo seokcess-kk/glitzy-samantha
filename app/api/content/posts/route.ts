@@ -1,9 +1,9 @@
 import { serverSupabase } from '@/lib/supabase'
-import { withClinicFilter, ClinicContext, apiError, apiSuccess } from '@/lib/api-middleware'
+import { withClinicFilter, ClinicContext, applyClinicFilter, apiError, apiSuccess } from '@/lib/api-middleware'
 import { canAccessContentPost, parseId } from '@/lib/security'
 
 // 콘텐츠 목록 조회 (최신 통계 포함)
-export const GET = withClinicFilter(async (req: Request, { clinicId }: ClinicContext) => {
+export const GET = withClinicFilter(async (req: Request, { clinicId, assignedClinicIds }: ClinicContext) => {
   const supabase = serverSupabase()
   const url = new URL(req.url)
   const platform = url.searchParams.get('platform')
@@ -13,7 +13,9 @@ export const GET = withClinicFilter(async (req: Request, { clinicId }: ClinicCon
     .select('*, stats:content_stats(views, likes, comments, shares, saves, reach, impressions, stat_date)')
     .order('published_at', { ascending: false })
 
-  if (clinicId) query = query.eq('clinic_id', clinicId)
+  const filtered = applyClinicFilter(query, { clinicId, assignedClinicIds })
+  if (filtered === null) return apiSuccess([])
+  query = filtered
   if (platform && platform !== 'all') query = query.eq('platform', platform)
 
   const { data, error } = await query

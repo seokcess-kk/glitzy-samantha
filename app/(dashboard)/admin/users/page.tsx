@@ -1,6 +1,6 @@
 'use client'
 import { useState, useEffect } from 'react'
-import { Plus, UserCog, ToggleLeft, ToggleRight } from 'lucide-react'
+import { Plus, UserCog, ToggleLeft, ToggleRight, Settings } from 'lucide-react'
 import { useSession } from 'next-auth/react'
 import { useRouter } from 'next/navigation'
 import { toast } from 'sonner'
@@ -9,6 +9,7 @@ import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
+import { Checkbox } from '@/components/ui/checkbox'
 import {
   Select,
   SelectContent,
@@ -32,6 +33,27 @@ import {
   DialogFooter,
 } from '@/components/ui/dialog'
 
+const ROLE_LABELS: Record<string, string> = {
+  superadmin: '슈퍼어드민',
+  clinic_admin: '병원 관리자',
+  clinic_staff: '병원 담당자',
+  agency_staff: '실행사 담당자',
+}
+
+const MENU_OPTIONS = [
+  { key: 'dashboard', label: '대시보드' },
+  { key: 'campaigns', label: '캠페인 리드' },
+  { key: 'leads', label: '고객(CDP)' },
+  { key: 'patients', label: '예약/결제' },
+  { key: 'chatbot', label: '챗봇 현황' },
+  { key: 'ads', label: '광고 성과' },
+  { key: 'content', label: '콘텐츠 분석' },
+  { key: 'monitor', label: '콘텐츠 모니터링' },
+  { key: 'press', label: '언론보도' },
+  { key: 'monitoring', label: '순위 현황' },
+  { key: 'monitoring-input', label: '순위 입력' },
+]
+
 export default function UsersPage() {
   const { data: session } = useSession()
   const router = useRouter()
@@ -41,7 +63,15 @@ export default function UsersPage() {
   const [clinics, setClinics] = useState<any[]>([])
   const [loading, setLoading] = useState(true)
   const [dialogOpen, setDialogOpen] = useState(false)
-  const [form, setForm] = useState({ username: '', password: '', role: 'clinic_admin', clinic_id: '' })
+  const [permDialogOpen, setPermDialogOpen] = useState(false)
+  const [permUserId, setPermUserId] = useState<number | null>(null)
+  const [permClinicIds, setPermClinicIds] = useState<number[]>([])
+  const [permMenuKeys, setPermMenuKeys] = useState<string[]>([])
+  const [permSaving, setPermSaving] = useState(false)
+  const [form, setForm] = useState({
+    username: '', password: '', role: 'clinic_admin', clinic_id: '',
+    assigned_clinic_ids: [] as number[], menu_permissions: [] as string[],
+  })
   const [saving, setSaving] = useState(false)
 
   useEffect(() => {
@@ -73,16 +103,26 @@ export default function UsersPage() {
     }
     setSaving(true)
     try {
+      const body: any = {
+        username: form.username,
+        password: form.password,
+        role: form.role,
+        clinic_id: form.clinic_id ? Number(form.clinic_id) : null,
+      }
+      if (form.role === 'agency_staff') {
+        body.assigned_clinic_ids = form.assigned_clinic_ids
+        body.menu_permissions = form.menu_permissions
+      }
       const res = await fetch('/api/admin/users', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ ...form, clinic_id: form.clinic_id ? Number(form.clinic_id) : null }),
+        body: JSON.stringify(body),
       })
       if (!res.ok) {
         const err = await res.json()
         throw new Error(err.error)
       }
-      setForm({ username: '', password: '', role: 'clinic_admin', clinic_id: '' })
+      setForm({ username: '', password: '', role: 'clinic_admin', clinic_id: '', assigned_clinic_ids: [], menu_permissions: [] })
       setDialogOpen(false)
       toast.success('계정이 생성되었습니다.')
       fetchData()
@@ -111,6 +151,54 @@ export default function UsersPage() {
     }
   }
 
+  const openPermDialog = async (userId: number) => {
+    setPermUserId(userId)
+    setPermSaving(true)
+    setPermDialogOpen(true)
+    try {
+      const res = await fetch(`/api/admin/users/${userId}/permissions`)
+      if (res.ok) {
+        const data = await res.json()
+        setPermClinicIds(data.assigned_clinic_ids || [])
+        setPermMenuKeys(data.menu_permissions || [])
+      }
+    } catch {
+      toast.error('권한 로드 실패')
+    } finally {
+      setPermSaving(false)
+    }
+  }
+
+  const savePermissions = async () => {
+    if (!permUserId) return
+    setPermSaving(true)
+    try {
+      const res = await fetch(`/api/admin/users/${permUserId}/permissions`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ assigned_clinic_ids: permClinicIds, menu_permissions: permMenuKeys }),
+      })
+      if (!res.ok) {
+        const err = await res.json()
+        throw new Error(err.error)
+      }
+      toast.success('권한이 저장되었습니다.')
+      setPermDialogOpen(false)
+    } catch (e: any) {
+      toast.error(e.message || '저장 실패')
+    } finally {
+      setPermSaving(false)
+    }
+  }
+
+  const toggleClinicId = (id: number, list: number[], setter: (v: number[]) => void) => {
+    setter(list.includes(id) ? list.filter(x => x !== id) : [...list, id])
+  }
+
+  const toggleMenuKey = (key: string, list: string[], setter: (v: string[]) => void) => {
+    setter(list.includes(key) ? list.filter(x => x !== key) : [...list, key])
+  }
+
   if (user?.role !== 'superadmin') return null
 
   return (
@@ -123,8 +211,9 @@ export default function UsersPage() {
         <p className="text-sm text-slate-400">사용자 계정 생성 및 권한 관리</p>
       </div>
 
+      {/* 계정 생성 다이얼로그 */}
       <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
-        <DialogContent>
+        <DialogContent className="max-h-[80vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>신규 계정 생성</DialogTitle>
           </DialogHeader>
@@ -151,17 +240,20 @@ export default function UsersPage() {
             </div>
             <div className="space-y-2">
               <Label className="text-xs text-slate-400">역할 *</Label>
-              <Select value={form.role} onValueChange={v => setForm(f => ({ ...f, role: v }))}>
+              <Select value={form.role} onValueChange={v => setForm(f => ({ ...f, role: v, clinic_id: '', assigned_clinic_ids: [], menu_permissions: [] }))}>
                 <SelectTrigger>
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="clinic_staff">병원 담당자</SelectItem>
                   <SelectItem value="clinic_admin">병원 관리자</SelectItem>
+                  <SelectItem value="agency_staff">실행사 담당자</SelectItem>
                   <SelectItem value="superadmin">슈퍼어드민</SelectItem>
                 </SelectContent>
               </Select>
             </div>
+
+            {/* clinic_admin / clinic_staff: 단일 병원 선택 */}
             {(form.role === 'clinic_admin' || form.role === 'clinic_staff') && (
               <div className="space-y-2">
                 <Label className="text-xs text-slate-400">담당 병원 *</Label>
@@ -177,11 +269,90 @@ export default function UsersPage() {
                 </Select>
               </div>
             )}
+
+            {/* agency_staff: 다중 병원 + 메뉴 권한 */}
+            {form.role === 'agency_staff' && (
+              <>
+                <div className="space-y-2">
+                  <Label className="text-xs text-slate-400">배정 병원 * (복수 선택)</Label>
+                  <div className="grid grid-cols-2 gap-2 max-h-[160px] overflow-y-auto border border-white/10 rounded-lg p-3">
+                    {clinics.map((c: any) => (
+                      <label key={c.id} className="flex items-center gap-2 text-sm text-slate-300 cursor-pointer hover:text-white">
+                        <Checkbox
+                          checked={form.assigned_clinic_ids.includes(c.id)}
+                          onCheckedChange={() => toggleClinicId(c.id, form.assigned_clinic_ids, (v) => setForm(f => ({ ...f, assigned_clinic_ids: v })))}
+                        />
+                        {c.name}
+                      </label>
+                    ))}
+                  </div>
+                </div>
+                <div className="space-y-2">
+                  <Label className="text-xs text-slate-400">메뉴 권한 (미선택 시 전체 허용)</Label>
+                  <div className="grid grid-cols-2 gap-2 max-h-[160px] overflow-y-auto border border-white/10 rounded-lg p-3">
+                    {MENU_OPTIONS.map(m => (
+                      <label key={m.key} className="flex items-center gap-2 text-sm text-slate-300 cursor-pointer hover:text-white">
+                        <Checkbox
+                          checked={form.menu_permissions.includes(m.key)}
+                          onCheckedChange={() => toggleMenuKey(m.key, form.menu_permissions, (v) => setForm(f => ({ ...f, menu_permissions: v })))}
+                        />
+                        {m.label}
+                      </label>
+                    ))}
+                  </div>
+                </div>
+              </>
+            )}
           </div>
           <DialogFooter>
             <Button variant="ghost" onClick={() => setDialogOpen(false)}>취소</Button>
             <Button onClick={handleSave} disabled={saving} className="bg-brand-600 hover:bg-brand-700">
               {saving ? '생성 중...' : '계정 생성'}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* 권한 수정 다이얼로그 */}
+      <Dialog open={permDialogOpen} onOpenChange={setPermDialogOpen}>
+        <DialogContent className="max-h-[80vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>권한 설정</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4 py-4">
+            <div className="space-y-2">
+              <Label className="text-xs text-slate-400">배정 병원</Label>
+              <div className="grid grid-cols-2 gap-2 max-h-[160px] overflow-y-auto border border-white/10 rounded-lg p-3">
+                {clinics.map((c: any) => (
+                  <label key={c.id} className="flex items-center gap-2 text-sm text-slate-300 cursor-pointer hover:text-white">
+                    <Checkbox
+                      checked={permClinicIds.includes(c.id)}
+                      onCheckedChange={() => toggleClinicId(c.id, permClinicIds, setPermClinicIds)}
+                    />
+                    {c.name}
+                  </label>
+                ))}
+              </div>
+            </div>
+            <div className="space-y-2">
+              <Label className="text-xs text-slate-400">메뉴 권한 (미선택 시 전체 허용)</Label>
+              <div className="grid grid-cols-2 gap-2 max-h-[160px] overflow-y-auto border border-white/10 rounded-lg p-3">
+                {MENU_OPTIONS.map(m => (
+                  <label key={m.key} className="flex items-center gap-2 text-sm text-slate-300 cursor-pointer hover:text-white">
+                    <Checkbox
+                      checked={permMenuKeys.includes(m.key)}
+                      onCheckedChange={() => toggleMenuKey(m.key, permMenuKeys, setPermMenuKeys)}
+                    />
+                    {m.label}
+                  </label>
+                ))}
+              </div>
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="ghost" onClick={() => setPermDialogOpen(false)}>취소</Button>
+            <Button onClick={savePermissions} disabled={permSaving} className="bg-brand-600 hover:bg-brand-700">
+              {permSaving ? '저장 중...' : '저장'}
             </Button>
           </DialogFooter>
         </DialogContent>
@@ -202,8 +373,8 @@ export default function UsersPage() {
           <Table>
             <TableHeader>
               <TableRow className="border-b border-white/5 hover:bg-transparent">
-                {['아이디', '역할', '담당 병원', '생성일', '상태', '활성화'].map(h => (
-                  <TableHead key={h} className="text-xs text-slate-500 font-medium">{h}</TableHead>
+                {['아이디', '역할', '담당 병원', '생성일', '상태', '활성화', '관리'].map(h => (
+                  <TableHead key={h} className="text-xs text-slate-500 font-medium">{h === '관리' ? '' : h}</TableHead>
                 ))}
               </TableRow>
             </TableHeader>
@@ -213,13 +384,17 @@ export default function UsersPage() {
                 <TableCell className="text-white font-medium">{u.username}</TableCell>
                 <TableCell>
                   <Badge
-                    variant={u.role === 'superadmin' ? 'default' : 'info'}
-                    className={u.role === 'superadmin' ? 'bg-purple-500/20 text-purple-400 border-0' : u.role === 'clinic_staff' ? 'bg-slate-500/20 text-slate-400 border-0' : ''}
+                    variant={u.role === 'superadmin' ? 'default' : u.role === 'agency_staff' ? 'warning' : 'info'}
+                    className={
+                      u.role === 'superadmin' ? 'bg-purple-500/20 text-purple-400 border-0' :
+                      u.role === 'agency_staff' ? 'bg-orange-500/20 text-orange-400 border-0' :
+                      u.role === 'clinic_staff' ? 'bg-slate-500/20 text-slate-400 border-0' : ''
+                    }
                   >
-                    {u.role === 'superadmin' ? '슈퍼어드민' : u.role === 'clinic_admin' ? '병원 관리자' : '병원 담당자'}
+                    {ROLE_LABELS[u.role] || u.role}
                   </Badge>
                 </TableCell>
-                <TableCell className="text-slate-400 text-xs">{u.clinic?.name || '-'}</TableCell>
+                <TableCell className="text-slate-400 text-xs">{u.clinic?.name || (u.role === 'agency_staff' ? '다중 배정' : '-')}</TableCell>
                 <TableCell className="text-slate-400 text-xs">{new Date(u.created_at).toLocaleDateString('ko')}</TableCell>
                 <TableCell>
                   <Badge variant={u.is_active ? 'success' : 'secondary'}>
@@ -234,6 +409,17 @@ export default function UsersPage() {
                   >
                     {u.is_active ? <ToggleRight size={20} className="text-emerald-400" /> : <ToggleLeft size={20} />}
                   </button>
+                </TableCell>
+                <TableCell>
+                  {u.role === 'agency_staff' && (
+                    <button
+                      onClick={() => openPermDialog(u.id)}
+                      className="text-slate-400 hover:text-white transition-colors"
+                      aria-label="권한 설정"
+                    >
+                      <Settings size={16} />
+                    </button>
+                  )}
                 </TableCell>
               </TableRow>
               ))}

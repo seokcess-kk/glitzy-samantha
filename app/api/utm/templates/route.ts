@@ -4,12 +4,12 @@
  * POST: 템플릿 생성
  */
 
-import { withClinicFilter, apiError, apiSuccess, ClinicContext } from '@/lib/api-middleware'
+import { withClinicFilter, applyClinicFilter, apiError, apiSuccess, ClinicContext } from '@/lib/api-middleware'
 import { serverSupabase } from '@/lib/supabase'
 import { sanitizeUtmParam } from '@/lib/utm'
 import { parseId, sanitizeString } from '@/lib/security'
 
-export const GET = withClinicFilter(async (req: Request, { clinicId }: ClinicContext) => {
+export const GET = withClinicFilter(async (req: Request, { clinicId, assignedClinicIds }: ClinicContext) => {
   const supabase = serverSupabase()
 
   let query = supabase
@@ -18,9 +18,9 @@ export const GET = withClinicFilter(async (req: Request, { clinicId }: ClinicCon
     .order('is_default', { ascending: false })
     .order('created_at', { ascending: false })
 
-  if (clinicId) {
-    query = query.eq('clinic_id', clinicId)
-  }
+  const filtered = applyClinicFilter(query, { clinicId, assignedClinicIds })
+  if (filtered === null) return apiSuccess({ templates: [] })
+  query = filtered
 
   const { data, error } = await query
 

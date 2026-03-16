@@ -1,12 +1,12 @@
 import { serverSupabase } from '@/lib/supabase'
-import { withClinicFilter, ClinicContext, apiError, apiSuccess } from '@/lib/api-middleware'
+import { withClinicFilter, ClinicContext, applyClinicFilter, apiError, apiSuccess } from '@/lib/api-middleware'
 
 /**
  * 랜딩 페이지 목록 (인증된 사용자용)
  * - clinic_admin은 자기 병원 랜딩 페이지만 조회
  * - superadmin은 전체 또는 clinic_id 필터
  */
-export const GET = withClinicFilter(async (req: Request, { clinicId }: ClinicContext) => {
+export const GET = withClinicFilter(async (req: Request, { clinicId, assignedClinicIds }: ClinicContext) => {
   const supabase = serverSupabase()
 
   let query = supabase
@@ -15,7 +15,9 @@ export const GET = withClinicFilter(async (req: Request, { clinicId }: ClinicCon
     .eq('is_active', true)
     .order('name')
 
-  if (clinicId) query = query.eq('clinic_id', clinicId)
+  const filtered = applyClinicFilter(query, { clinicId, assignedClinicIds })
+  if (filtered === null) return apiSuccess([])
+  query = filtered
 
   const { data, error } = await query
   if (error) return apiError(error.message, 500)

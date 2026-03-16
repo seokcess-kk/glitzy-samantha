@@ -2,18 +2,28 @@ import { NextResponse } from 'next/server'
 import { serverSupabase } from '@/lib/supabase'
 import { withClinicFilter, ClinicContext } from '@/lib/api-middleware'
 
+
 /**
  * 퍼널 분석 API
  * Phase 2: Lead → Booking → Visit → Payment 전환율 분석
  */
-export const GET = withClinicFilter(async (req: Request, { clinicId }: ClinicContext) => {
+export const GET = withClinicFilter(async (req: Request, { clinicId, assignedClinicIds }: ClinicContext) => {
   const supabase = serverSupabase()
   const url = new URL(req.url)
   const startDate = url.searchParams.get('startDate')
   const endDate = url.searchParams.get('endDate')
   const groupBy = url.searchParams.get('groupBy') || 'total' // total | channel | campaign
 
-  const applyFilter = <T>(q: T): T => clinicId ? (q as any).eq('clinic_id', clinicId) : q
+  // agency_staff 배정 병원 0개 → 빈 결과
+  if (assignedClinicIds !== null && assignedClinicIds.length === 0) {
+    return NextResponse.json({ type: 'total', funnel: { stages: [], totalConversionRate: 0, summary: { leads: 0, payments: 0 } } })
+  }
+
+  const applyFilter = <T>(q: T): T => {
+    if (clinicId) return (q as any).eq('clinic_id', clinicId)
+    if (assignedClinicIds !== null && assignedClinicIds.length > 0) return (q as any).in('clinic_id', assignedClinicIds)
+    return q
+  }
   const applyDateFilter = <T>(q: T, dateField: string): T => {
     let query = q
     if (startDate) query = (query as any).gte(dateField, startDate)

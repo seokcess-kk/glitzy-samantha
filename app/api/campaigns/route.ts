@@ -1,5 +1,5 @@
 import { serverSupabase } from '@/lib/supabase'
-import { withClinicFilter, ClinicContext, apiError, apiSuccess } from '@/lib/api-middleware'
+import { withClinicFilter, ClinicContext, applyClinicFilter, apiError, apiSuccess } from '@/lib/api-middleware'
 
 /**
  * 캠페인별 리드 목록 API
@@ -7,7 +7,7 @@ import { withClinicFilter, ClinicContext, apiError, apiSuccess } from '@/lib/api
  * - clinic_admin: 자기 병원만 / superadmin: 전체 또는 clinic_id 필터
  * - ?campaign=xxx 시 해당 캠페인 리드 상세 목록 반환
  */
-export const GET = withClinicFilter(async (req: Request, { clinicId }: ClinicContext) => {
+export const GET = withClinicFilter(async (req: Request, { clinicId, assignedClinicIds }: ClinicContext) => {
   const supabase = serverSupabase()
   const url = new URL(req.url)
   const campaign = url.searchParams.get('campaign')
@@ -28,7 +28,9 @@ export const GET = withClinicFilter(async (req: Request, { clinicId }: ClinicCon
       .order('created_at', { ascending: false })
       .limit(500)
 
-    if (clinicId) query = query.eq('clinic_id', clinicId)
+    const filtered = applyClinicFilter(query, { clinicId, assignedClinicIds })
+    if (filtered === null) return apiSuccess([])
+    query = filtered
     if (startDate) query = query.gte('created_at', startDate)
     if (endDate) query = query.lte('created_at', endDate)
 

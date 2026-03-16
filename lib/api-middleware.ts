@@ -10,6 +10,7 @@ import { getServerSession } from 'next-auth'
 import { authOptions } from './auth'
 import { getClinicId } from './session'
 import { SessionUser } from './security'
+import { serverSupabase } from './supabase'
 
 // AuthUser를 SessionUser의 별칭으로 export (하위 호환성)
 export type AuthUser = SessionUser
@@ -21,6 +22,8 @@ export interface AuthContext {
 
 export interface ClinicContext extends AuthContext {
   clinicId: number | null
+  /** agency_staff가 clinic_id 미지정 시, 배정된 병원 ID 목록. 그 외 역할은 null */
+  assignedClinicIds: number[] | null
 }
 
 // 핸들러 타입
@@ -45,6 +48,18 @@ async function getAuthUser(): Promise<AuthUser | null> {
 }
 
 /**
+ * agency_staff의 배정 병원 ID 목록 조회
+ */
+async function getAssignedClinicIds(userId: string): Promise<number[]> {
+  const supabase = serverSupabase()
+  const { data } = await supabase
+    .from('user_clinic_assignments')
+    .select('clinic_id')
+    .eq('user_id', parseInt(userId, 10))
+  return (data || []).map((d: any) => d.clinic_id)
+}
+
+/**
  * 인증 필수 래퍼
  * - 로그인한 사용자만 접근 가능
  */
@@ -60,6 +75,7 @@ export function withAuth(handler: AuthHandler) {
  * 인증 + clinic_id 필터 래퍼
  * - clinicId가 자동으로 추출됨
  * - superadmin은 ?clinic_id=X 파라미터로 특정 병원 조회 가능
+ * - agency_staff는 ?clinic_id=X (배정된 병원만) 또는 미지정 시 assignedClinicIds 제공
  * - clinic_admin은 자신의 병원만 조회
  */
 export function withClinicFilter(handler: ClinicHandler) {
@@ -68,7 +84,14 @@ export function withClinicFilter(handler: ClinicHandler) {
     if (!user) return UNAUTHORIZED
 
     const clinicId = await getClinicId(req.url)
-    return handler(req, { user, clinicId })
+
+    // agency_staff가 clinic_id 미지정 시: 배정된 병원 목록을 제공
+    let assignedClinicIds: number[] | null = null
+    if (user.role === 'agency_staff' && clinicId === null) {
+      assignedClinicIds = await getAssignedClinicIds(user.id)
+    }
+
+    return handler(req, { user, clinicId, assignedClinicIds })
   }
 }
 
@@ -88,7 +111,7 @@ export function withSuperAdmin(handler: SuperAdminHandler) {
 /**
  * clinic_admin 이상 권한 래퍼
  * - superadmin 또는 clinic_admin만 접근 가능
- * - clinic_staff는 차단
+ * - clinic_staff, agency_staff는 차단
  */
 export function withClinicAdmin(handler: ClinicAdminHandler) {
   return async (req: Request): Promise<NextResponse> => {
@@ -97,8 +120,31 @@ export function withClinicAdmin(handler: ClinicAdminHandler) {
     if (user.role !== 'superadmin' && user.role !== 'clinic_admin') return FORBIDDEN_CLINIC_ADMIN
 
     const clinicId = await getClinicId(req.url)
-    return handler(req, { user, clinicId })
+    return handler(req, { user, clinicId, assignedClinicIds: null })
   }
+}
+
+/**
+ * Supabase 쿼리에 clinic_id 필터를 적용하는 헬퍼
+ * - clinicId가 있으면 eq('clinic_id', clinicId) 적용
+ * - agency_staff가 clinicId 미지정이면 in('clinic_id', assignedClinicIds) 적용
+ * - superadmin이 clinicId 미지정이면 필터 없음 (전체 조회)
+ *
+ * @returns 필터 적용된 쿼리, 또는 agency_staff 배정 병원이 0개면 null (빈 결과 반환용)
+ */
+export function applyClinicFilter<T extends { eq: Function; in: Function }>(
+  query: T,
+  { clinicId, assignedClinicIds }: Pick<ClinicContext, 'clinicId' | 'assignedClinicIds'>,
+  column: string = 'clinic_id'
+): T | null {
+  if (clinicId) {
+    return query.eq(column, clinicId)
+  }
+  if (assignedClinicIds !== null) {
+    if (assignedClinicIds.length === 0) return null
+    return query.in(column, assignedClinicIds)
+  }
+  return query
 }
 
 /**

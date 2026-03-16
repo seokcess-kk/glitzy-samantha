@@ -53,6 +53,46 @@ export async function getClinicId(url?: string): Promise<number | null> {
     return null // null = 전체 조회
   }
 
+  // agency_staff: ?clinic_id=X 파라미터 사용, 배정된 병원만 허용
+  if (user.role === 'agency_staff') {
+    if (url) {
+      const supabase = serverSupabase()
+      const userId = parseInt(session.user.id, 10)
+      try {
+        const clinicIdParam = new URL(url).searchParams.get('clinic_id')
+        if (clinicIdParam) {
+          const clinicId = parseInt(clinicIdParam, 10)
+          if (isNaN(clinicId) || clinicId < 1) {
+            logger.warn('Invalid clinic_id parameter for agency_staff', { clinicIdParam })
+            return null
+          }
+
+          // 배정된 병원인지 확인
+          const { data: assignment } = await supabase
+            .from('user_clinic_assignments')
+            .select('id')
+            .eq('user_id', userId)
+            .eq('clinic_id', clinicId)
+            .single()
+
+          if (!assignment) {
+            logger.warn('Agency staff not assigned to clinic', { userId: session.user.id, clinicId })
+            return null
+          }
+
+          return clinicId
+        }
+      } catch (e) {
+        logger.warn('Failed to parse clinic_id from URL for agency_staff', { error: String(e) })
+        return null
+      }
+    }
+
+    // clinic_id 미지정 → null 반환
+    // withClinicFilter가 getAssignedClinicIds()로 배정 병원 목록을 조회하여 필터링함
+    return null
+  }
+
   return user.clinic_id ?? null
 }
 

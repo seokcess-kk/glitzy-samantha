@@ -14,8 +14,8 @@ export const GET = withSuperAdmin(async () => {
   return apiSuccess(data)
 })
 
-export const POST = withSuperAdmin(async (req: Request) => {
-  const { username, password, role, clinic_id } = await req.json()
+export const POST = withSuperAdmin(async (req: Request, { user }) => {
+  const { username, password, role, clinic_id, assigned_clinic_ids, menu_permissions } = await req.json()
 
   // 필수값 검증
   if (!username || !password) {
@@ -34,7 +34,7 @@ export const POST = withSuperAdmin(async (req: Request) => {
   }
 
   // 역할 검증
-  const validRoles = ['superadmin', 'clinic_admin', 'clinic_staff']
+  const validRoles = ['superadmin', 'clinic_admin', 'clinic_staff', 'agency_staff']
   if (!validRoles.includes(role)) {
     return apiError('유효하지 않은 역할입니다.', 400)
   }
@@ -43,8 +43,15 @@ export const POST = withSuperAdmin(async (req: Request) => {
     return apiError('병원을 선택해주세요.', 400)
   }
 
-  const password_hash = await bcrypt.hash(password, 12) // 라운드 수 증가
+  if (role === 'agency_staff' && (!Array.isArray(assigned_clinic_ids) || assigned_clinic_ids.length === 0)) {
+    return apiError('실행사 담당자는 최소 1개 병원을 배정해야 합니다.', 400)
+  }
+
+  const password_hash = await bcrypt.hash(password, 12)
   const supabase = serverSupabase()
+
+  // agency_staff, superadmin은 clinic_id NULL
+  const userClinicId = (role === 'superadmin' || role === 'agency_staff') ? null : (clinic_id || null)
 
   const { data, error } = await supabase
     .from('users')
@@ -52,7 +59,7 @@ export const POST = withSuperAdmin(async (req: Request) => {
       username: sanitizeString(username, 30),
       password_hash,
       role,
-      clinic_id: role === 'superadmin' ? null : (clinic_id || null),
+      clinic_id: userClinicId,
     })
     .select('id, username, role, clinic_id, is_active, created_at')
     .single()
@@ -63,6 +70,32 @@ export const POST = withSuperAdmin(async (req: Request) => {
     }
     return apiError(error.message, 500)
   }
+
+  // agency_staff: 병원 배정 + 메뉴 권한 저장
+  if (role === 'agency_staff' && data) {
+    const userId = data.id
+
+    if (assigned_clinic_ids?.length > 0) {
+      const clinicRows = assigned_clinic_ids.map((cid: number) => ({ user_id: userId, clinic_id: cid }))
+      const { error: assignError } = await supabase.from('user_clinic_assignments').insert(clinicRows)
+      if (assignError) {
+        // 유저는 생성되었으므로 롤백 대신 경고 로그 + 에러 반환
+        await supabase.from('users').delete().eq('id', userId)
+        return apiError('병원 배정 실패: ' + assignError.message, 500)
+      }
+    }
+
+    if (Array.isArray(menu_permissions) && menu_permissions.length > 0) {
+      const menuRows = menu_permissions.map((key: string) => ({ user_id: userId, menu_key: key }))
+      const { error: menuError } = await supabase.from('user_menu_permissions').insert(menuRows)
+      if (menuError) {
+        // 유저+병원배정은 유지, 메뉴 권한만 실패 → 유저 삭제 롤백 (CASCADE로 배정도 삭제됨)
+        await supabase.from('users').delete().eq('id', userId)
+        return apiError('메뉴 권한 저장 실패: ' + menuError.message, 500)
+      }
+    }
+  }
+
   return apiSuccess(data)
 })
 

@@ -6,14 +6,23 @@ import { withClinicFilter, ClinicContext } from '@/lib/api-middleware'
  * 캠페인별 KPI 분석 API
  * Phase 2: leads.utm_campaign 기반 캠페인 성과 분석
  */
-export const GET = withClinicFilter(async (req: Request, { clinicId }: ClinicContext) => {
+export const GET = withClinicFilter(async (req: Request, { clinicId, assignedClinicIds }: ClinicContext) => {
   const supabase = serverSupabase()
   const url = new URL(req.url)
   const startDate = url.searchParams.get('startDate')
   const endDate = url.searchParams.get('endDate')
   const channel = url.searchParams.get('channel') // 특정 채널 필터 (선택)
 
-  const applyFilter = <T>(q: T): T => clinicId ? (q as any).eq('clinic_id', clinicId) : q
+  // agency_staff 배정 병원 0개 → 빈 결과
+  if (assignedClinicIds !== null && assignedClinicIds.length === 0) {
+    return NextResponse.json([])
+  }
+
+  const applyFilter = <T>(q: T): T => {
+    if (clinicId) return (q as any).eq('clinic_id', clinicId)
+    if (assignedClinicIds !== null && assignedClinicIds.length > 0) return (q as any).in('clinic_id', assignedClinicIds)
+    return q
+  }
   const applyDateFilter = <T>(q: T, dateField: string): T => {
     let query = q
     if (startDate) query = (query as any).gte(dateField, startDate)

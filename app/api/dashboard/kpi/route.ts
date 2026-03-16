@@ -7,10 +7,15 @@ import { SupabaseClient } from '@supabase/supabase-js'
 async function fetchMetrics(
   supabase: SupabaseClient,
   clinicId: number | null,
+  assignedClinicIds: number[] | null,
   start: string,
   end: string
 ) {
-  const applyFilter = <T>(q: T): T => clinicId ? (q as any).eq('clinic_id', clinicId) : q
+  const applyFilter = <T>(q: T): T => {
+    if (clinicId) return (q as any).eq('clinic_id', clinicId)
+    if (assignedClinicIds !== null && assignedClinicIds.length > 0) return (q as any).in('clinic_id', assignedClinicIds)
+    return q
+  }
 
   const [adStatsRes, leadsRes, paymentsRes, consultRes, contentBudgetRes] = await Promise.all([
     applyFilter(supabase.from('ad_campaign_stats').select('spend_amount').gte('stat_date', start).lte('stat_date', end)),
@@ -56,14 +61,19 @@ function calcChange(prev: number, curr: number): number {
   return Number((((curr - prev) / prev) * 100).toFixed(1))
 }
 
-export const GET = withClinicFilter(async (req: Request, { clinicId }: ClinicContext) => {
+export const GET = withClinicFilter(async (req: Request, { clinicId, assignedClinicIds }: ClinicContext) => {
+  // agency_staff 배정 병원 0개 → 빈 결과
+  if (assignedClinicIds !== null && assignedClinicIds.length === 0) {
+    return NextResponse.json({ cpl: 0, roas: 0, bookingRate: 0, totalRevenue: 0, totalLeads: 0, totalSpend: 0, cac: 0, arpc: 0, payingCustomerCount: 0 })
+  }
+
   const supabase = serverSupabase()
   const url = new URL(req.url)
   const start = url.searchParams.get('startDate') || new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString()
   const end = url.searchParams.get('endDate') || new Date().toISOString()
   const compare = url.searchParams.get('compare') === 'true'
 
-  const current = await fetchMetrics(supabase, clinicId, start, end)
+  const current = await fetchMetrics(supabase, clinicId, assignedClinicIds, start, end)
 
   // 비교 모드: 전기 데이터와 변화율 계산
   if (compare) {
@@ -71,7 +81,7 @@ export const GET = withClinicFilter(async (req: Request, { clinicId }: ClinicCon
     const prevStart = new Date(new Date(start).getTime() - duration).toISOString()
     const prevEnd = new Date(new Date(end).getTime() - duration).toISOString()
 
-    const previous = await fetchMetrics(supabase, clinicId, prevStart, prevEnd)
+    const previous = await fetchMetrics(supabase, clinicId, assignedClinicIds, prevStart, prevEnd)
 
     return NextResponse.json({
       ...current,

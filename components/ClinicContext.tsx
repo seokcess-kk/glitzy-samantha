@@ -7,6 +7,7 @@ interface ClinicContextType {
   setSelectedClinicId: (id: number | null) => void
   clinics: { id: number; name: string; slug: string }[]
   isSuperAdmin: boolean
+  isAgencyStaff: boolean
 }
 
 const ClinicContext = createContext<ClinicContextType>({
@@ -14,12 +15,14 @@ const ClinicContext = createContext<ClinicContextType>({
   setSelectedClinicId: () => {},
   clinics: [],
   isSuperAdmin: false,
+  isAgencyStaff: false,
 })
 
 export function ClinicProvider({ children }: { children: ReactNode }) {
   const { data: session } = useSession()
   const user = session?.user as any
   const isSuperAdmin = user?.role === 'superadmin'
+  const isAgencyStaff = user?.role === 'agency_staff'
 
   const [selectedClinicId, setSelectedClinicIdState] = useState<number | null>(null)
   const [clinics, setClinics] = useState<any[]>([])
@@ -32,10 +35,27 @@ export function ClinicProvider({ children }: { children: ReactNode }) {
         .catch(() => {})
       const saved = localStorage.getItem('mmi_selected_clinic')
       if (saved) setSelectedClinicIdState(Number(saved))
+    } else if (isAgencyStaff) {
+      fetch('/api/my/clinics')
+        .then(r => r.json())
+        .then(d => {
+          const list = Array.isArray(d) ? d : []
+          setClinics(list)
+          // 배정된 병원이 1개면 자동 선택
+          if (list.length === 1) setSelectedClinicIdState(list[0].id)
+          else {
+            const saved = localStorage.getItem('mmi_selected_clinic')
+            if (saved) {
+              const savedId = Number(saved)
+              if (list.some((c: any) => c.id === savedId)) setSelectedClinicIdState(savedId)
+            }
+          }
+        })
+        .catch(() => {})
     } else if (user?.clinic_id) {
       setSelectedClinicIdState(user.clinic_id)
     }
-  }, [isSuperAdmin, user?.clinic_id])
+  }, [isSuperAdmin, isAgencyStaff, user?.clinic_id])
 
   const setSelectedClinicId = (id: number | null) => {
     setSelectedClinicIdState(id)
@@ -44,7 +64,7 @@ export function ClinicProvider({ children }: { children: ReactNode }) {
   }
 
   return (
-    <ClinicContext.Provider value={{ selectedClinicId, setSelectedClinicId, clinics, isSuperAdmin }}>
+    <ClinicContext.Provider value={{ selectedClinicId, setSelectedClinicId, clinics, isSuperAdmin, isAgencyStaff }}>
       {children}
     </ClinicContext.Provider>
   )
