@@ -204,7 +204,7 @@ export default function MonitoringPage() {
                 <LineChart data={chartData}>
                   <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.05)" />
                   <XAxis dataKey="day" tick={{ fill: '#64748b', fontSize: 11 }} />
-                  <YAxis reversed domain={['auto', 1]} tick={{ fill: '#64748b', fontSize: 11 }} />
+                  <YAxis reversed domain={['auto', 1]} allowDecimals={false} tick={{ fill: '#64748b', fontSize: 11 }} />
                   <Tooltip
                     contentStyle={{ backgroundColor: '#1e1e2e', border: '1px solid rgba(255,255,255,0.1)', borderRadius: 8 }}
                     labelStyle={{ color: '#fff' }}
