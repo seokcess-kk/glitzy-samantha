@@ -218,23 +218,53 @@ export async function POST(req: Request) {
     // raw 로그 → processed
     await updateRawLog(supabase, rawLogId, { status: 'processed', lead_id: lead.id })
 
-    // 3. SMS 알림 (실패해도 무시)
+    // 3. SMS 알림 (다중 번호, 로그 기록, 실패 시 재시도)
     try {
       const { data: clinic } = await supabase
         .from('clinics')
-        .select('notify_phone, notify_enabled, name')
+        .select('notify_phone, notify_phones, notify_enabled, name')
         .eq('id', customer.clinic_id || validClinicId)
         .single()
 
-      if (clinic?.notify_enabled && clinic?.notify_phone && process.env.SOLAPI_API_KEY) {
-        const { sendSms } = await import('@/lib/solapi')
-        await sendSms({
-          to: clinic.notify_phone,
-          text: `[${clinic.name}] 상담 유입\n이름: ${sanitizedName || '미입력'}\n연락처: ${normalizedPhone}`,
-        }).catch(() => {})
+      if (clinic?.notify_enabled && process.env.SOLAPI_API_KEY) {
+        // notify_phones 우선, fallback: notify_phone
+        const phones: string[] =
+          (clinic.notify_phones && clinic.notify_phones.length > 0)
+            ? clinic.notify_phones
+            : (clinic.notify_phone ? [clinic.notify_phone] : [])
+
+        if (phones.length > 0) {
+          const { sendSmsWithLog } = await import('@/lib/solapi')
+          const smsText = `[${clinic.name}] 상담 유입\n이름: ${sanitizedName || '미입력'}\n연락처: ${normalizedPhone}`
+          const clinicId = customer.clinic_id || validClinicId
+
+          const results = await Promise.all(
+            phones.map(phone =>
+              sendSmsWithLog(supabase, {
+                to: phone,
+                text: smsText,
+                clinicId,
+                leadId: lead.id,
+              }).catch(() => ({ success: false, logId: undefined, error: 'catch' }))
+            )
+          )
+
+          // 실패 건 재시도 스케줄
+          if (process.env.QSTASH_TOKEN) {
+            for (const r of results) {
+              if (!r.success && r.logId) {
+                await qstash.publishJSON({
+                  url: `${process.env.NEXTAUTH_URL}/api/qstash/sms-retry`,
+                  body: { logId: r.logId },
+                  delay: 180,
+                }).catch(() => {})
+              }
+            }
+          }
+        }
       }
     } catch {
-      // 알림 발송 실패는 무시
+      // 알림 발송 실패는 리드 등록을 막지 않음
     }
 
     // 4. QStash 챗봇 스케줄

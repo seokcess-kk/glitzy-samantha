@@ -1,6 +1,6 @@
 'use client'
 import { useState, useEffect } from 'react'
-import { Plus, Building2, Bell, Pencil } from 'lucide-react'
+import { Plus, Building2, Bell, Pencil, X } from 'lucide-react'
 import { useSession } from 'next-auth/react'
 import { useRouter } from 'next/navigation'
 import { toast } from 'sonner'
@@ -39,7 +39,8 @@ export default function ClinicsPage() {
   // 알림 설정
   const [notifyDialogOpen, setNotifyDialogOpen] = useState(false)
   const [notifyTarget, setNotifyTarget] = useState<any>(null)
-  const [notifyForm, setNotifyForm] = useState({ notify_phone: '', notify_enabled: false })
+  const [notifyPhones, setNotifyPhones] = useState<string[]>([''])
+  const [notifyEnabled, setNotifyEnabled] = useState(false)
   const [notifySaving, setNotifySaving] = useState(false)
 
   useEffect(() => {
@@ -90,34 +91,72 @@ export default function ClinicsPage() {
 
   const openNotifyDialog = (clinic: any) => {
     setNotifyTarget(clinic)
-    setNotifyForm({
-      notify_phone: clinic.notify_phone || '',
-      notify_enabled: clinic.notify_enabled || false,
-    })
+    // notify_phones 우선, fallback: notify_phone
+    const phones: string[] =
+      (clinic.notify_phones && clinic.notify_phones.length > 0)
+        ? [...clinic.notify_phones]
+        : (clinic.notify_phone ? [clinic.notify_phone] : [''])
+    if (phones.length === 0) phones.push('')
+    setNotifyPhones(phones)
+    setNotifyEnabled(clinic.notify_enabled || false)
     setNotifyDialogOpen(true)
+  }
+
+  const updatePhone = (index: number, value: string) => {
+    setNotifyPhones(prev => prev.map((p, i) => i === index ? value : p))
+  }
+
+  const addPhone = () => {
+    if (notifyPhones.length < 3) {
+      setNotifyPhones(prev => [...prev, ''])
+    }
+  }
+
+  const removePhone = (index: number) => {
+    setNotifyPhones(prev => {
+      const next = prev.filter((_, i) => i !== index)
+      return next.length === 0 ? [''] : next
+    })
   }
 
   const handleNotifySave = async () => {
     if (!notifyTarget) return
+    const filtered = notifyPhones.filter(p => p && p.trim())
+    if (notifyEnabled && filtered.length === 0) {
+      toast.error('알림을 활성화하려면 연락처를 1개 이상 입력해주세요.')
+      return
+    }
     setNotifySaving(true)
     try {
       const res = await fetch(`/api/admin/clinics/${notifyTarget.id}`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          notify_phone: notifyForm.notify_phone || null,
-          notify_enabled: notifyForm.notify_enabled,
+          notify_phones: filtered,
+          notify_enabled: notifyEnabled,
         }),
       })
-      if (!res.ok) throw new Error('저장 실패')
+      if (!res.ok) {
+        const err = await res.json()
+        throw new Error(err.error || '저장 실패')
+      }
       toast.success('알림 설정이 저장되었습니다.')
       setNotifyDialogOpen(false)
       fetchClinics()
-    } catch {
-      toast.error('알림 설정 저장 실패')
+    } catch (e: any) {
+      toast.error(e.message || '알림 설정 저장 실패')
     } finally {
       setNotifySaving(false)
     }
+  }
+
+  // 테이블에 표시할 알림 번호 목록
+  const getNotifyDisplay = (clinic: any) => {
+    const phones: string[] =
+      (clinic.notify_phones && clinic.notify_phones.length > 0)
+        ? clinic.notify_phones
+        : (clinic.notify_phone ? [clinic.notify_phone] : [])
+    return phones
   }
 
   if (user?.role !== 'superadmin') return null
@@ -175,22 +214,46 @@ export default function ClinicsPage() {
           </DialogHeader>
           <div className="space-y-4 py-4">
             <p className="text-xs text-slate-400">
-              새 리드가 유입되면 담당자에게 알림톡/문자를 발송합니다.
+              새 리드가 유입되면 등록된 연락처로 알림 문자를 발송합니다. (최대 3개)
             </p>
             <div className="space-y-2">
               <Label className="text-xs text-slate-400">담당자 연락처</Label>
-              <Input
-                type="tel"
-                value={notifyForm.notify_phone}
-                onChange={e => setNotifyForm(f => ({ ...f, notify_phone: e.target.value }))}
-                placeholder="010-1234-5678"
-              />
+              {notifyPhones.map((phone, i) => (
+                <div key={i} className="flex items-center gap-2">
+                  <Input
+                    type="tel"
+                    value={phone}
+                    onChange={e => updatePhone(i, e.target.value)}
+                    placeholder="010-1234-5678"
+                  />
+                  {notifyPhones.length > 1 && (
+                    <button
+                      type="button"
+                      onClick={() => removePhone(i)}
+                      className="text-slate-400 hover:text-red-400 transition-colors shrink-0"
+                    >
+                      <X size={16} />
+                    </button>
+                  )}
+                </div>
+              ))}
+              {notifyPhones.length < 3 && (
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="sm"
+                  onClick={addPhone}
+                  className="text-xs text-slate-400 hover:text-white"
+                >
+                  <Plus size={12} /> 연락처 추가
+                </Button>
+              )}
             </div>
             <div className="flex items-center justify-between">
               <Label className="text-xs text-slate-400">알림 활성화</Label>
               <Switch
-                checked={notifyForm.notify_enabled}
-                onCheckedChange={v => setNotifyForm(f => ({ ...f, notify_enabled: v }))}
+                checked={notifyEnabled}
+                onCheckedChange={setNotifyEnabled}
               />
             </div>
           </div>
@@ -228,34 +291,41 @@ export default function ClinicsPage() {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {clinics.map((c: any) => (
-                <TableRow key={c.id} className="border-b border-white/5">
-                  <TableCell className="text-slate-500 text-xs">#{c.id}</TableCell>
-                  <TableCell className="text-white font-medium">{c.name}</TableCell>
-                  <TableCell className="text-slate-400 font-mono text-xs">{c.slug}</TableCell>
-                  <TableCell className="text-slate-400 text-xs">{new Date(c.created_at).toLocaleDateString('ko')}</TableCell>
-                  <TableCell>
-                    {c.notify_enabled && c.notify_phone ? (
-                      <span className="flex items-center gap-1.5 text-xs text-emerald-400">
-                        <Bell size={11} />
-                        {c.notify_phone}
-                      </span>
-                    ) : (
-                      <span className="text-xs text-slate-600">미설정</span>
-                    )}
-                  </TableCell>
-                  <TableCell>
-                    <Badge variant={c.is_active ? 'success' : 'secondary'}>
-                      {c.is_active ? '활성' : '비활성'}
-                    </Badge>
-                  </TableCell>
-                  <TableCell>
-                    <button onClick={() => openNotifyDialog(c)} className="text-slate-400 hover:text-white transition-colors" aria-label="알림 설정">
-                      <Pencil size={14} />
-                    </button>
-                  </TableCell>
-                </TableRow>
-              ))}
+              {clinics.map((c: any) => {
+                const phones = getNotifyDisplay(c)
+                return (
+                  <TableRow key={c.id} className="border-b border-white/5">
+                    <TableCell className="text-slate-500 text-xs">#{c.id}</TableCell>
+                    <TableCell className="text-white font-medium">{c.name}</TableCell>
+                    <TableCell className="text-slate-400 font-mono text-xs">{c.slug}</TableCell>
+                    <TableCell className="text-slate-400 text-xs">{new Date(c.created_at).toLocaleDateString('ko')}</TableCell>
+                    <TableCell>
+                      {c.notify_enabled && phones.length > 0 ? (
+                        <div className="flex flex-col gap-0.5">
+                          {phones.map((p: string, i: number) => (
+                            <span key={i} className="flex items-center gap-1.5 text-xs text-emerald-400">
+                              <Bell size={11} />
+                              {p}
+                            </span>
+                          ))}
+                        </div>
+                      ) : (
+                        <span className="text-xs text-slate-600">미설정</span>
+                      )}
+                    </TableCell>
+                    <TableCell>
+                      <Badge variant={c.is_active ? 'success' : 'secondary'}>
+                        {c.is_active ? '활성' : '비활성'}
+                      </Badge>
+                    </TableCell>
+                    <TableCell>
+                      <button onClick={() => openNotifyDialog(c)} className="text-slate-400 hover:text-white transition-colors" aria-label="알림 설정">
+                        <Pencil size={14} />
+                      </button>
+                    </TableCell>
+                  </TableRow>
+                )
+              })}
             </TableBody>
           </Table>
         )}
