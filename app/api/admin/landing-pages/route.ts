@@ -60,10 +60,11 @@ export const POST = withSuperAdmin(async (req: Request) => {
     return apiError('이름과 파일명은 필수입니다.', 400)
   }
 
-  // 파일 존재 여부 확인
-  const filePath = path.join(process.cwd(), 'public', 'landing', file_name)
+  // file_name path traversal 방어
+  const safeFileName = path.basename(file_name)
+  const filePath = path.join(process.cwd(), 'public', 'landing', safeFileName)
   if (!fs.existsSync(filePath)) {
-    return apiError(`파일을 찾을 수 없습니다: ${file_name}`, 400)
+    return apiError(`파일을 찾을 수 없습니다: ${safeFileName}`, 400)
   }
 
   const supabase = serverSupabase()
@@ -95,7 +96,7 @@ export const POST = withSuperAdmin(async (req: Request) => {
     .insert({
       id: newId,
       name: sanitizeString(name, 100),
-      file_name: sanitizeString(file_name, 100),
+      file_name: sanitizeString(safeFileName, 100),
       clinic_id: validClinicId,
       description: description ? sanitizeString(description, 500) : null,
       is_active: is_active !== false,

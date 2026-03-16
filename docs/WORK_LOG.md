@@ -34,6 +34,7 @@ shadcn/ui 기반 UI/UX 개선 및 기능 개발 작업 기록.
 
 | 파일 | 내용 | 실행 필요 |
 |------|------|----------|
+| `20240101_add_utm_fields.sql` | leads UTM 필드 추가 | ⚠️ |
 | `20240315_utm_templates_links.sql` | utm_templates, utm_links 테이블 | ⚠️ |
 | `20260315_landing_pages.sql` | landing_pages 테이블, leads 컬럼 추가 | ⚠️ |
 | `20260315_ad_creatives.sql` | ad_creatives 테이블 | ⚠️ |
@@ -41,6 +42,9 @@ shadcn/ui 기반 UI/UX 개선 및 기능 개발 작업 기록.
 | `20260316_clinic_notify.sql` | clinics 알림 컬럼 추가 | ⚠️ |
 | `20260316_lead_status.sql` | leads 상태/타임스탬프 컬럼 추가 | ⚠️ |
 | `20260316_lead_notes.sql` | leads 메모 컬럼 추가 | ⚠️ |
+| `20260316_landing_pages_random_id.sql` | landing_pages ID 8자리 랜덤으로 변경 | ⚠️ |
+| `20260316_leads_landing_page_on_delete.sql` | leads FK ON DELETE SET NULL 추가 | ⚠️ |
+| `20260316_lead_raw_logs.sql` | 리드 원본 로그 테이블 (유실 방지) | ⚠️ |
 
 ---
 

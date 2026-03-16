@@ -1,6 +1,6 @@
 'use client'
 import { useState, useEffect } from 'react'
-import { Plus, FileText, Copy, ExternalLink, Trash2, Pencil } from 'lucide-react'
+import { Plus, FileText, Copy, ExternalLink, Trash2, Pencil, Upload, X } from 'lucide-react'
 import { useSession } from 'next-auth/react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
@@ -61,6 +61,9 @@ export default function LandingPagesPage() {
   const [editing, setEditing] = useState<LandingPage | null>(null)
   const [form, setForm] = useState({ name: '', file_name: '', clinic_id: '', description: '', is_active: true })
   const [saving, setSaving] = useState(false)
+  const [fileMode, setFileMode] = useState<'select' | 'upload'>('select')
+  const [uploadFile, setUploadFile] = useState<File | null>(null)
+  const [uploading, setUploading] = useState(false)
 
   useEffect(() => {
     if (user && user.role !== 'superadmin') router.replace('/')
@@ -97,12 +100,33 @@ export default function LandingPagesPage() {
   useEffect(() => { fetchData() }, [])
 
   const handleSave = async () => {
-    if (!form.name || !form.file_name) {
-      toast.error('이름과 파일을 선택해주세요.')
+    const needsUpload = fileMode === 'upload'
+    if (!form.name || (!needsUpload && !form.file_name) || (needsUpload && !uploadFile)) {
+      toast.error(needsUpload ? '이름과 HTML 파일을 첨부해주세요.' : '이름과 파일을 선택해주세요.')
       return
     }
     setSaving(true)
     try {
+      let fileName = form.file_name
+
+      // 파일 업로드 처리
+      if (needsUpload && uploadFile) {
+        setUploading(true)
+        const formData = new FormData()
+        formData.append('file', uploadFile)
+        const uploadRes = await fetch('/api/admin/landing-pages/upload', {
+          method: 'POST',
+          body: formData,
+        })
+        if (!uploadRes.ok) {
+          const err = await uploadRes.json()
+          throw new Error(err.error || '파일 업로드 실패')
+        }
+        const uploadData = await uploadRes.json()
+        fileName = uploadData.fileName
+        setUploading(false)
+      }
+
       const url = editing ? `/api/admin/landing-pages/${editing.id}` : '/api/admin/landing-pages'
       const method = editing ? 'PUT' : 'POST'
 
@@ -111,6 +135,7 @@ export default function LandingPagesPage() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           ...form,
+          file_name: fileName,
           clinic_id: form.clinic_id && form.clinic_id !== 'none' ? Number(form.clinic_id) : null,
         }),
       })
@@ -119,6 +144,8 @@ export default function LandingPagesPage() {
         throw new Error(err.error)
       }
       setForm({ name: '', file_name: '', clinic_id: '', description: '', is_active: true })
+      setUploadFile(null)
+      setFileMode('select')
       setEditing(null)
       setDialogOpen(false)
       toast.success(editing ? '랜딩 페이지가 수정되었습니다.' : '랜딩 페이지가 등록되었습니다.')
@@ -127,11 +154,14 @@ export default function LandingPagesPage() {
       toast.error(e.message || '저장 실패')
     } finally {
       setSaving(false)
+      setUploading(false)
     }
   }
 
   const handleEdit = (lp: LandingPage) => {
     setEditing(lp)
+    setFileMode('select')
+    setUploadFile(null)
     setForm({
       name: lp.name,
       file_name: lp.file_name,
@@ -177,6 +207,8 @@ export default function LandingPagesPage() {
         if (!open) {
           setEditing(null)
           setForm({ name: '', file_name: '', clinic_id: '', description: '', is_active: true })
+          setUploadFile(null)
+          setFileMode('select')
         }
       }}>
         <DialogContent>
@@ -195,17 +227,83 @@ export default function LandingPagesPage() {
             </div>
             <div className="space-y-2">
               <Label className="text-xs text-slate-400">HTML 파일 *</Label>
-              <Select value={form.file_name} onValueChange={v => setForm(f => ({ ...f, file_name: v }))}>
-                <SelectTrigger>
-                  <SelectValue placeholder="파일 선택" />
-                </SelectTrigger>
-                <SelectContent>
-                  {availableFiles.map((file) => (
-                    <SelectItem key={file} value={file}>{file}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-              <p className="text-xs text-slate-500">public/landing/ 폴더에 있는 HTML 파일</p>
+              <div className="flex gap-1 mb-2">
+                <button
+                  type="button"
+                  onClick={() => { setFileMode('select'); setUploadFile(null) }}
+                  className={`text-xs px-3 py-1.5 rounded-md transition-colors ${fileMode === 'select' ? 'bg-brand-600 text-white' : 'bg-white/5 text-slate-400 hover:text-white'}`}
+                >
+                  기존 파일 선택
+                </button>
+                <button
+                  type="button"
+                  onClick={() => { setFileMode('upload'); setForm(f => ({ ...f, file_name: '' })) }}
+                  className={`text-xs px-3 py-1.5 rounded-md transition-colors ${fileMode === 'upload' ? 'bg-brand-600 text-white' : 'bg-white/5 text-slate-400 hover:text-white'}`}
+                >
+                  새 파일 업로드
+                </button>
+              </div>
+              {fileMode === 'select' ? (
+                <>
+                  <Select value={form.file_name} onValueChange={v => setForm(f => ({ ...f, file_name: v }))}>
+                    <SelectTrigger>
+                      <SelectValue placeholder="파일 선택" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {availableFiles.map((file) => (
+                        <SelectItem key={file} value={file}>{file}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  <p className="text-xs text-slate-500">public/landing/ 폴더에 있는 HTML 파일</p>
+                </>
+              ) : (
+                <>
+                  {uploadFile ? (
+                    <div className="flex items-center gap-2 bg-white/5 border border-white/10 rounded-lg px-3 py-2.5">
+                      <FileText size={16} className="text-brand-400 shrink-0" />
+                      <span className="text-sm text-white truncate flex-1">{uploadFile.name}</span>
+                      <span className="text-xs text-slate-500 shrink-0">{(uploadFile.size / 1024).toFixed(1)}KB</span>
+                      <button
+                        type="button"
+                        onClick={() => setUploadFile(null)}
+                        className="text-slate-400 hover:text-red-400 transition-colors shrink-0"
+                      >
+                        <X size={14} />
+                      </button>
+                    </div>
+                  ) : (
+                    <label
+                      className="flex flex-col items-center justify-center gap-2 border-2 border-dashed border-white/10 hover:border-brand-500/50 rounded-lg py-6 cursor-pointer transition-colors"
+                      onDragOver={(e) => { e.preventDefault(); e.currentTarget.classList.add('border-brand-500/50') }}
+                      onDragLeave={(e) => { e.preventDefault(); e.currentTarget.classList.remove('border-brand-500/50') }}
+                      onDrop={(e) => {
+                        e.preventDefault()
+                        e.currentTarget.classList.remove('border-brand-500/50')
+                        const file = e.dataTransfer.files?.[0]
+                        if (file && file.name.match(/\.html?$/i)) {
+                          setUploadFile(file)
+                        } else {
+                          toast.error('HTML 파일만 업로드할 수 있습니다.')
+                        }
+                      }}
+                    >
+                      <Upload size={24} className="text-slate-500" />
+                      <span className="text-sm text-slate-400">HTML 파일을 선택하거나 여기에 드래그하세요</span>
+                      <span className="text-xs text-slate-600">최대 5MB, .html</span>
+                      <input
+                        type="file"
+                        accept=".html"
+                        className="hidden"
+                        onChange={(e) => {
+                          const file = e.target.files?.[0]
+                          if (file) setUploadFile(file)
+                        }}
+                      />
+                    </label>
+                  )}
+                </>
+              )}
             </div>
             <div className="space-y-2">
               <Label className="text-xs text-slate-400">배정 병원</Label>
@@ -241,7 +339,7 @@ export default function LandingPagesPage() {
           <DialogFooter>
             <Button variant="ghost" onClick={() => setDialogOpen(false)}>취소</Button>
             <Button onClick={handleSave} disabled={saving} className="bg-brand-600 hover:bg-brand-700">
-              {saving ? '저장 중...' : (editing ? '수정' : '등록')}
+              {saving ? (uploading ? '업로드 중...' : '저장 중...') : (editing ? '수정' : '등록')}
             </Button>
           </DialogFooter>
         </DialogContent>

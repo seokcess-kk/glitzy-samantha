@@ -613,31 +613,37 @@
         // 서버에서 주입한 데이터 사용
         const lpData = window.__LP_DATA__ || {};
 
+        // payload 구성
+        const payload = {
+            name: name,
+            phoneNumber: phone,
+            clinic_id: lpData.clinicId,
+            landing_page_id: lpData.landingPageId,
+            inflowUrl: window.location.href,
+            utm_source: urlParams.get('utm_source'),
+            utm_medium: urlParams.get('utm_medium'),
+            utm_campaign: urlParams.get('utm_campaign'),
+            utm_content: urlParams.get('utm_content'),
+            utm_term: urlParams.get('utm_term'),
+            custom_data: {
+                survey: userAnswers,
+                marketing_consent: marketing
+            }
+        };
+
+        // localStorage에 먼저 저장 (유실 방지)
+        const queueKey = window.LeadQueue ? window.LeadQueue.save(payload) : null;
+
         try {
             const response = await fetch('/api/webhook/lead', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                    name: name,
-                    phoneNumber: phone,
-                    clinic_id: lpData.clinicId,
-                    landing_page_id: lpData.landingPageId,
-                    inflowUrl: window.location.href,
-                    // UTM 파라미터
-                    utm_source: urlParams.get('utm_source'),
-                    utm_medium: urlParams.get('utm_medium'),
-                    utm_campaign: urlParams.get('utm_campaign'),
-                    utm_content: urlParams.get('utm_content'),
-                    utm_term: urlParams.get('utm_term'),
-                    // 커스텀 데이터 (설문 응답)
-                    custom_data: {
-                        survey: userAnswers,
-                        marketing_consent: marketing
-                    }
-                }),
+                body: JSON.stringify(payload),
             });
 
             if (response.ok) {
+                // 성공 시 localStorage에서 제거
+                if (window.LeadQueue) window.LeadQueue.remove(queueKey);
                 submitBtn.innerHTML = "신청 완료 ✓";
                 submitBtn.className = "w-full bg-[#1e293b] text-white font-bold text-lg md:text-xl py-5 rounded-2xl cursor-not-allowed transition-all";
                 alert(`${name}님, 신청이 완료되었습니다.\n작성해주신 번호로 시크릿 특가 링크를 발송해 드리겠습니다.`);
@@ -646,6 +652,7 @@
                 throw new Error(data.error || '신청 실패');
             }
         } catch (error) {
+            // 실패 시 localStorage에 유지 → 재방문 시 자동 재시도
             console.error('Submit error:', error);
             alert("신청 중 오류가 발생했습니다. 다시 시도해주세요.");
             submitBtn.innerHTML = "설문 제출 완료";
