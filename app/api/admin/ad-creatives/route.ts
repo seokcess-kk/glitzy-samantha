@@ -42,7 +42,7 @@ export const POST = withSuperAdmin(async (req: Request) => {
   const body = await req.json()
   const {
     name, description, utm_content, utm_source, utm_medium, utm_campaign, utm_term,
-    platform, clinic_id, landing_page_id, is_active
+    platform, clinic_id, landing_page_id, is_active, file_name, file_type
   } = body
 
   if (!name || !utm_content) {
@@ -114,6 +114,8 @@ export const POST = withSuperAdmin(async (req: Request) => {
       clinic_id: validClinicId,
       landing_page_id: validLandingPageId,
       is_active: is_active !== false,
+      file_name: file_name ? sanitizeString(file_name, 200) : null,
+      file_type: file_type ? sanitizeString(file_type, 50) : null,
     })
     .select(`
       *,

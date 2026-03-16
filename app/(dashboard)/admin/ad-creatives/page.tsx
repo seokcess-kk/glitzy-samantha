@@ -1,6 +1,6 @@
 'use client'
-import { useState, useEffect } from 'react'
-import { Plus, Image, Trash2, Pencil, Link2 } from 'lucide-react'
+import { useState, useEffect, useRef } from 'react'
+import { Plus, Image, Trash2, Pencil, Link2, Upload, X, Film } from 'lucide-react'
 import { useSession } from 'next-auth/react'
 import { useRouter } from 'next/navigation'
 import { toast } from 'sonner'
@@ -54,6 +54,8 @@ interface AdCreative {
   clinic_id: number
   landing_page_id: number | null
   is_active: boolean
+  file_name: string | null
+  file_type: string | null
   created_at: string
   clinic?: { id: number; name: string } | null
   landing_page?: { id: number; name: string; file_name: string } | null
@@ -69,10 +71,43 @@ const PLATFORM_OPTIONS = [
   { value: 'other', label: '기타' },
 ]
 
+function CreativeThumbnail({ creative }: { creative: AdCreative }) {
+  if (!creative.file_name) {
+    return (
+      <div className="w-12 h-12 rounded-lg bg-white/5 flex items-center justify-center text-slate-600">
+        <Image size={20} />
+      </div>
+    )
+  }
+
+  const src = `/creatives/${creative.file_name}`
+  const isVideo = creative.file_type?.startsWith('video/')
+
+  if (isVideo) {
+    return (
+      <div className="w-12 h-12 rounded-lg bg-white/5 overflow-hidden relative group">
+        <video src={src} className="w-full h-full object-cover" muted preload="metadata" />
+        <div className="absolute inset-0 flex items-center justify-center bg-black/30">
+          <Film size={16} className="text-white/80" />
+        </div>
+      </div>
+    )
+  }
+
+  return (
+    <img
+      src={src}
+      alt={creative.name}
+      className="w-12 h-12 rounded-lg object-cover bg-white/5"
+    />
+  )
+}
+
 export default function AdCreativesPage() {
   const { data: session } = useSession()
   const router = useRouter()
   const user = session?.user as any
+  const fileInputRef = useRef<HTMLInputElement>(null)
 
   const [adCreatives, setAdCreatives] = useState<AdCreative[]>([])
   const [landingPages, setLandingPages] = useState<LandingPage[]>([])
@@ -82,9 +117,13 @@ export default function AdCreativesPage() {
   const [editing, setEditing] = useState<AdCreative | null>(null)
   const [form, setForm] = useState({
     name: '', description: '', utm_content: '', utm_source: '', utm_medium: '', utm_campaign: '', utm_term: '',
-    platform: '', clinic_id: '', landing_page_id: '', is_active: true
+    platform: '', clinic_id: '', landing_page_id: '', is_active: true,
+    file_name: '' as string | null, file_type: '' as string | null,
   })
   const [saving, setSaving] = useState(false)
+  const [uploading, setUploading] = useState(false)
+  const [previewUrl, setPreviewUrl] = useState<string | null>(null)
+  const [previewType, setPreviewType] = useState<string | null>(null)
 
   useEffect(() => {
     if (user && user.role !== 'superadmin') router.replace('/')
@@ -113,6 +152,39 @@ export default function AdCreativesPage() {
   }
 
   useEffect(() => { fetchData() }, [])
+
+  const handleFileUpload = async (file: File) => {
+    setUploading(true)
+    try {
+      const formData = new FormData()
+      formData.append('file', file)
+      const res = await fetch('/api/admin/ad-creatives/upload', { method: 'POST', body: formData })
+      const data = await res.json()
+      if (!res.ok) throw new Error(data.error)
+
+      setForm(f => ({ ...f, file_name: data.fileName, file_type: data.fileType }))
+      // 미리보기
+      const url = URL.createObjectURL(file)
+      setPreviewUrl(url)
+      setPreviewType(file.type)
+    } catch (e: any) {
+      toast.error(e.message || '업로드 실패')
+    } finally {
+      setUploading(false)
+    }
+  }
+
+  const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0]
+    if (file) handleFileUpload(file)
+    if (fileInputRef.current) fileInputRef.current.value = ''
+  }
+
+  const clearFile = () => {
+    setForm(f => ({ ...f, file_name: null, file_type: null }))
+    setPreviewUrl(null)
+    setPreviewType(null)
+  }
 
   const handleSave = async () => {
     if (!form.name || !form.utm_content || !form.clinic_id) {
@@ -152,9 +224,11 @@ export default function AdCreativesPage() {
   const resetForm = () => {
     setForm({
       name: '', description: '', utm_content: '', utm_source: '', utm_medium: '', utm_campaign: '', utm_term: '',
-      platform: '', clinic_id: '', landing_page_id: '', is_active: true
+      platform: '', clinic_id: '', landing_page_id: '', is_active: true, file_name: null, file_type: null,
     })
     setEditing(null)
+    setPreviewUrl(null)
+    setPreviewType(null)
   }
 
   const handleEdit = (creative: AdCreative) => {
@@ -171,7 +245,13 @@ export default function AdCreativesPage() {
       clinic_id: String(creative.clinic_id),
       landing_page_id: creative.landing_page_id ? String(creative.landing_page_id) : '',
       is_active: creative.is_active,
+      file_name: creative.file_name,
+      file_type: creative.file_type,
     })
+    if (creative.file_name) {
+      setPreviewUrl(`/creatives/${creative.file_name}`)
+      setPreviewType(creative.file_type)
+    }
     setDialogOpen(true)
   }
 
@@ -187,7 +267,6 @@ export default function AdCreativesPage() {
     }
   }
 
-  // 선택된 병원의 랜딩 페이지만 필터링
   const filteredLandingPages = form.clinic_id
     ? landingPages.filter(lp => lp.clinic_id === Number(form.clinic_id) || !lp.clinic_id)
     : landingPages
@@ -213,6 +292,44 @@ export default function AdCreativesPage() {
             <DialogTitle>{editing ? '광고 소재 수정' : '신규 광고 소재 등록'}</DialogTitle>
           </DialogHeader>
           <div className="space-y-4 py-4">
+            {/* 소재 파일 업로드 */}
+            <div className="space-y-2">
+              <Label className="text-xs text-slate-400">소재 파일 (이미지/동영상)</Label>
+              {previewUrl ? (
+                <div className="relative inline-block">
+                  {previewType?.startsWith('video/') ? (
+                    <video src={previewUrl} className="h-32 rounded-lg bg-white/5" controls muted />
+                  ) : (
+                    <img src={previewUrl} alt="미리보기" className="h-32 rounded-lg object-contain bg-white/5" />
+                  )}
+                  <button
+                    onClick={clearFile}
+                    className="absolute -top-2 -right-2 w-6 h-6 bg-red-500 rounded-full flex items-center justify-center text-white hover:bg-red-600 transition-colors"
+                  >
+                    <X size={12} />
+                  </button>
+                </div>
+              ) : (
+                <button
+                  type="button"
+                  onClick={() => fileInputRef.current?.click()}
+                  disabled={uploading}
+                  className="w-full h-24 border-2 border-dashed border-white/10 rounded-lg flex flex-col items-center justify-center gap-1 text-slate-500 hover:border-brand-500/50 hover:text-slate-400 transition-colors"
+                >
+                  <Upload size={20} />
+                  <span className="text-xs">{uploading ? '업로드 중...' : '클릭하여 파일 선택'}</span>
+                  <span className="text-[10px] text-slate-600">JPG, PNG, GIF, WebP, MP4, WebM (50MB 이하)</span>
+                </button>
+              )}
+              <input
+                ref={fileInputRef}
+                type="file"
+                accept="image/jpeg,image/png,image/gif,image/webp,video/mp4,video/webm"
+                onChange={handleFileSelect}
+                className="hidden"
+              />
+            </div>
+
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
                 <Label className="text-xs text-slate-400">소재명 *</Label>
@@ -348,7 +465,7 @@ export default function AdCreativesPage() {
           </div>
           <DialogFooter>
             <Button variant="ghost" onClick={() => setDialogOpen(false)}>취소</Button>
-            <Button onClick={handleSave} disabled={saving} className="bg-brand-600 hover:bg-brand-700">
+            <Button onClick={handleSave} disabled={saving || uploading} className="bg-brand-600 hover:bg-brand-700">
               {saving ? '저장 중...' : (editing ? '수정' : '등록')}
             </Button>
           </DialogFooter>
@@ -373,6 +490,7 @@ export default function AdCreativesPage() {
           <Table>
             <TableHeader>
               <TableRow className="border-b border-white/5 hover:bg-transparent">
+                <TableHead className="text-xs text-slate-500 font-medium w-[60px]">소재</TableHead>
                 <TableHead className="text-xs text-slate-500 font-medium">소재명</TableHead>
                 <TableHead className="text-xs text-slate-500 font-medium">UTM Content</TableHead>
                 <TableHead className="text-xs text-slate-500 font-medium">플랫폼</TableHead>
@@ -385,6 +503,9 @@ export default function AdCreativesPage() {
             <TableBody>
               {adCreatives.map((creative) => (
                 <TableRow key={creative.id} className="border-b border-white/5">
+                  <TableCell>
+                    <CreativeThumbnail creative={creative} />
+                  </TableCell>
                   <TableCell className="text-white font-medium">{creative.name}</TableCell>
                   <TableCell>
                     <code className="text-xs text-brand-400 bg-white/5 px-2 py-1 rounded">

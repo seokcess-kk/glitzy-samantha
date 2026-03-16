@@ -42,7 +42,7 @@ export const PUT = withSuperAdmin(async (req: Request) => {
   const body = await req.json()
   const {
     name, description, utm_content, utm_source, utm_medium, utm_campaign, utm_term,
-    platform, clinic_id, landing_page_id, is_active
+    platform, clinic_id, landing_page_id, is_active, file_name, file_type
   } = body
 
   const supabase = serverSupabase()
@@ -127,6 +127,8 @@ export const PUT = withSuperAdmin(async (req: Request) => {
   if (validClinicId !== undefined) updateData.clinic_id = validClinicId
   if (validLandingPageId !== undefined) updateData.landing_page_id = validLandingPageId
   if (is_active !== undefined) updateData.is_active = is_active
+  if (file_name !== undefined) updateData.file_name = file_name ? sanitizeString(file_name as string, 200) : null
+  if (file_type !== undefined) updateData.file_type = file_type ? sanitizeString(file_type as string, 50) : null
 
   const { data, error } = await supabase
     .from('ad_creatives')
