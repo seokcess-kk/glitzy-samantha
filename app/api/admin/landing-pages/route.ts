@@ -37,6 +37,21 @@ export const GET = withSuperAdmin(async (req: Request) => {
   return apiSuccess(data)
 })
 
+// 8자리 랜덤 숫자 ID 생성 (10000000 ~ 99999999)
+async function generateUniqueLpId(supabase: ReturnType<typeof serverSupabase>): Promise<number> {
+  const MAX_ATTEMPTS = 10
+  for (let i = 0; i < MAX_ATTEMPTS; i++) {
+    const id = Math.floor(10000000 + Math.random() * 90000000)
+    const { data } = await supabase
+      .from('landing_pages')
+      .select('id')
+      .eq('id', id)
+      .single()
+    if (!data) return id
+  }
+  throw new Error('고유 ID 생성에 실패했습니다. 다시 시도해주세요.')
+}
+
 export const POST = withSuperAdmin(async (req: Request) => {
   const body = await req.json()
   const { name, file_name, clinic_id, description, is_active } = body
@@ -72,9 +87,13 @@ export const POST = withSuperAdmin(async (req: Request) => {
     }
   }
 
+  // 8자리 랜덤 ID 생성
+  const newId = await generateUniqueLpId(supabase)
+
   const { data, error } = await supabase
     .from('landing_pages')
     .insert({
+      id: newId,
       name: sanitizeString(name, 100),
       file_name: sanitizeString(file_name, 100),
       clinic_id: validClinicId,
