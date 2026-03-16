@@ -4,7 +4,7 @@ import { usePathname } from 'next/navigation'
 import { signOut } from 'next-auth/react'
 import { useSession } from 'next-auth/react'
 import { useState, useEffect } from 'react'
-import { LayoutDashboard, Users, MessageCircle, BarChart2, LogOut, Activity, Calendar, Film, Link2, Scan, Newspaper, Settings, ChevronUp, User, FileEdit, ClipboardList, LucideIcon, Building2, UserCog, FileText, Image, Megaphone, TrendingUp } from 'lucide-react'
+import { LayoutDashboard, Users, MessageCircle, BarChart2, LogOut, Activity, Calendar, Film, Link2, Scan, Newspaper, Settings, ChevronUp, User, FileEdit, ClipboardList, LucideIcon, Building2, UserCog, FileText, Image, Megaphone, TrendingUp, Shield, KeyRound } from 'lucide-react'
 import { useClinic } from './ClinicContext'
 import { Button } from '@/components/ui/button'
 import {
@@ -84,6 +84,9 @@ const menuGroups: MenuGroup[] = [
   },
 ]
 
+// 비밀번호 변경 다이얼로그 (lazy import 불필요 — 사이드바는 항상 마운트)
+import PasswordChangeDialog from '@/components/PasswordChangeDialog'
+
 export default function Sidebar({ onClose }: { onClose?: () => void }) {
   const pathname = usePathname()
   const { data: session } = useSession()
@@ -94,6 +97,7 @@ export default function Sidebar({ onClose }: { onClose?: () => void }) {
   const isClinicAdmin = userRole === 'clinic_admin'
   const isAgencyStaff = userRole === 'agency_staff'
 
+  const [pwDialogOpen, setPwDialogOpen] = useState(false)
   const { selectedClinicId, setSelectedClinicId, clinics } = useClinic()
   const selectedClinic = clinics.find(c => c.id === selectedClinicId)
 
@@ -296,6 +300,18 @@ export default function Sidebar({ onClose }: { onClose?: () => void }) {
                 <UserCog size={17} />
                 계정 관리
               </Link>
+              <Link
+                href="/admin/login-logs"
+                onClick={onClose}
+                className={`flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-all ${
+                  pathname === '/admin/login-logs'
+                    ? 'bg-brand-600/20 text-brand-400'
+                    : 'text-slate-400 hover:text-white hover:bg-white/[0.05]'
+                }`}
+              >
+                <Shield size={17} />
+                로그인 로그
+              </Link>
             </div>
           </>
         )}
@@ -323,6 +339,10 @@ export default function Sidebar({ onClose }: { onClose?: () => void }) {
               {user?.name || user?.username}
             </DropdownMenuLabel>
             <DropdownMenuSeparator />
+            <DropdownMenuItem onClick={() => setPwDialogOpen(true)}>
+              <KeyRound size={14} />
+              비밀번호 변경
+            </DropdownMenuItem>
             <DropdownMenuItem
               onClick={() => signOut({ callbackUrl: '/login' })}
               className="text-red-400 hover:text-red-300 focus:text-red-300"
@@ -332,6 +352,7 @@ export default function Sidebar({ onClose }: { onClose?: () => void }) {
             </DropdownMenuItem>
           </DropdownMenuContent>
         </DropdownMenu>
+        <PasswordChangeDialog open={pwDialogOpen} onOpenChange={setPwDialogOpen} />
       </div>
     </aside>
   )

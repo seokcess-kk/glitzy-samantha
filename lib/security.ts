@@ -119,6 +119,7 @@ export interface SessionUser {
   username: string
   role: 'superadmin' | 'clinic_admin' | 'clinic_staff' | 'agency_staff'
   clinic_id: number | null
+  password_version: number
 }
 
 // 세션 사용자 정보 가져오기

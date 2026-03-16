@@ -11,6 +11,7 @@ declare module 'next-auth' {
       username: string
       role: UserRole
       clinic_id: number | null
+      password_version: number
       name?: string | null
       email?: string | null
       image?: string | null
@@ -22,6 +23,7 @@ declare module 'next-auth' {
     role: UserRole
     clinic_id: number | null
     username: string
+    password_version: number
   }
 }
 
@@ -31,5 +33,6 @@ declare module 'next-auth/jwt' {
     role: UserRole
     clinic_id: number | null
     username: string
+    password_version: number
   }
 }

@@ -29,7 +29,11 @@ export default function LoginPage() {
     if (result?.ok) {
       router.replace('/')
     } else {
-      setError('아이디 또는 비밀번호가 올바르지 않습니다.')
+      if (result?.error === 'RATE_LIMITED') {
+        setError('로그인 시도 횟수를 초과했습니다. 15분 후 다시 시도해주세요.')
+      } else {
+        setError('아이디 또는 비밀번호가 올바르지 않습니다.')
+      }
       setLoading(false)
     }
   }

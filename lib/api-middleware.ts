@@ -38,13 +38,30 @@ const FORBIDDEN_SUPERADMIN = () => NextResponse.json({ error: 'Forbidden: supera
 const FORBIDDEN_CLINIC_ADMIN = () => NextResponse.json({ error: 'Forbidden: clinic_admin 이상 권한 필요' }, { status: 403 })
 
 /**
- * 세션에서 인증된 사용자 추출
- * @returns AuthUser 또는 null (미인증 시)
+ * 세션에서 인증된 사용자 추출 + password_version 검증
+ * @returns AuthUser 또는 null (미인증 또는 세션 무효화 시)
  */
 async function getAuthUser(): Promise<AuthUser | null> {
   const session = await getServerSession(authOptions)
   if (!session?.user) return null
-  return session.user as AuthUser
+
+  const user = session.user as AuthUser
+
+  // password_version 검증: 비밀번호 변경 시 기존 세션 무효화
+  if (user.id && user.password_version != null) {
+    const supabase = serverSupabase()
+    const { data: dbUser } = await supabase
+      .from('users')
+      .select('password_version')
+      .eq('id', parseInt(user.id, 10))
+      .single()
+
+    if (dbUser && dbUser.password_version !== user.password_version) {
+      return null // 세션 무효화
+    }
+  }
+
+  return user
 }
 
 /**
