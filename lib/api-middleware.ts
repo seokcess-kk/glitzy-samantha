@@ -48,7 +48,9 @@ async function getAuthUser(): Promise<AuthUser | null> {
   const user = session.user as AuthUser
 
   // password_version 검증: 비밀번호 변경 시 기존 세션 무효화
-  if (user.id && user.password_version != null) {
+  // 토큰에 password_version이 있는 경우에만 검증 (레거시 세션은 통과)
+  const tokenPV = user.password_version
+  if (user.id && typeof tokenPV === 'number') {
     const supabase = serverSupabase()
     const { data: dbUser } = await supabase
       .from('users')
@@ -56,7 +58,7 @@ async function getAuthUser(): Promise<AuthUser | null> {
       .eq('id', parseInt(user.id, 10))
       .single()
 
-    if (dbUser && dbUser.password_version !== user.password_version) {
+    if (dbUser && dbUser.password_version !== tokenPV) {
       return null // 세션 무효화
     }
   }

@@ -77,11 +77,34 @@ npm run analyze  # 번들 크기 분석 (브라우저에서 시각화)
 | `components/common/` | 프로젝트 공용 컴포넌트 |
 | `components/charts/` | Recharts 래퍼 (코드 스플리팅) |
 
+## 인증 보안
+
+### 로그인 흐름
+```
+사용자 → NextAuth Credentials → lib/auth.ts authorize()
+  ├─ Rate Limit 체크 (lib/rate-limit.ts: IP:username 키, 15분/5회)
+  ├─ DB 사용자 조회 + bcrypt 검증
+  ├─ 성공/실패 로그 기록 (login_logs 테이블, non-blocking)
+  └─ JWT 토큰 발급 (password_version 포함)
+```
+
+### 세션 무효화 (password_version)
+- `users.password_version` 컬럼 (기본값 1)
+- 비밀번호 변경 시 `password_version` 증가
+- `getAuthUser()`에서 토큰의 `password_version`과 DB 비교 → 불일치 시 401
+- 레거시 토큰(password_version 없음)은 검증 건너뜀
+
+### IP/UA 전달 패턴
+`app/api/auth/[...nextauth]/route.ts`에서 `headers()`로 IP/UA 추출 → `setRequestContext()`로 모듈 레벨 변수에 저장 → `authorize()`에서 사용
+
+### 미들웨어 (middleware.ts)
+NextAuth 미들웨어로 인증 필수 경로 제어. 인증 불필요 경로: `api/`, `login`, `lp`(랜딩페이지)
+
 ## 핵심 유틸리티 모듈
 
 ### API 미들웨어 (lib/api-middleware.ts)
 ```typescript
-import { withAuth, withClinicFilter, withClinicAdmin, withSuperAdmin, apiError, apiSuccess } from '@/lib/api-middleware'
+import { withAuth, withClinicFilter, withClinicAdmin, withSuperAdmin, applyClinicFilter, apiError, apiSuccess } from '@/lib/api-middleware'
 
 // 인증만 필요한 경우
 export const GET = withAuth(async (req, { user }) => {
@@ -89,9 +112,11 @@ export const GET = withAuth(async (req, { user }) => {
 })
 
 // clinic_id 필터링이 필요한 경우 (대부분의 API)
-export const GET = withClinicFilter(async (req, { user, clinicId }) => {
+export const GET = withClinicFilter(async (req, { user, clinicId, assignedClinicIds }) => {
   let query = supabase.from('table').select('*')
-  if (clinicId) query = query.eq('clinic_id', clinicId)
+  // applyClinicFilter: clinicId, assignedClinicIds 자동 처리 (agency_staff 포함)
+  const filtered = applyClinicFilter(query, { clinicId, assignedClinicIds })
+  if (!filtered) return apiSuccess([]) // agency_staff 배정 병원 0개
   return apiSuccess(data)
 })
 
@@ -251,6 +276,7 @@ const { success, logId, error } = await sendSmsWithLog(supabase, {
 | `user_menu_permissions` | agency_staff 메뉴 권한 |
 | `monitoring_keywords` | 순위 모니터링 키워드 (place/website/smartblock) |
 | `monitoring_rankings` | 일별 순위 데이터 (keyword_id + rank_date UNIQUE) |
+| `login_logs` | 로그인 시도 이력 (user_id, ip_address, success, failure_reason) |
 
 ### 멀티테넌트 필터링 (필수)
 ```typescript
@@ -311,6 +337,7 @@ curl -X POST http://localhost:3000/api/cron/sync-ads -H "Authorization: Bearer $
 3. **활동 추적**: bookings/payments/consultations/leads 변경 시 `created_by`/`updated_by` + `logActivity()` 호출
 4. **보안**: 사용자 입력은 `sanitizeString`, ID는 `parseId`로 검증
 5. **타입 안전**: TypeScript strict 모드 준수
+6. **인증 타입**: `types/next-auth.d.ts`에서 Session/JWT 타입 확장 시 `password_version` 필드 유지
 
 ### 페이지 역할 가드 패턴
 ```typescript

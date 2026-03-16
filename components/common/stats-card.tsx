@@ -1,6 +1,6 @@
 import { Card } from '@/components/ui/card'
 import { Skeleton } from '@/components/ui/skeleton'
-import { LucideIcon } from 'lucide-react'
+import { LucideIcon, ArrowUpRight, ArrowDownRight } from 'lucide-react'
 
 interface StatsCardProps {
   label: string
@@ -16,23 +16,25 @@ interface StatsCardProps {
 export function StatsCard({ label, value, loading, icon: Icon, trend }: StatsCardProps) {
   return (
     <Card variant="glass" className="p-4 md:p-5 animate-fade-in-up overflow-hidden">
-      <div className="flex items-start justify-between">
-        <p className="text-[10px] md:text-xs text-slate-400 uppercase tracking-widest mb-1 truncate">
-          {label}
-        </p>
-        {Icon && <Icon size={16} className="text-slate-500" />}
-      </div>
+      <p className="text-[11px] text-slate-400 font-medium mb-3 truncate">
+        {label}
+      </p>
       {loading ? (
-        <Skeleton className="h-7 md:h-9 mt-2 mb-2 md:mb-3" />
+        <Skeleton className="h-7 md:h-8 mb-2" />
       ) : (
-        <p className="text-lg md:text-3xl font-bold text-white mt-2 mb-2 md:mb-3 truncate">
+        <p className="text-xl md:text-2xl font-bold text-white mb-1 truncate tabular-nums">
           {value}
         </p>
       )}
       {trend && !loading && (
-        <p className={`text-xs ${trend.isPositive ? 'text-emerald-400' : 'text-red-400'}`}>
-          {trend.isPositive ? '+' : ''}{trend.value}%
-        </p>
+        <div className={`inline-flex items-center gap-1 text-xs font-medium mt-1 px-1.5 py-0.5 rounded ${
+          trend.isPositive
+            ? 'text-emerald-400 bg-emerald-500/10'
+            : 'text-rose-400 bg-rose-500/10'
+        }`}>
+          {trend.isPositive ? <ArrowUpRight size={12} /> : <ArrowDownRight size={12} />}
+          <span className="tabular-nums">{Math.abs(trend.value)}%</span>
+        </div>
       )}
     </Card>
   )

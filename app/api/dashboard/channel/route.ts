@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server'
 import { serverSupabase } from '@/lib/supabase'
 import { withClinicFilter, ClinicContext, applyClinicFilter } from '@/lib/api-middleware'
+import { normalizeChannel } from '@/lib/channel'
 
 /**
  * 채널별 KPI 분석 API
@@ -126,31 +127,3 @@ export const GET = withClinicFilter(async (req: Request, { clinicId, assignedCli
   return NextResponse.json(result)
 })
 
-/**
- * 채널명 정규화
- */
-function normalizeChannel(source: string | null | undefined): string {
-  if (!source) return 'Unknown'
-
-  const normalized = source.toLowerCase().trim()
-
-  const channelMap: Record<string, string> = {
-    'meta': 'Meta',
-    'facebook': 'Meta',
-    'fb': 'Meta',
-    'instagram': 'Instagram',
-    'ig': 'Instagram',
-    'google': 'Google',
-    'gdn': 'Google',
-    'youtube': 'YouTube',
-    'yt': 'YouTube',
-    'tiktok': 'TikTok',
-    'naver': 'Naver',
-    'kakao': 'Kakao',
-    'phone': 'Phone',
-    'direct': 'Direct',
-    'organic': 'Organic',
-  }
-
-  return channelMap[normalized] || source
-}

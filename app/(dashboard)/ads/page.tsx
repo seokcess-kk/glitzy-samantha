@@ -8,6 +8,7 @@ import { toast } from 'sonner'
 import { useClinic } from '@/components/ClinicContext'
 import { Card } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
+import AttributionView from '@/components/attribution/AttributionView'
 import { Badge } from '@/components/ui/badge'
 import { Skeleton } from '@/components/ui/skeleton'
 import { Input } from '@/components/ui/input'
@@ -45,6 +46,12 @@ export default function AdsPage() {
   }, [user, router])
 
   const { selectedClinicId } = useClinic()
+  const [activeTab, setActiveTab] = useState(() => {
+    if (typeof window !== 'undefined') {
+      return new URLSearchParams(window.location.search).get('tab') === 'attribution' ? 'attribution' : 'ads'
+    }
+    return 'ads'
+  })
   const [stats, setStats] = useState<any[]>([])
   const [channelData, setChannelData] = useState<any[]>([])
   const [kpi, setKpi] = useState<any>(null)
@@ -53,6 +60,18 @@ export default function AdsPage() {
   const [days, setDays] = useState('30')
   const [platformFilter, setPlatformFilter] = useState('all')
   const [searchQuery, setSearchQuery] = useState('')
+
+  // 탭 변경 시 URL 업데이트
+  const handleTabChange = (tab: string) => {
+    setActiveTab(tab)
+    const url = new URL(window.location.href)
+    if (tab === 'attribution') {
+      url.searchParams.set('tab', 'attribution')
+    } else {
+      url.searchParams.delete('tab')
+    }
+    window.history.replaceState({}, '', url.toString())
+  }
 
   const fetchData = useCallback(async () => {
     setLoading(true)
@@ -73,7 +92,7 @@ export default function AdsPage() {
     }
   }, [days, selectedClinicId])
 
-  useEffect(() => { fetchData() }, [fetchData])
+  useEffect(() => { if (activeTab === 'ads') fetchData() }, [fetchData, activeTab])
 
   const handleSync = async () => {
     setSyncing(true)
@@ -102,9 +121,9 @@ export default function AdsPage() {
   return (
     <>
       <PageHeader
-        title="광고 성과 분석"
-        description="Meta / Google / TikTok 광고 지출 및 성과 데이터."
-        actions={
+        title="광고 성과"
+        description={activeTab === 'ads' ? 'Meta / Google / TikTok 광고 지출 및 성과 데이터.' : '채널/캠페인별 실제 결제 매출 귀속 분석'}
+        actions={activeTab === 'ads' ? (
           <>
             <Select value={days} onValueChange={setDays}>
               <SelectTrigger className="w-[130px] glass-card border-0 text-white">
@@ -123,8 +142,37 @@ export default function AdsPage() {
               <Play size={14} /> {syncing ? '수집 중...' : '지금 데이터 수집'}
             </Button>
           </>
-        }
+        ) : undefined}
       />
+
+      {/* 탭 */}
+      <div className="flex gap-1 mb-6 border-b border-white/5 pb-px">
+        {[
+          { key: 'ads', label: '광고 성과' },
+          { key: 'attribution', label: '매출 귀속' },
+        ].map(tab => (
+          <button
+            key={tab.key}
+            onClick={() => handleTabChange(tab.key)}
+            className={`px-4 py-2 text-sm font-medium transition-colors relative ${
+              activeTab === tab.key
+                ? 'text-white'
+                : 'text-slate-500 hover:text-slate-300'
+            }`}
+          >
+            {tab.label}
+            {activeTab === tab.key && (
+              <span className="absolute bottom-0 left-0 right-0 h-0.5 bg-brand-500 rounded-full" />
+            )}
+          </button>
+        ))}
+      </div>
+
+      {/* 매출 귀속 탭 */}
+      {activeTab === 'attribution' && <AttributionView />}
+
+      {/* 광고 성과 탭 */}
+      {activeTab === 'ads' && <>
 
       {/* 매체 필터 버튼 */}
       <div className="flex gap-2 mb-6 flex-wrap">
@@ -279,6 +327,7 @@ export default function AdsPage() {
           </div>
         )}
       </Card>
+      </>}
     </>
   )
 }
