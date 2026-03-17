@@ -1,5 +1,5 @@
 'use client'
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import {
   AreaChart, Area, BarChart, Bar,
   XAxis, YAxis, CartesianGrid, Tooltip,
@@ -27,6 +27,7 @@ import {
   TableRow,
 } from '@/components/ui/table'
 import { PageHeader, StatsCard } from '@/components/common'
+import { useClinic } from '@/components/ClinicContext'
 
 // 팔레트: brand 단색 기반 + 의미 있는 2색 (긍정/부정)
 const BRAND = '#6366f1'
@@ -73,6 +74,7 @@ export default function DashboardPage() {
   const { data: session } = useSession()
   const router = useRouter()
   const sessionUser = session?.user as any
+  const { selectedClinicId } = useClinic()
 
   useEffect(() => {
     if (sessionUser?.role === 'clinic_staff') router.replace('/patients')
@@ -89,19 +91,20 @@ export default function DashboardPage() {
   const [lastUpdated, setLastUpdated] = useState<Date | null>(null)
   const [days, setDays] = useState('30')
 
-  const fetchAll = async (selectedDays?: string) => {
+  const fetchAll = useCallback(async (selectedDays?: string) => {
     const daysValue = selectedDays || days
     setLoading(true)
     try {
       const startDate = new Date(Date.now() - Number(daysValue) * 24 * 60 * 60 * 1000).toISOString()
+      const clinicParam = selectedClinicId ? `&clinic_id=${selectedClinicId}` : ''
       const [kpiRes, trendRes, channelRes, contentRes, leadsRes, funnelRes, campaignRes] = await Promise.allSettled([
-        fetch(`/api/dashboard/kpi?startDate=${startDate}&compare=true`).then(r => r.json()),
-        fetch(`/api/dashboard/trend?startDate=${startDate}`).then(r => r.json()),
-        fetch(`/api/dashboard/channel?startDate=${startDate}`).then(r => r.json()),
-        fetch(`/api/content/analytics?groupBy=platform&startDate=${startDate}`).then(r => r.json()),
-        fetch(`/api/leads?startDate=${startDate}`).then(r => r.json()),
-        fetch(`/api/dashboard/funnel?startDate=${startDate}`).then(r => r.json()),
-        fetch(`/api/dashboard/campaign?startDate=${startDate}`).then(r => r.json()),
+        fetch(`/api/dashboard/kpi?startDate=${startDate}&compare=true${clinicParam}`).then(r => r.json()),
+        fetch(`/api/dashboard/trend?startDate=${startDate}${clinicParam}`).then(r => r.json()),
+        fetch(`/api/dashboard/channel?startDate=${startDate}${clinicParam}`).then(r => r.json()),
+        fetch(`/api/content/analytics?groupBy=platform&startDate=${startDate}${clinicParam}`).then(r => r.json()),
+        fetch(`/api/leads?startDate=${startDate}${clinicParam}`).then(r => r.json()),
+        fetch(`/api/dashboard/funnel?startDate=${startDate}${clinicParam}`).then(r => r.json()),
+        fetch(`/api/dashboard/campaign?startDate=${startDate}${clinicParam}`).then(r => r.json()),
       ])
       if (kpiRes.status === 'fulfilled') setKpi(kpiRes.value)
       if (trendRes.status === 'fulfilled') {
@@ -119,14 +122,14 @@ export default function DashboardPage() {
     } finally {
       setLoading(false)
     }
-  }
+  }, [days, selectedClinicId])
 
   const handleDaysChange = (value: string) => {
     setDays(value)
     fetchAll(value)
   }
 
-  useEffect(() => { fetchAll() }, [])
+  useEffect(() => { fetchAll() }, [fetchAll])
 
   const kpiCards = kpi ? [
     {

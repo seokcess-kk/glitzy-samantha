@@ -360,4 +360,13 @@ npm run build
 
 # ESLint 검사
 npm run lint
+
+# E2E 테스트 (Playwright)
+npm run test:e2e           # 전체 실행
+npm run test:e2e:headed    # 브라우저 표시
+npm run test:e2e:ui        # Playwright UI 모드
+npm run test:e2e:report    # 리포트 보기
 ```
+
+### DB 마이그레이션
+SQL 마이그레이션 파일은 `supabase/migrations/`에 위치. 파일명은 `YYYYMMDD_설명.sql` 형식.

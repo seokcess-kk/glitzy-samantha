@@ -1,5 +1,5 @@
 'use client'
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import { MessageCircle, Clock, CheckCircle, RefreshCw } from 'lucide-react'
 import { Card } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
@@ -15,21 +15,24 @@ import {
 } from '@/components/ui/table'
 import { PageHeader, StatsCard, ChannelBadge } from '@/components/common'
 import { formatDateTime } from '@/lib/date'
+import { useClinic } from '@/components/ClinicContext'
 
 
 export default function ChatbotPage() {
+  const { selectedClinicId } = useClinic()
   const [leads, setLeads] = useState<any[]>([])
   const [loading, setLoading] = useState(true)
 
-  const fetchLeads = () => {
+  const fetchLeads = useCallback(() => {
     setLoading(true)
-    fetch('/api/leads')
+    const qs = selectedClinicId ? `?clinic_id=${selectedClinicId}` : ''
+    fetch(`/api/leads${qs}`)
       .then(r => r.json())
       .then(d => setLeads(Array.isArray(d) ? d : []))
       .catch(() => {})
       .finally(() => setLoading(false))
-  }
-  useEffect(() => { fetchLeads() }, [])
+  }, [selectedClinicId])
+  useEffect(() => { fetchLeads() }, [fetchLeads])
 
   const sent = leads.filter(l => l.chatbot_sent)
   const pending = leads.filter(l => !l.chatbot_sent)
