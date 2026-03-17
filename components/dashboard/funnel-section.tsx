@@ -36,20 +36,20 @@ const STAGE_LINKS: Record<string, string> = {
   Payment: '/patients',
 }
 
-/** 직전 단계 대비 전환율 기준 색상 */
+const NODE_SIZE = 40
+
+/** 직전 단계 대비 전환율 기준 커넥터 색상 */
 function getSegmentColor(prevCount: number, currentCount: number): string {
   if (prevCount === 0) return '#6366f1'
   const rate = (currentCount / prevCount) * 100
-  if (rate >= 70) return '#22c55e' // green-500
-  if (rate >= 50) return '#eab308' // yellow-500
-  return '#ef4444' // red-500
+  if (rate >= 70) return '#22c55e'
+  if (rate >= 50) return '#eab308'
+  return '#ef4444'
 }
 
-/** 노드 크기 계산 (최대 인원 기준 비례, 최소 30px ~ 최대 56px) */
-function getNodeSize(count: number, maxCount: number): number {
-  if (maxCount === 0) return 30
-  const ratio = count / maxCount
-  return Math.round(30 + ratio * 26)
+/** 노드 배경 opacity — 0명이면 연하게 */
+function getNodeOpacity(count: number): number {
+  return count === 0 ? 0.4 : 1
 }
 
 export function FunnelSection({ data, loading }: FunnelSectionProps) {
@@ -67,7 +67,7 @@ export function FunnelSection({ data, loading }: FunnelSectionProps) {
       </div>
 
       {loading ? (
-        <Skeleton className="h-[140px] rounded-lg" />
+        <Skeleton className="h-[120px] rounded-lg" />
       ) : stages && stages.length > 0 ? (
         <FunnelProgress stages={stages} totalRate={totalRate} />
       ) : (
@@ -88,7 +88,6 @@ function FunnelProgress({
   stages: FunnelStage[]
   totalRate?: number
 }) {
-  const maxCount = stages[0]?.count || 1
   const [tooltip, setTooltip] = useState<{
     index: number
     x: number
@@ -96,80 +95,74 @@ function FunnelProgress({
   } | null>(null)
   const containerRef = useRef<HTMLDivElement>(null)
 
-
   return (
     <div ref={containerRef}>
-      {/* 데스크탑: 수평 */}
+      {/* 데스크탑: 수평 — 노드를 균등 배치하고 사이에 커넥터 */}
       <div className="hidden md:block relative">
-        <div className="flex items-center justify-between">
-          {stages.map((stage, i) => {
-            const size = getNodeSize(stage.count, maxCount)
-            const segColor =
-              i > 0 ? getSegmentColor(stages[i - 1].count, stage.count) : '#6366f1'
-            const prevStageRate =
-              i > 0 && stages[i - 1].count > 0
-                ? ((stage.count / stages[i - 1].count) * 100).toFixed(1)
-                : null
-
-            return (
-              <div key={stage.stage} className="flex items-center flex-1 last:flex-none">
-                {/* 커넥터 바 (첫 번째 제외) */}
-                {i > 0 && (
-                  <div className="flex-1 flex items-center relative mx-1">
-                    <div
-                      className="w-full h-[3px] rounded-full"
-                      style={{ background: segColor }}
-                    />
-                    {/* 구간 전환율 라벨 */}
-                    {prevStageRate && (
-                      <span
-                        className="absolute -top-4 left-1/2 -translate-x-1/2 text-[10px] font-medium tabular-nums whitespace-nowrap"
-                        style={{ color: segColor }}
-                      >
-                        {prevStageRate}%
-                      </span>
-                    )}
-                  </div>
-                )}
-
-                {/* 노드 */}
-                <div className="relative group">
-                  <Link href={STAGE_LINKS[stage.stage] || '#'}>
-                    <div
-                      className="rounded-full flex items-center justify-center font-bold text-white cursor-pointer
-                        transition-all duration-200 hover:scale-110 hover:ring-2 hover:ring-white/20 hover:shadow-lg hover:shadow-brand-500/20"
-                      style={{
-                        width: size,
-                        height: size,
-                        background: `linear-gradient(135deg, #6366f1, #818cf8)`,
-                        fontSize: size <= 32 ? '11px' : '13px',
-                      }}
-                      onMouseEnter={(e) => {
-                        const rect = e.currentTarget.getBoundingClientRect()
-                        const containerRect = containerRef.current?.getBoundingClientRect()
-                        if (containerRect) {
-                          setTooltip({
-                            index: i,
-                            x: rect.left - containerRect.left + rect.width / 2,
-                            y: rect.bottom - containerRect.top + 8,
-                          })
-                        }
-                      }}
-                      onMouseLeave={() => setTooltip(null)}
+        {/* 커넥터 라인 (노드 뒤에 깔리는 레이어) */}
+        <div className="absolute inset-0 flex items-start" style={{ top: NODE_SIZE / 2 }}>
+          <div className="w-full flex items-center px-5">
+            {stages.slice(1).map((stage, i) => {
+              const segColor = getSegmentColor(stages[i].count, stage.count)
+              const prevStageRate =
+                stages[i].count > 0
+                  ? ((stage.count / stages[i].count) * 100).toFixed(1)
+                  : null
+              return (
+                <div key={`seg-${i}`} className="flex-1 relative">
+                  <div
+                    className="w-full h-[3px] rounded-full"
+                    style={{ background: segColor }}
+                  />
+                  {prevStageRate && (
+                    <span
+                      className="absolute -top-4 left-1/2 -translate-x-1/2 text-[10px] font-medium tabular-nums whitespace-nowrap"
+                      style={{ color: segColor }}
                     >
-                      {stage.count}
-                    </div>
-                  </Link>
-
-                  {/* 라벨 */}
-                  <div className="text-center mt-2">
-                    <p className="text-xs font-medium text-slate-300">{stage.label}</p>
-                    <p className="text-[11px] text-slate-500 tabular-nums">{stage.rate}%</p>
-                  </div>
+                      {prevStageRate}%
+                    </span>
+                  )}
                 </div>
-              </div>
-            )
-          })}
+              )
+            })}
+          </div>
+        </div>
+
+        {/* 노드 행 (균등 배치) */}
+        <div className="relative flex justify-between">
+          {stages.map((stage, i) => (
+            <div key={stage.stage} className="flex flex-col items-center" style={{ minWidth: NODE_SIZE + 16 }}>
+              <Link href={STAGE_LINKS[stage.stage] || '#'}>
+                <div
+                  className="rounded-full flex items-center justify-center font-bold text-white cursor-pointer
+                    transition-all duration-200 hover:scale-110 hover:ring-2 hover:ring-white/20 hover:shadow-lg hover:shadow-brand-500/20"
+                  style={{
+                    width: NODE_SIZE,
+                    height: NODE_SIZE,
+                    background: `linear-gradient(135deg, #6366f1, #818cf8)`,
+                    opacity: getNodeOpacity(stage.count),
+                    fontSize: '13px',
+                  }}
+                  onMouseEnter={(e) => {
+                    const rect = e.currentTarget.getBoundingClientRect()
+                    const containerRect = containerRef.current?.getBoundingClientRect()
+                    if (containerRect) {
+                      setTooltip({
+                        index: i,
+                        x: rect.left - containerRect.left + rect.width / 2,
+                        y: rect.bottom - containerRect.top + 8,
+                      })
+                    }
+                  }}
+                  onMouseLeave={() => setTooltip(null)}
+                >
+                  {stage.count}
+                </div>
+              </Link>
+              <p className="text-xs font-medium text-slate-300 mt-2">{stage.label}</p>
+              <p className="text-[11px] text-slate-500 tabular-nums">{stage.rate}%</p>
+            </div>
+          ))}
         </div>
 
         {/* 툴팁 */}
@@ -182,6 +175,7 @@ function FunnelProgress({
               left: tooltip.x,
               top: tooltip.y,
               transform: 'translateX(-50%)',
+              zIndex: 50,
             }}
           />
         )}
@@ -190,7 +184,6 @@ function FunnelProgress({
       {/* 모바일: 수직 */}
       <div className="md:hidden space-y-0">
         {stages.map((stage, i) => {
-          const size = getNodeSize(stage.count, maxCount)
           const segColor =
             i > 0 ? getSegmentColor(stages[i - 1].count, stage.count) : '#6366f1'
           const prevStageRate =
@@ -200,14 +193,14 @@ function FunnelProgress({
 
           return (
             <div key={stage.stage}>
-              {/* 커넥터 (첫 번째 제외) */}
+              {/* 커넥터 */}
               {i > 0 && (
                 <div
                   className="flex items-center gap-2 py-1"
-                  style={{ marginLeft: size / 2 - 1.5 }}
+                  style={{ marginLeft: NODE_SIZE / 2 - 1.5 }}
                 >
                   <div
-                    className="w-[3px] h-6 rounded-full"
+                    className="w-[3px] h-5 rounded-full"
                     style={{ background: segColor }}
                   />
                   {prevStageRate && (
@@ -229,10 +222,11 @@ function FunnelProgress({
                 <div
                   className="rounded-full flex items-center justify-center font-bold text-white shrink-0"
                   style={{
-                    width: size,
-                    height: size,
+                    width: NODE_SIZE,
+                    height: NODE_SIZE,
                     background: `linear-gradient(135deg, #6366f1, #818cf8)`,
-                    fontSize: size <= 32 ? '11px' : '13px',
+                    opacity: getNodeOpacity(stage.count),
+                    fontSize: '13px',
                   }}
                 >
                   {stage.count}
@@ -289,7 +283,7 @@ function FunnelTooltip({
 
   return (
     <div
-      className="z-50 bg-slate-800 border border-white/10 rounded-lg px-3 py-2 shadow-xl pointer-events-none"
+      className="bg-slate-800 border border-white/10 rounded-lg px-3 py-2 shadow-xl pointer-events-none"
       style={style}
     >
       <p className="text-xs font-semibold text-white mb-1">{stage.label}</p>
