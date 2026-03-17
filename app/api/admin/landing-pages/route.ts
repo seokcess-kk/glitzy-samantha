@@ -77,9 +77,10 @@ export const POST = withSuperAdmin(async (req: Request) => {
   const supabase = serverSupabase()
 
   // 파일 존재 확인 (Storage 또는 로컬)
-  const { data: storageFile } = await supabase.storage.from('landing-pages').download(safeFileName)
+  const { data: storageFiles } = await supabase.storage.from('landing-pages').list('', { search: safeFileName })
+  const inStorage = storageFiles?.some(f => f.name === safeFileName)
   const localPath = path.join(process.cwd(), 'public', 'landing', safeFileName)
-  if (!storageFile && !fs.existsSync(localPath)) {
+  if (!inStorage && !fs.existsSync(localPath)) {
     return apiError(`파일을 찾을 수 없습니다: ${safeFileName}`, 400)
   }
 
