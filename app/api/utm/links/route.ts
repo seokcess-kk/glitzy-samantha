@@ -60,7 +60,7 @@ export const POST = withClinicFilter(async (req: Request, { user, clinicId }: Cl
 
   const insertData = {
     clinic_id: targetClinicId,
-    original_url: sanitizeString(body.original_url, 2000),
+    original_url: String(body.original_url).slice(0, 2000).replace(/[<>'"]/g, ''),
     utm_source: sanitizeUtmParam(body.utm_source, 50),
     utm_medium: sanitizeUtmParam(body.utm_medium, 50),
     utm_campaign: sanitizeUtmParam(body.utm_campaign, 100),
