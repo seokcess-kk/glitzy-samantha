@@ -130,6 +130,29 @@ export async function GET(req: NextRequest) {
 })();
 </script>`
 
+  // GTM 이벤트 트래킹: fetch를 래핑하여 리드 제출 성공 시 dataLayer.push 자동 실행
+  const gtmEventScript = `
+<script>
+(function(){
+  window.dataLayer = window.dataLayer || [];
+  var _origFetch = window.fetch;
+  window.fetch = function(url, opts) {
+    return _origFetch.apply(this, arguments).then(function(res) {
+      if (typeof url === 'string' && url.indexOf('/api/webhook/lead') !== -1 && opts && opts.method === 'POST' && res.ok) {
+        var lpData = window.__LP_DATA__ || {};
+        window.dataLayer.push({
+          event: 'form_submit',
+          landing_page_id: lpData.landingPageId || null,
+          clinic_id: lpData.clinicId || null,
+          clinic_name: lpData.clinicName || ''
+        });
+      }
+      return res;
+    });
+  };
+})();
+</script>`
+
   // GTM 태그 주입 (랜딩페이지별 또는 기본 GTM ID)
   const DEFAULT_GTM_ID = 'GTM-5B2QSHGG'
   const gtmId = landingPage.gtm_id || DEFAULT_GTM_ID
@@ -155,7 +178,7 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
   htmlContent = htmlContent.replace(/<!-- Google Tag Manager \(auto-injected\) -->[\s\S]*?<!-- End Google Tag Manager -->/g, '')
   htmlContent = htmlContent.replace(/<!-- Google Tag Manager \(noscript, auto-injected\) -->[\s\S]*?<!-- End Google Tag Manager \(noscript\) -->/g, '')
 
-  htmlContent = htmlContent.replace('</head>', `${gtmHeadScript}${dataScript}${leadQueueScript}</head>`)
+  htmlContent = htmlContent.replace('</head>', `${gtmHeadScript}${dataScript}${gtmEventScript}${leadQueueScript}</head>`)
   htmlContent = htmlContent.replace(/<body([^>]*)>/, `<body$1>${gtmBodyScript}`)
 
   return new NextResponse(htmlContent, {
