@@ -82,13 +82,13 @@ function DualChart({ data, height, fontSize, dotRadius, gradientId, showLegend }
 
 export function SpendLeadTrend({ data, loading }: SpendLeadTrendProps) {
   return (
-    <Card variant="glass" className="p-5">
+    <Card variant="glass" className="p-5 w-full flex flex-col">
       <div className="flex items-center justify-between mb-4">
         <h2 className="text-sm font-semibold text-white">광고비 · 리드 추이</h2>
         <span className="text-xs text-slate-500">최근 8주</span>
       </div>
       {loading ? (
-        <Skeleton className="h-[200px] md:h-[240px] rounded-lg" />
+        <Skeleton className="h-[200px] md:h-[240px] rounded-lg flex-1" />
       ) : data && data.length > 0 ? (
         <>
           <div className="hidden md:block">

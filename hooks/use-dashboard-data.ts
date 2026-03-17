@@ -17,21 +17,20 @@ function buildQs(params: Record<string, string | number | null | undefined>): st
 }
 
 // ─── KPI + 오늘 요약 ───
-export function useKpiData(clinicId: number | null, days: string) {
+export function useKpiData(clinicId: number | null, startDate: string, endDate: string) {
   const [state, setState] = useState<FetchState<any>>({ data: null, loading: true })
 
   const fetch_ = useCallback(async () => {
     setState(prev => ({ ...prev, loading: true }))
     try {
-      const startDate = new Date(Date.now() - Number(days) * 24 * 60 * 60 * 1000).toISOString()
-      const qs = buildQs({ startDate, compare: 'true', clinic_id: clinicId })
+      const qs = buildQs({ startDate, endDate, compare: 'true', clinic_id: clinicId })
       const res = await fetch(`/api/dashboard/kpi${qs}`)
       const json = await res.json()
       setState({ data: json, loading: false })
     } catch {
       setState(prev => ({ ...prev, loading: false }))
     }
-  }, [clinicId, days])
+  }, [clinicId, startDate, endDate])
 
   useEffect(() => { fetch_() }, [fetch_])
 
@@ -39,7 +38,7 @@ export function useKpiData(clinicId: number | null, days: string) {
 }
 
 // ─── 추이 + 콘텐츠 ───
-export function useTrendData(clinicId: number | null, days: string) {
+export function useTrendData(clinicId: number | null, startDate: string, endDate: string) {
   const [trend, setTrend] = useState<any[]>([])
   const [contentPlatform, setContentPlatform] = useState<any[]>([])
   const [loading, setLoading] = useState(true)
@@ -47,9 +46,8 @@ export function useTrendData(clinicId: number | null, days: string) {
   const fetch_ = useCallback(async () => {
     setLoading(true)
     try {
-      const startDate = new Date(Date.now() - Number(days) * 24 * 60 * 60 * 1000).toISOString()
-      const qs = buildQs({ startDate, clinic_id: clinicId })
-      const contentQs = buildQs({ groupBy: 'platform', startDate, clinic_id: clinicId })
+      const qs = buildQs({ startDate, endDate, clinic_id: clinicId })
+      const contentQs = buildQs({ groupBy: 'platform', startDate, endDate, clinic_id: clinicId })
 
       const [trendRes, contentRes] = await Promise.allSettled([
         fetch(`/api/dashboard/trend${qs}`).then(r => r.json()),
@@ -70,7 +68,7 @@ export function useTrendData(clinicId: number | null, days: string) {
     } finally {
       setLoading(false)
     }
-  }, [clinicId, days])
+  }, [clinicId, startDate, endDate])
 
   useEffect(() => { fetch_() }, [fetch_])
 
@@ -78,7 +76,7 @@ export function useTrendData(clinicId: number | null, days: string) {
 }
 
 // ─── 퍼널 + 채널 + 시술별 매출 ───
-export function useFunnelChannelData(clinicId: number | null, days: string) {
+export function useFunnelChannelData(clinicId: number | null, startDate: string, endDate: string) {
   const [funnel, setFunnel] = useState<any>(null)
   const [channel, setChannel] = useState<any[]>([])
   const [treatmentData, setTreatmentData] = useState<{ name: string; amount: number }[]>([])
@@ -87,9 +85,8 @@ export function useFunnelChannelData(clinicId: number | null, days: string) {
   const fetch_ = useCallback(async () => {
     setLoading(true)
     try {
-      const startDate = new Date(Date.now() - Number(days) * 24 * 60 * 60 * 1000).toISOString()
-      const qs = buildQs({ startDate, clinic_id: clinicId })
-      const leadsQs = buildQs({ startDate, clinic_id: clinicId, limit: '200' })
+      const qs = buildQs({ startDate, endDate, clinic_id: clinicId })
+      const leadsQs = buildQs({ startDate, endDate, clinic_id: clinicId, limit: '200' })
 
       const [funnelRes, channelRes, leadsRes] = await Promise.allSettled([
         fetch(`/api/dashboard/funnel${qs}`).then(r => r.json()),
@@ -121,7 +118,7 @@ export function useFunnelChannelData(clinicId: number | null, days: string) {
     } finally {
       setLoading(false)
     }
-  }, [clinicId, days])
+  }, [clinicId, startDate, endDate])
 
   useEffect(() => { fetch_() }, [fetch_])
 

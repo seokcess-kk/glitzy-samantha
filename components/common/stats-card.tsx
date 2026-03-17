@@ -24,7 +24,7 @@ export function StatsCard({ label, value, loading, icon: Icon, trend, onClick, s
   return (
     <Card
       variant="glass"
-      className={`${isLg ? 'p-5 md:p-6' : 'p-4 md:p-5'} animate-fade-in-up overflow-hidden ${
+      className={`${isLg ? 'p-5 md:p-6' : 'p-4 md:p-5'} h-full animate-fade-in-up overflow-hidden ${
         clickable ? 'cursor-pointer hover:border-white/20 hover:bg-white/[0.03] transition-all' : ''
       }`}
       onClick={onClick}

@@ -38,7 +38,7 @@ export function TreatmentPie({ data, loading }: TreatmentPieProps) {
   const total = filtered.reduce((sum, d) => sum + d.amount, 0)
 
   return (
-    <Card variant="glass" className="p-5">
+    <Card variant="glass" className="p-5 w-full flex flex-col">
       <h2 className="text-sm font-semibold text-white mb-4">시술별 매출 비중</h2>
 
       {loading ? (
