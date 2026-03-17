@@ -241,18 +241,6 @@ export default function Sidebar({ onClose }: { onClose?: () => void }) {
             </div>
             <div className="space-y-1">
               <Link
-                href="/utm"
-                onClick={onClose}
-                className={`flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-all ${
-                  pathname.startsWith('/utm')
-                    ? 'bg-brand-600/20 text-brand-400'
-                    : 'text-slate-400 hover:text-white hover:bg-white/[0.05]'
-                }`}
-              >
-                <Link2 size={17} />
-                UTM 생성
-              </Link>
-              <Link
                 href="/admin/ad-creatives"
                 onClick={onClose}
                 className={`flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-all ${
@@ -299,6 +287,18 @@ export default function Sidebar({ onClose }: { onClose?: () => void }) {
               >
                 <UserCog size={17} />
                 계정 관리
+              </Link>
+              <Link
+                href="/utm"
+                onClick={onClose}
+                className={`flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-all ${
+                  pathname.startsWith('/utm')
+                    ? 'bg-brand-600/20 text-brand-400'
+                    : 'text-slate-400 hover:text-white hover:bg-white/[0.05]'
+                }`}
+              >
+                <Link2 size={17} />
+                UTM 생성
               </Link>
               <Link
                 href="/admin/login-logs"
