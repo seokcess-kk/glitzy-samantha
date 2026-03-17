@@ -338,6 +338,40 @@ curl -X POST http://localhost:3000/api/cron/sync-ads -H "Authorization: Bearer $
 4. **보안**: 사용자 입력은 `sanitizeString`, ID는 `parseId`로 검증
 5. **타입 안전**: TypeScript strict 모드 준수
 6. **인증 타입**: `types/next-auth.d.ts`에서 Session/JWT 타입 확장 시 `password_version` 필드 유지
+7. **레이아웃 밸런스**: 아래 "UI 레이아웃 밸런스 규칙" 항목 준수
+
+### UI 레이아웃 밸런스 규칙
+같은 그리드 행에 배치되는 카드/차트는 반드시 시각적으로 균형을 맞춰야 한다.
+
+**같은 행 카드 높이 통일**
+- 같은 그리드 행의 카드들은 동일한 콘텐츠 높이를 사용
+- 차트가 포함된 카드: `ResponsiveContainer height`를 양쪽 카드가 같은 값으로 설정
+- 데이터 건수가 다를 경우: `Math.max(좌측.length, 우측.length)` 기준으로 높이 계산
+- `items-stretch`로 억지로 늘리지 않음 (하단 빈 여백 발생)
+
+**리스트/범례 제한**
+- 차트 범례, 항목 목록 등은 **최대 5~6개**로 제한
+- 초과 항목은 "기타"로 합산하거나 "더보기"로 접기
+- 범례가 차트보다 길어지면 안 됨
+
+**차트 높이 가이드**
+```
+카드 내 차트: 160px ~ 360px (데이터 건수에 따라 동적)
+수평 바차트: items * 44px + 20px (항목당 44px)
+영역/라인 차트: 모바일 180px, 데스크탑 240px
+파이/도넛 차트: 160px (고정)
+```
+
+**간격 패턴**
+```
+섹션 간: mb-6 md:mb-8
+카드 그리드 gap: gap-2 md:gap-3 (KPI), gap-3 (차트)
+카드 내부 패딩: p-4 md:p-5 (기본), p-5 md:p-6 (강조)
+```
+
+**StatsCard 높이 정렬**
+- `h-full` 클래스로 같은 행의 카드 높이 통일
+- subtitle/trend 유무에 관계없이 높이가 맞아야 함
 
 ### 페이지 역할 가드 패턴
 ```typescript
