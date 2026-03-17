@@ -3,10 +3,9 @@
 import { Card } from '@/components/ui/card'
 import { Skeleton } from '@/components/ui/skeleton'
 import { EmptyState } from '@/components/common'
-import { Users, ArrowRight, Filter } from 'lucide-react'
+import { Users, Filter } from 'lucide-react'
 import Link from 'next/link'
-
-const FUNNEL_SHADES = ['#6366f1', '#818cf8', '#a5b4fc', '#c7d2fe', '#e0e7ff']
+import { useState, useRef } from 'react'
 
 interface FunnelStage {
   stage: string
@@ -28,13 +27,38 @@ interface FunnelSectionProps {
   loading?: boolean
 }
 
+/** 단계별 링크 매핑 */
+const STAGE_LINKS: Record<string, string> = {
+  Lead: '/leads',
+  Booking: '/bookings',
+  Visit: '/bookings',
+  Consultation: '/patients',
+  Payment: '/patients',
+}
+
+/** 직전 단계 대비 전환율 기준 색상 */
+function getSegmentColor(prevCount: number, currentCount: number): string {
+  if (prevCount === 0) return '#6366f1'
+  const rate = (currentCount / prevCount) * 100
+  if (rate >= 70) return '#22c55e' // green-500
+  if (rate >= 50) return '#eab308' // yellow-500
+  return '#ef4444' // red-500
+}
+
+/** 노드 크기 계산 (최대 인원 기준 비례, 최소 30px ~ 최대 56px) */
+function getNodeSize(count: number, maxCount: number): number {
+  if (maxCount === 0) return 30
+  const ratio = count / maxCount
+  return Math.round(30 + ratio * 26)
+}
+
 export function FunnelSection({ data, loading }: FunnelSectionProps) {
   const stages = data?.funnel?.stages
   const totalRate = data?.funnel?.totalConversionRate
 
   return (
     <Card variant="glass" className="p-5">
-      <div className="flex items-center justify-between mb-4">
+      <div className="flex items-center justify-between mb-5">
         <div className="flex items-center gap-2">
           <Users size={16} className="text-brand-400" />
           <h2 className="text-sm font-semibold text-white">전환 퍼널</h2>
@@ -43,54 +67,9 @@ export function FunnelSection({ data, loading }: FunnelSectionProps) {
       </div>
 
       {loading ? (
-        <Skeleton className="h-[100px] rounded-lg" />
+        <Skeleton className="h-[140px] rounded-lg" />
       ) : stages && stages.length > 0 ? (
-        <>
-          <div className="flex items-center justify-between gap-2 overflow-x-auto pb-2">
-            {stages.map((stage, i) => (
-              <div key={stage.stage} className="flex items-center gap-2 min-w-0">
-                <div className="text-center min-w-[80px]">
-                  <div
-                    className="mx-auto rounded-lg flex items-center justify-center font-bold text-white mb-2"
-                    style={{
-                      width: Math.max(48, 72 - i * 5),
-                      height: Math.max(48, 72 - i * 5),
-                      background: FUNNEL_SHADES[i % FUNNEL_SHADES.length],
-                    }}
-                  >
-                    {stage.count}
-                  </div>
-                  <p className="text-xs font-medium text-slate-300">{stage.label}</p>
-                  <p className="text-[11px] text-slate-500 tabular-nums">{stage.rate}%</p>
-                </div>
-                {i < stages.length - 1 && (
-                  <div className="flex flex-col items-center text-slate-600 shrink-0">
-                    <ArrowRight size={14} />
-                    <span className="text-[10px] text-slate-500 mt-0.5 tabular-nums">
-                      {stage.dropoff > 0 ? `-${stage.dropoff}%` : ''}
-                    </span>
-                  </div>
-                )}
-              </div>
-            ))}
-          </div>
-
-          <div className="mt-4 pt-3 border-t border-white/5">
-            {totalRate !== undefined && totalRate > 0 && (
-              <div className="flex items-center justify-between mb-3">
-                <span className="text-xs text-slate-500">전체 전환율 (리드 → 결제)</span>
-                <span className="text-lg font-bold text-emerald-400 tabular-nums">{totalRate}%</span>
-              </div>
-            )}
-            <Link
-              href="/leads"
-              className="inline-flex items-center gap-1 text-xs text-brand-400 hover:text-brand-300 transition-colors"
-            >
-              전체 고객 여정 보기
-              <ArrowRight size={12} />
-            </Link>
-          </div>
-        </>
+        <FunnelProgress stages={stages} totalRate={totalRate} />
       ) : (
         <EmptyState
           icon={Filter}
@@ -99,5 +78,237 @@ export function FunnelSection({ data, loading }: FunnelSectionProps) {
         />
       )}
     </Card>
+  )
+}
+
+function FunnelProgress({
+  stages,
+  totalRate,
+}: {
+  stages: FunnelStage[]
+  totalRate?: number
+}) {
+  const maxCount = stages[0]?.count || 1
+  const [tooltip, setTooltip] = useState<{
+    index: number
+    x: number
+    y: number
+  } | null>(null)
+  const containerRef = useRef<HTMLDivElement>(null)
+
+
+  return (
+    <div ref={containerRef}>
+      {/* 데스크탑: 수평 */}
+      <div className="hidden md:block relative">
+        <div className="flex items-center justify-between">
+          {stages.map((stage, i) => {
+            const size = getNodeSize(stage.count, maxCount)
+            const segColor =
+              i > 0 ? getSegmentColor(stages[i - 1].count, stage.count) : '#6366f1'
+            const prevStageRate =
+              i > 0 && stages[i - 1].count > 0
+                ? ((stage.count / stages[i - 1].count) * 100).toFixed(1)
+                : null
+
+            return (
+              <div key={stage.stage} className="flex items-center flex-1 last:flex-none">
+                {/* 커넥터 바 (첫 번째 제외) */}
+                {i > 0 && (
+                  <div className="flex-1 flex items-center relative mx-1">
+                    <div
+                      className="w-full h-[3px] rounded-full"
+                      style={{ background: segColor }}
+                    />
+                    {/* 구간 전환율 라벨 */}
+                    {prevStageRate && (
+                      <span
+                        className="absolute -top-4 left-1/2 -translate-x-1/2 text-[10px] font-medium tabular-nums whitespace-nowrap"
+                        style={{ color: segColor }}
+                      >
+                        {prevStageRate}%
+                      </span>
+                    )}
+                  </div>
+                )}
+
+                {/* 노드 */}
+                <div className="relative group">
+                  <Link href={STAGE_LINKS[stage.stage] || '#'}>
+                    <div
+                      className="rounded-full flex items-center justify-center font-bold text-white cursor-pointer
+                        transition-all duration-200 hover:scale-110 hover:ring-2 hover:ring-white/20 hover:shadow-lg hover:shadow-brand-500/20"
+                      style={{
+                        width: size,
+                        height: size,
+                        background: `linear-gradient(135deg, #6366f1, #818cf8)`,
+                        fontSize: size <= 32 ? '11px' : '13px',
+                      }}
+                      onMouseEnter={(e) => {
+                        const rect = e.currentTarget.getBoundingClientRect()
+                        const containerRect = containerRef.current?.getBoundingClientRect()
+                        if (containerRect) {
+                          setTooltip({
+                            index: i,
+                            x: rect.left - containerRect.left + rect.width / 2,
+                            y: rect.bottom - containerRect.top + 8,
+                          })
+                        }
+                      }}
+                      onMouseLeave={() => setTooltip(null)}
+                    >
+                      {stage.count}
+                    </div>
+                  </Link>
+
+                  {/* 라벨 */}
+                  <div className="text-center mt-2">
+                    <p className="text-xs font-medium text-slate-300">{stage.label}</p>
+                    <p className="text-[11px] text-slate-500 tabular-nums">{stage.rate}%</p>
+                  </div>
+                </div>
+              </div>
+            )
+          })}
+        </div>
+
+        {/* 툴팁 */}
+        {tooltip && stages[tooltip.index] && (
+          <FunnelTooltip
+            stage={stages[tooltip.index]}
+            prevStage={tooltip.index > 0 ? stages[tooltip.index - 1] : undefined}
+            style={{
+              position: 'absolute',
+              left: tooltip.x,
+              top: tooltip.y,
+              transform: 'translateX(-50%)',
+            }}
+          />
+        )}
+      </div>
+
+      {/* 모바일: 수직 */}
+      <div className="md:hidden space-y-0">
+        {stages.map((stage, i) => {
+          const size = getNodeSize(stage.count, maxCount)
+          const segColor =
+            i > 0 ? getSegmentColor(stages[i - 1].count, stage.count) : '#6366f1'
+          const prevStageRate =
+            i > 0 && stages[i - 1].count > 0
+              ? ((stage.count / stages[i - 1].count) * 100).toFixed(1)
+              : null
+
+          return (
+            <div key={stage.stage}>
+              {/* 커넥터 (첫 번째 제외) */}
+              {i > 0 && (
+                <div
+                  className="flex items-center gap-2 py-1"
+                  style={{ marginLeft: size / 2 - 1.5 }}
+                >
+                  <div
+                    className="w-[3px] h-6 rounded-full"
+                    style={{ background: segColor }}
+                  />
+                  {prevStageRate && (
+                    <span
+                      className="text-[10px] font-medium tabular-nums"
+                      style={{ color: segColor }}
+                    >
+                      {prevStageRate}%
+                    </span>
+                  )}
+                </div>
+              )}
+
+              {/* 노드 행 */}
+              <Link
+                href={STAGE_LINKS[stage.stage] || '#'}
+                className="flex items-center gap-3 py-1 rounded-lg hover:bg-white/5 transition-colors px-1 -mx-1"
+              >
+                <div
+                  className="rounded-full flex items-center justify-center font-bold text-white shrink-0"
+                  style={{
+                    width: size,
+                    height: size,
+                    background: `linear-gradient(135deg, #6366f1, #818cf8)`,
+                    fontSize: size <= 32 ? '11px' : '13px',
+                  }}
+                >
+                  {stage.count}
+                </div>
+                <div className="min-w-0">
+                  <p className="text-sm font-medium text-slate-200">{stage.label}</p>
+                  <p className="text-xs text-slate-500 tabular-nums">
+                    리드 대비 {stage.rate}%
+                  </p>
+                </div>
+              </Link>
+            </div>
+          )
+        })}
+      </div>
+
+      {/* 전체 전환율 */}
+      {totalRate !== undefined && totalRate > 0 && (
+        <div className="mt-5 pt-4 border-t border-white/5">
+          <div className="flex items-center justify-between mb-2">
+            <span className="text-xs text-slate-500">전체 전환율 (리드 → 결제)</span>
+            <span className="text-base font-bold text-emerald-400 tabular-nums">
+              {totalRate}%
+            </span>
+          </div>
+          <div className="w-full h-1.5 bg-white/5 rounded-full overflow-hidden">
+            <div
+              className="h-full rounded-full transition-all duration-700 ease-out"
+              style={{
+                width: `${Math.min(totalRate, 100)}%`,
+                background: 'linear-gradient(90deg, #6366f1, #22c55e)',
+              }}
+            />
+          </div>
+        </div>
+      )}
+    </div>
+  )
+}
+
+function FunnelTooltip({
+  stage,
+  prevStage,
+  style,
+}: {
+  stage: FunnelStage
+  prevStage?: FunnelStage
+  style: React.CSSProperties
+}) {
+  const prevRate =
+    prevStage && prevStage.count > 0
+      ? ((stage.count / prevStage.count) * 100).toFixed(1)
+      : null
+
+  return (
+    <div
+      className="z-50 bg-slate-800 border border-white/10 rounded-lg px-3 py-2 shadow-xl pointer-events-none"
+      style={style}
+    >
+      <p className="text-xs font-semibold text-white mb-1">{stage.label}</p>
+      <div className="space-y-0.5 text-[11px]">
+        <p className="text-slate-300">
+          <span className="text-slate-500">인원:</span>{' '}
+          <span className="font-medium tabular-nums">{stage.count}명</span>
+        </p>
+        <p className="text-slate-300">
+          <span className="text-slate-500">리드 대비:</span>{' '}
+          <span className="font-medium tabular-nums">{stage.rate}%</span>
+        </p>
+        {prevRate && (
+          <p className="text-slate-300">
+            <span className="text-slate-500">{prevStage!.label} 대비:</span>{' '}
+            <span className="font-medium tabular-nums">{prevRate}%</span>
+          </p>
+        )}
+      </div>
+    </div>
   )
 }
