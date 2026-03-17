@@ -102,7 +102,13 @@ export function CplRoasChart({ cplData, roasData, loading }: CplRoasChartProps) 
       <Card variant="glass" className="p-5">
         <div className="flex items-center justify-between mb-1">
           <h2 className="text-sm font-semibold text-white">매체별 ROAS</h2>
-          <span className="text-[11px] text-slate-500">광고 + 콘텐츠</span>
+          <Link
+            href="/ads"
+            className="inline-flex items-center gap-1 text-xs text-brand-400 hover:text-brand-300 transition-colors"
+          >
+            광고 성과 상세 보기
+            <ArrowRight size={12} />
+          </Link>
         </div>
         <p className="text-xs text-slate-500 mb-4">예산 대비 매출 (100% 이상 = 흑자)</p>
         {roasData.length > 0 ? (
@@ -124,15 +130,6 @@ export function CplRoasChart({ cplData, roasData, loading }: CplRoasChartProps) 
             <EmptyState icon={BarChart3} title="ROAS 데이터 없음" description="매출 데이터가 집계되면 표시됩니다." />
           </div>
         )}
-        <div className="mt-3 pt-3 border-t border-white/5">
-          <Link
-            href="/ads"
-            className="inline-flex items-center gap-1 text-xs text-brand-400 hover:text-brand-300 transition-colors"
-          >
-            광고 성과 상세 보기
-            <ArrowRight size={12} />
-          </Link>
-        </div>
       </Card>
     </div>
   )

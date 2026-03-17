@@ -88,18 +88,18 @@ export function SpendLeadTrend({ data, loading }: SpendLeadTrendProps) {
         <span className="text-xs text-slate-500">최근 8주</span>
       </div>
       {loading ? (
-        <Skeleton className="h-[200px] md:h-[240px] rounded-lg" />
+        <Skeleton className="h-[240px] md:h-[300px] rounded-lg" />
       ) : data && data.length > 0 ? (
         <>
           <div className="hidden md:block">
-            <DualChart data={data} height={240} fontSize={11} dotRadius={3} gradientId="spendGradDual" showLegend />
+            <DualChart data={data} height={300} fontSize={11} dotRadius={3} gradientId="spendGradDual" showLegend />
           </div>
           <div className="block md:hidden">
-            <DualChart data={data} height={180} fontSize={10} dotRadius={2} gradientId="spendGradDualMobile" />
+            <DualChart data={data} height={200} fontSize={10} dotRadius={2} gradientId="spendGradDualMobile" />
           </div>
         </>
       ) : (
-        <div className="h-[200px] md:h-[240px] flex flex-col gap-2 items-center justify-center text-slate-500 text-sm">
+        <div className="h-[240px] md:h-[300px] flex flex-col gap-2 items-center justify-center text-slate-500 text-sm">
           <TrendingUp size={28} className="text-slate-600 mb-1" />
           <span>진행 중인 광고 캠페인이 없습니다.</span>
         </div>
