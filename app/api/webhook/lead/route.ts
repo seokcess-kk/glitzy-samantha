@@ -16,6 +16,7 @@ import {
 } from '@/lib/utm'
 import { createLogger } from '@/lib/logger'
 import { sendErrorAlert } from '@/lib/error-alert'
+import { sendCapiEvent } from '@/lib/services/metaCapi'
 
 const logger = createLogger('WebhookLead')
 
@@ -56,6 +57,7 @@ export async function POST(req: Request) {
     landing_page_id?: number | string
     custom_data?: Record<string, unknown>
     idempotency_key?: string
+    event_id?: string
   }
 
   try {
@@ -122,6 +124,7 @@ export async function POST(req: Request) {
     utm_term,
     landing_page_id,
     custom_data,
+    event_id,
   } = body
 
   if (!phoneNumber) {
@@ -278,6 +281,24 @@ export async function POST(req: Request) {
       })
     }
 
+    // 5. Meta CAPI Lead 이벤트 전송 (async, non-blocking)
+    // event_id 검증: UUID 형식이거나 100자 이내 영숫자+하이픈만 허용
+    const isValidEventId = event_id && /^[a-zA-Z0-9\-]{1,100}$/.test(event_id)
+    const capiEventId = isValidEventId ? event_id : crypto.randomUUID()
+    sendCapiEvent(supabase, {
+      clinicId: validClinicId,
+      leadId: lead.id,
+      eventName: 'Lead',
+      eventId: capiEventId,
+      userData: {
+        phone: normalizedPhone,
+        firstName: sanitizedName || undefined,
+      },
+      eventSourceUrl: inflowUrl ? sanitizeString(inflowUrl, 500) : undefined,
+    }).catch((e) => {
+      logger.warn('CAPI 전송 실패 (non-blocking)', { error: e, leadId: lead.id })
+    })
+
     return apiSuccess({
       success: true,
       message: '리드가 등록되고 담당자 알림 및 챗봇 발송이 스케줄되었습니다.',
@@ -285,6 +306,7 @@ export async function POST(req: Request) {
       customerId: customer.id,
       isNewCustomer: !existingCustomer,
       utm: finalUtm,
+      eventId: capiEventId,
     })
   } catch (err: unknown) {
     const errorMsg = err instanceof Error ? err.message : String(err)

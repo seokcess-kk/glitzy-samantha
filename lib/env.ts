@@ -41,7 +41,7 @@ const ENV_GROUPS: EnvGroup[] = [
   {
     name: 'Meta Ads',
     required: [],
-    optional: ['META_APP_ID', 'META_APP_SECRET'],
+    optional: ['META_APP_ID', 'META_APP_SECRET', 'META_PIXEL_ID', 'META_ACCESS_TOKEN'],
   },
   {
     name: 'TikTok Ads',

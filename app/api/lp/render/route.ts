@@ -131,17 +131,50 @@ export async function GET(req: NextRequest) {
 </script>`
 
   // GTM 이벤트 트래킹: fetch를 래핑하여 리드 제출 성공 시 dataLayer.push 자동 실행
+  // + Meta CAPI 연동: event_id를 UUID로 생성하여 서버/브라우저 중복 제거
   const gtmEventScript = `
 <script>
 (function(){
   window.dataLayer = window.dataLayer || [];
+
+  // UUID v4 생성 (crypto.randomUUID 폴백)
+  function generateEventId() {
+    if (typeof crypto !== 'undefined' && crypto.randomUUID) {
+      return crypto.randomUUID();
+    }
+    return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function(c) {
+      var r = Math.random() * 16 | 0;
+      return (c === 'x' ? r : (r & 0x3 | 0x8)).toString(16);
+    });
+  }
+
   var _origFetch = window.fetch;
   window.fetch = function(url, opts) {
-    return _origFetch.apply(this, arguments).then(function(res) {
-      if (typeof url === 'string' && url.indexOf('/api/webhook/lead') !== -1 && opts && opts.method === 'POST' && res.ok) {
+    var eventId = null;
+    var isLeadWebhook = typeof url === 'string' && url.indexOf('/api/webhook/lead') !== -1 && opts && opts.method === 'POST';
+
+    // 리드 웹훅 요청 감지: event_id 자동 주입
+    if (isLeadWebhook) {
+      try {
+        var bodyObj = JSON.parse(opts.body);
+        if (!bodyObj.event_id) {
+          bodyObj.event_id = generateEventId();
+        }
+        eventId = bodyObj.event_id;
+        // 원본 opts를 변경하지 않도록 새 객체 생성
+        opts = Object.assign({}, opts, { body: JSON.stringify(bodyObj) });
+      } catch(e) {
+        // body 파싱 실패: event_id를 주입할 수 없으므로 null로 두고 서버 폴백에 맡김
+        eventId = null;
+      }
+    }
+
+    return _origFetch.call(this, url, opts).then(function(res) {
+      if (isLeadWebhook && res.ok) {
         var lpData = window.__LP_DATA__ || {};
         window.dataLayer.push({
           event: 'form_submit',
+          event_id: eventId,
           landing_page_id: lpData.landingPageId || null,
           clinic_id: lpData.clinicId || null,
           clinic_name: lpData.clinicName || ''
