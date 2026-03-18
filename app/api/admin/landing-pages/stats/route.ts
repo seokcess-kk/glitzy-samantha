@@ -76,7 +76,8 @@ export const GET = withClinicFilter(async (req: Request, { clinicId, assignedCli
     rawLeadCountByLp[lpId] = (rawLeadCountByLp[lpId] || 0) + 1
   }
 
-  // leads 테이블에서 고객→랜딩페이지 매핑 (예약/결제 귀속용)
+  // leads 테이블에서 랜딩페이지별 리드 건수 + 고객 매핑
+  const leadsCountByLp: Record<number, number> = {}
   const customerToLp = new Map<number, number>()
   const lpIds = new Set<number>()
 
@@ -84,6 +85,7 @@ export const GET = withClinicFilter(async (req: Request, { clinicId, assignedCli
     const lpId = lead.landing_page_id
     if (!lpId) continue
     lpIds.add(lpId)
+    leadsCountByLp[lpId] = (leadsCountByLp[lpId] || 0) + 1
     if (!customerToLp.has(lead.customer_id)) {
       customerToLp.set(lead.customer_id, lpId)
     }
@@ -116,7 +118,8 @@ export const GET = withClinicFilter(async (req: Request, { clinicId, assignedCli
 
   // 결과 생성
   const result = Array.from(lpIds).map(lpId => {
-    const leads = rawLeadCountByLp[lpId] || 0
+    // raw_logs 건수와 leads 테이블 건수 중 큰 값 사용 (raw_logs 도입 전 데이터 호환)
+    const leads = Math.max(rawLeadCountByLp[lpId] || 0, leadsCountByLp[lpId] || 0)
     const bookings = bookingsByLp[lpId] || 0
     const revenue = revenueByLp[lpId] || 0
     const payingCustomers = payingByLp[lpId]?.size || 0
