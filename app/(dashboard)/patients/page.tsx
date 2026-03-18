@@ -45,36 +45,35 @@ const STATUS_CONFIG: Record<string, { label: string; variant: 'info' | 'success'
   noshow:                { label: '노쇼',     variant: 'destructive' },
 }
 
-// 10분 단위 시간 옵션 생성 (08:00 ~ 20:50)
-const TIME_OPTIONS = Array.from({ length: 13 * 6 }, (_, i) => {
-  const h = Math.floor(i / 6) + 8
+// 10분 단위 시간 옵션 생성 (00:00 ~ 23:50)
+const TIME_OPTIONS = Array.from({ length: 24 * 6 }, (_, i) => {
+  const h = Math.floor(i / 6)
   const m = (i % 6) * 10
-  if (h > 20) return null
   return `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}`
-}).filter(Boolean) as string[]
+})
+
+// booking_datetime → { date, time } 파싱 (KST 기준, 10분 단위 반올림)
+function parseBookingDateTime(dt: string | null | undefined): { date: string; time: string } {
+  if (!dt) return { date: '', time: '' }
+  const d = toUtcDate(dt)
+  const date = d.toLocaleDateString('en-CA', { timeZone: 'Asia/Seoul' }) // YYYY-MM-DD
+  const hh = Number(d.toLocaleString('en-US', { timeZone: 'Asia/Seoul', hour: '2-digit', hour12: false }).replace(/\D/g, ''))
+  const mm = d.toLocaleString('en-US', { timeZone: 'Asia/Seoul', minute: '2-digit' }).replace(/\D/g, '')
+  const rounded = Math.round(Number(mm) / 10) * 10
+  const adjH = rounded >= 60 ? hh + 1 : hh
+  const adjM = rounded >= 60 ? 0 : rounded
+  const time = `${String(adjH).padStart(2, '0')}:${String(adjM).padStart(2, '0')}`
+  return { date, time }
+}
 
 // 예약 정보 수정 폼
 function BookingEditForm({ booking, onSave }: { booking: any; onSave: () => void }) {
-  const parsed = booking.booking_datetime
-    ? toUtcDate(booking.booking_datetime).toLocaleString('sv-SE', { timeZone: 'Asia/Seoul', year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit' })
-    : ''
-  const [datePart, timePart] = parsed ? parsed.split(' ') : ['', '']
-  // 10분 단위로 맞춤
-  const roundedTime = timePart ? `${timePart.slice(0, 4)}${Math.floor(Number(timePart.slice(4)) / 10) * 10}`.replace(/:\d$/, (m) => `:0${m[1]}`) : ''
-  const normalizedTime = timePart
-    ? (() => {
-        const [hh, mm] = timePart.split(':').map(Number)
-        const rounded = Math.round(mm / 10) * 10
-        const adjH = rounded >= 60 ? hh + 1 : hh
-        const adjM = rounded >= 60 ? 0 : rounded
-        return `${String(adjH).padStart(2, '0')}:${String(adjM).padStart(2, '0')}`
-      })()
-    : ''
+  const { date: initDate, time: initTime } = parseBookingDateTime(booking.booking_datetime)
 
   const [form, setForm] = useState({
     status: booking.status || 'confirmed',
-    booking_date: datePart,
-    booking_time: normalizedTime,
+    booking_date: initDate,
+    booking_time: initTime,
     notes: booking.notes || '',
   })
   const [saving, setSaving] = useState(false)
@@ -86,7 +85,7 @@ function BookingEditForm({ booking, onSave }: { booking: any; onSave: () => void
     }
     setSaving(true)
     try {
-      const booking_datetime = `${form.booking_date}T${form.booking_time}:00`
+      const booking_datetime = `${form.booking_date}T${form.booking_time}:00+09:00`
       const res = await fetch('/api/bookings', {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
@@ -563,7 +562,7 @@ export default function PatientsPage() {
     }
     setCreating(true)
     try {
-      const booking_datetime = `${createForm.booking_date}T${createForm.booking_time}:00`
+      const booking_datetime = `${createForm.booking_date}T${createForm.booking_time}:00+09:00`
       const qs = selectedClinicId ? `?clinic_id=${selectedClinicId}` : ''
       const res = await fetch(`/api/bookings${qs}`, {
         method: 'POST',
