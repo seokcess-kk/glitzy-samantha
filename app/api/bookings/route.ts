@@ -130,7 +130,7 @@ export async function PUT(req: Request) {
   }
 
   const supabase = serverSupabase()
-  const update: Record<string, unknown> = { updated_by: Number(user.id) }
+  const update: Record<string, unknown> = { updated_by: Number(user.id), updated_at: new Date().toISOString() }
   if (status !== undefined) update.status = status
   if (notes !== undefined) update.notes = sanitizeString(notes, 1000)
   if (booking_datetime !== undefined) update.booking_datetime = booking_datetime || null
@@ -180,7 +180,7 @@ export async function PATCH(req: Request) {
   const supabase = serverSupabase()
   const { data, error } = await supabase
     .from('bookings')
-    .update({ status, updated_by: Number(user.id) })
+    .update({ status, updated_by: Number(user.id), updated_at: new Date().toISOString() })
     .eq('id', bookingId)
     .select()
     .single()

@@ -45,24 +45,52 @@ const STATUS_CONFIG: Record<string, { label: string; variant: 'info' | 'success'
   noshow:                { label: '노쇼',     variant: 'destructive' },
 }
 
+// 10분 단위 시간 옵션 생성 (08:00 ~ 20:50)
+const TIME_OPTIONS = Array.from({ length: 13 * 6 }, (_, i) => {
+  const h = Math.floor(i / 6) + 8
+  const m = (i % 6) * 10
+  if (h > 20) return null
+  return `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}`
+}).filter(Boolean) as string[]
+
 // 예약 정보 수정 폼
 function BookingEditForm({ booking, onSave }: { booking: any; onSave: () => void }) {
+  const parsed = booking.booking_datetime
+    ? toUtcDate(booking.booking_datetime).toLocaleString('sv-SE', { timeZone: 'Asia/Seoul', year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit' })
+    : ''
+  const [datePart, timePart] = parsed ? parsed.split(' ') : ['', '']
+  // 10분 단위로 맞춤
+  const roundedTime = timePart ? `${timePart.slice(0, 4)}${Math.floor(Number(timePart.slice(4)) / 10) * 10}`.replace(/:\d$/, (m) => `:0${m[1]}`) : ''
+  const normalizedTime = timePart
+    ? (() => {
+        const [hh, mm] = timePart.split(':').map(Number)
+        const rounded = Math.round(mm / 10) * 10
+        const adjH = rounded >= 60 ? hh + 1 : hh
+        const adjM = rounded >= 60 ? 0 : rounded
+        return `${String(adjH).padStart(2, '0')}:${String(adjM).padStart(2, '0')}`
+      })()
+    : ''
+
   const [form, setForm] = useState({
     status: booking.status || 'confirmed',
-    booking_datetime: booking.booking_datetime
-      ? toUtcDate(booking.booking_datetime).toLocaleString('sv-SE', { timeZone: 'Asia/Seoul', year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit' }).replace(' ', 'T')
-      : '',
+    booking_date: datePart,
+    booking_time: normalizedTime,
     notes: booking.notes || '',
   })
   const [saving, setSaving] = useState(false)
 
   const handleSave = async () => {
+    if (!form.booking_date || !form.booking_time) {
+      toast.error('예약 일시를 입력해주세요.')
+      return
+    }
     setSaving(true)
     try {
+      const booking_datetime = `${form.booking_date}T${form.booking_time}:00`
       const res = await fetch('/api/bookings', {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ id: booking.id, ...form }),
+        body: JSON.stringify({ id: booking.id, status: form.status, booking_datetime, notes: form.notes }),
       })
       if (!res.ok) throw new Error()
       toast.success('예약 정보가 저장되었습니다.')
@@ -75,38 +103,65 @@ function BookingEditForm({ booking, onSave }: { booking: any; onSave: () => void
   }
 
   return (
-    <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 mt-3">
-      <div className="space-y-2">
-        <Label className="text-xs text-muted-foreground">예약 상태</Label>
-        <Select value={form.status} onValueChange={v => setForm(f => ({ ...f, status: v }))}>
-          <SelectTrigger>
-            <SelectValue />
-          </SelectTrigger>
-          <SelectContent>
-            {Object.entries(STATUS_CONFIG).map(([k, v]) => (
-              <SelectItem key={k} value={k}>{v.label}</SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
+    <div className="space-y-3 mt-3">
+      <div className="grid grid-cols-1 sm:grid-cols-4 gap-3">
+        <div className="space-y-2">
+          <Label className="text-xs text-muted-foreground">예약 상태</Label>
+          <Select value={form.status} onValueChange={v => setForm(f => ({ ...f, status: v }))}>
+            <SelectTrigger>
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              {Object.entries(STATUS_CONFIG).map(([k, v]) => (
+                <SelectItem key={k} value={k}>{v.label}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+        <div className="space-y-2">
+          <Label className="text-xs text-muted-foreground">예약 날짜</Label>
+          <Input
+            type="date"
+            value={form.booking_date}
+            onChange={e => setForm(f => ({ ...f, booking_date: e.target.value }))}
+          />
+        </div>
+        <div className="space-y-2">
+          <Label className="text-xs text-muted-foreground">예약 시간</Label>
+          <Select value={form.booking_time} onValueChange={v => setForm(f => ({ ...f, booking_time: v }))}>
+            <SelectTrigger>
+              <SelectValue placeholder="시간 선택" />
+            </SelectTrigger>
+            <SelectContent className="max-h-60">
+              {TIME_OPTIONS.map(val => (
+                <SelectItem key={val} value={val}>{val}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+        <div className="space-y-2">
+          <Label className="text-xs text-muted-foreground">메모</Label>
+          <Input
+            type="text"
+            value={form.notes}
+            onChange={e => setForm(f => ({ ...f, notes: e.target.value }))}
+            placeholder="예약 관련 메모"
+          />
+        </div>
       </div>
-      <div className="space-y-2">
-        <Label className="text-xs text-muted-foreground">예약 일시</Label>
-        <Input
-          type="datetime-local"
-          value={form.booking_datetime}
-          onChange={e => setForm(f => ({ ...f, booking_datetime: e.target.value }))}
-        />
+      <div className="flex gap-4">
+        {booking.created_at && (
+          <p className="text-[11px] text-muted-foreground">
+            등록: {formatDateTime(booking.created_at)}
+          </p>
+        )}
+        {booking.updated_at && booking.updated_at !== booking.created_at && (
+          <p className="text-[11px] text-muted-foreground">
+            수정: {formatDateTime(booking.updated_at)}
+          </p>
+        )}
       </div>
-      <div className="space-y-2">
-        <Label className="text-xs text-muted-foreground">메모</Label>
-        <Input
-          type="text"
-          value={form.notes}
-          onChange={e => setForm(f => ({ ...f, notes: e.target.value }))}
-          placeholder="예약 관련 메모"
-        />
-      </div>
-      <div className="sm:col-span-3 flex justify-end">
+      <div className="flex justify-end">
         <Button onClick={handleSave} disabled={saving} className="bg-brand-600 hover:bg-brand-700">
           {saving ? '저장 중...' : '예약 저장'}
         </Button>
@@ -305,11 +360,32 @@ function PaymentSection({ customerId, payments, onSave, isSuperAdmin }: { custom
 function BookingRow({ booking, onRefresh, isSuperAdmin }: { booking: any; onRefresh: () => void; isSuperAdmin?: boolean }) {
   const [open, setOpen] = useState(false)
   const [tab, setTab] = useState<'booking' | 'consult' | 'payment'>('booking')
+  const [changingStatus, setChangingStatus] = useState(false)
 
   const customer = booking.customer
   const cfg = STATUS_CONFIG[booking.status] || { label: booking.status, variant: 'secondary' as const }
   const totalPayment = (customer?.payments || []).reduce((s: number, p: any) => s + Number(p.payment_amount), 0)
   const latestConsult = customer?.consultations?.[0]
+
+  const handleStatusChange = async (newStatus: string) => {
+    if (newStatus === booking.status) return
+    setChangingStatus(true)
+    try {
+      const res = await fetch('/api/bookings', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ id: booking.id, status: newStatus }),
+      })
+      if (!res.ok) throw new Error()
+      const statusLabel = STATUS_CONFIG[newStatus]?.label || newStatus
+      toast.success(`예약 상태가 "${statusLabel}"(으)로 변경되었습니다.`)
+      onRefresh()
+    } catch {
+      toast.error('상태 변경에 실패했습니다.')
+    } finally {
+      setChangingStatus(false)
+    }
+  }
 
   return (
     <Card variant="glass" className="overflow-hidden">
@@ -322,16 +398,33 @@ function BookingRow({ booking, onRefresh, isSuperAdmin }: { booking: any; onRefr
         <div className="w-9 h-9 rounded-full bg-brand-600/20 flex items-center justify-center text-brand-400 font-bold text-sm shrink-0">
           {customer?.name?.[0] || '?'}
         </div>
-        <div className="flex-1 min-w-0">
-          <p className="font-medium text-foreground text-sm">{customer?.name || '이름 없음'}</p>
-          <p className="text-xs text-muted-foreground flex items-center gap-1 mt-0.5"><Phone size={10} /> {customer?.phone_number}</p>
+        <div className="w-40 shrink-0 min-w-0">
+          <p className="font-medium text-foreground text-sm truncate">{customer?.name || '이름 없음'}</p>
+          <p className="text-xs text-muted-foreground flex items-center gap-1 mt-0.5 truncate"><Phone size={10} /> {customer?.phone_number}</p>
         </div>
-        <div className="w-44 shrink-0 text-xs text-muted-foreground flex items-center gap-1">
-          <Clock size={11} />
-          {booking.booking_datetime ? formatDateTime(booking.booking_datetime) : '-'}
+        <div className="w-40 shrink-0">
+          <div className="text-xs text-muted-foreground flex items-center gap-1">
+            <Clock size={11} />
+            {booking.booking_datetime ? formatDateTime(booking.booking_datetime) : '-'}
+          </div>
+          {booking.created_at && (
+            <p className="text-[10px] text-muted-foreground/60 mt-0.5">등록: {formatDateTime(booking.created_at)}</p>
+          )}
         </div>
-        <div className="w-20 shrink-0">
-          <Badge variant={cfg.variant}>{cfg.label}</Badge>
+        <div className="flex-1" />
+        <div className="w-28 shrink-0" onClick={e => e.stopPropagation()}>
+          <Select value={booking.status} onValueChange={handleStatusChange} disabled={changingStatus}>
+            <SelectTrigger className="h-7 px-2 text-xs border-0 bg-transparent hover:bg-muted dark:hover:bg-white/5 focus:ring-0 w-full">
+              <Badge variant={cfg.variant} className="whitespace-nowrap">{changingStatus ? '변경 중...' : cfg.label}</Badge>
+            </SelectTrigger>
+            <SelectContent>
+              {Object.entries(STATUS_CONFIG).map(([k, v]) => (
+                <SelectItem key={k} value={k}>
+                  <Badge variant={v.variant} className="text-[10px] px-1.5 py-0">{v.label}</Badge>
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
         </div>
         <div className="w-20 shrink-0">
           {latestConsult
@@ -598,13 +691,9 @@ export default function PatientsPage() {
                     <SelectValue placeholder="시간 선택" />
                   </SelectTrigger>
                   <SelectContent className="max-h-60">
-                    {Array.from({ length: 13 * 6 }, (_, i) => {
-                      const h = Math.floor(i / 6) + 8
-                      const m = (i % 6) * 10
-                      if (h > 20) return null
-                      const val = `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}`
-                      return <SelectItem key={val} value={val}>{val}</SelectItem>
-                    })}
+                    {TIME_OPTIONS.map(val => (
+                      <SelectItem key={val} value={val}>{val}</SelectItem>
+                    ))}
                   </SelectContent>
                 </Select>
               </div>
@@ -699,9 +788,10 @@ export default function PatientsPage() {
               {/* 컬럼 헤더 */}
               <Card variant="glass" className="flex items-center gap-4 px-5 py-2 text-xs font-medium text-muted-foreground uppercase tracking-wider mb-1 min-w-[640px]">
                 <div className="w-9 shrink-0" />
-                <div className="flex-1 min-w-0">고객명</div>
-                <div className="w-44 shrink-0">예약 일시</div>
-                <div className="w-20 shrink-0">예약 상태</div>
+                <div className="w-40 shrink-0">고객명</div>
+                <div className="w-40 shrink-0">예약 일시</div>
+                <div className="flex-1" />
+                <div className="w-28 shrink-0">예약 상태</div>
                 <div className="w-20 shrink-0">상담 상태</div>
                 <div className="w-28 shrink-0 text-right">결제 금액</div>
                 <div className="w-4 shrink-0" />
