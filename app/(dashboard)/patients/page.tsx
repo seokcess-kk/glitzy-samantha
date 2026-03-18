@@ -45,6 +45,8 @@ const STATUS_CONFIG: Record<string, { label: string; variant: 'info' | 'success'
   noshow:                { label: '노쇼',     variant: 'destructive' },
 }
 
+const DAY_NAMES = ['일', '월', '화', '수', '목', '금', '토']
+
 // 10분 단위 시간 옵션 생성 (00:00 ~ 23:50)
 const TIME_OPTIONS = Array.from({ length: 24 * 6 }, (_, i) => {
   const h = Math.floor(i / 6)
@@ -57,8 +59,8 @@ function parseBookingDateTime(dt: string | null | undefined): { date: string; ti
   if (!dt) return { date: '', time: '' }
   const d = toUtcDate(dt)
   const date = d.toLocaleDateString('en-CA', { timeZone: 'Asia/Seoul' }) // YYYY-MM-DD
-  const hh = Number(d.toLocaleString('en-US', { timeZone: 'Asia/Seoul', hour: '2-digit', hour12: false }).replace(/\D/g, ''))
-  const mm = d.toLocaleString('en-US', { timeZone: 'Asia/Seoul', minute: '2-digit' }).replace(/\D/g, '')
+  const hh = Number(d.toLocaleString('en-GB', { timeZone: 'Asia/Seoul', hour: '2-digit', hour12: false }).replace(/\D/g, '')) % 24
+  const mm = d.toLocaleString('en-GB', { timeZone: 'Asia/Seoul', minute: '2-digit' }).replace(/\D/g, '')
   const rounded = Math.round(Number(mm) / 10) * 10
   const adjH = rounded >= 60 ? hh + 1 : hh
   const adjM = rounded >= 60 ? 0 : rounded
@@ -503,6 +505,55 @@ function BookingRow({ booking, onRefresh, isSuperAdmin }: { booking: any; onRefr
   )
 }
 
+// 일간 뷰 컴포넌트
+function DayView({ currentMonth, bookingsByDate, todayKey, selectedDate, onSelectDate }: {
+  currentMonth: Date
+  bookingsByDate: Record<string, any[]>
+  todayKey: string
+  selectedDate: string | null
+  onSelectDate: (date: string | null) => void
+}) {
+  const dateKey = currentMonth.toLocaleDateString('en-CA', { timeZone: 'Asia/Seoul' })
+  const dayBookings = bookingsByDate[dateKey] || []
+  const byHour: Record<number, any[]> = {}
+  for (const b of dayBookings) {
+    const h = Number(toUtcDate(b.booking_datetime).toLocaleString('en-GB', { timeZone: 'Asia/Seoul', hour: '2-digit', hour12: false }).replace(/\D/g, '')) % 24
+    if (!byHour[h]) byHour[h] = []
+    byHour[h].push(b)
+  }
+  return (
+    <div className="space-y-0">
+      {Array.from({ length: 15 }, (_, i) => i + 8).map(hour => {
+        const hourBookings = byHour[hour] || []
+        return (
+          <div key={hour} className="flex border-t border-border dark:border-white/5 min-h-[48px]">
+            <div className="w-16 shrink-0 py-2 text-xs text-muted-foreground text-right pr-3">
+              {String(hour).padStart(2, '0')}:00
+            </div>
+            <div className="flex-1 py-1.5 space-y-1">
+              {hourBookings.map((b: any) => {
+                const c = STATUS_CONFIG[b.status] || { label: b.status, variant: 'secondary' as const }
+                return (
+                  <button
+                    key={b.id}
+                    onClick={() => onSelectDate(selectedDate === dateKey ? null : dateKey)}
+                    className="flex items-center gap-2 w-full text-left px-3 py-1.5 rounded-lg bg-brand-500/10 hover:bg-brand-500/20 transition-colors"
+                  >
+                    <Badge variant={c.variant} className="text-[10px] px-1.5 py-0 shrink-0">{c.label}</Badge>
+                    <span className="text-xs font-medium text-foreground truncate">{b.customer?.name}</span>
+                    <span className="text-[10px] text-muted-foreground">{formatTime(b.booking_datetime)}</span>
+                    <span className="text-[10px] text-muted-foreground ml-auto truncate">{b.customer?.phone_number}</span>
+                  </button>
+                )
+              })}
+            </div>
+          </div>
+        )
+      })}
+    </div>
+  )
+}
+
 // 메인 페이지
 export default function PatientsPage() {
   const { selectedClinicId } = useClinic()
@@ -511,9 +562,11 @@ export default function PatientsPage() {
   const [bookings, setBookings] = useState<any[]>([])
   const [loading, setLoading] = useState(true)
   const [view, setView] = useState<'list' | 'calendar'>('list')
+  const [calView, setCalView] = useState<'month' | 'week' | 'day'>('month')
   const [search, setSearch] = useState('')
   const [statusFilter, setStatusFilter] = useState('all')
   const [currentMonth, setCurrentMonth] = useState(new Date())
+  const [selectedDate, setSelectedDate] = useState<string | null>(null)
   // 예약 등록 다이얼로그
   const [createOpen, setCreateOpen] = useState(false)
   const [createForm, setCreateForm] = useState({
@@ -602,7 +655,7 @@ export default function PatientsPage() {
     revenue: bookings.reduce((s, b) => s + (b.customer?.payments || []).reduce((ps: number, p: any) => ps + Number(p.payment_amount), 0), 0),
   }
 
-  // 캘린더
+  // 캘린더 데이터 준비
   const year = currentMonth.getFullYear()
   const month = currentMonth.getMonth()
   const firstDay = new Date(year, month, 1).getDay()
@@ -614,6 +667,26 @@ export default function PatientsPage() {
     if (!bookingsByDate[key]) bookingsByDate[key] = []
     bookingsByDate[key].push(b)
   }
+  // 날짜별 시간순 정렬
+  for (const key of Object.keys(bookingsByDate)) {
+    bookingsByDate[key].sort((a: any, b: any) =>
+      new Date(a.booking_datetime).getTime() - new Date(b.booking_datetime).getTime()
+    )
+  }
+  const todayKey = new Date().toLocaleDateString('en-CA', { timeZone: 'Asia/Seoul' })
+
+  // 주간 뷰 날짜 계산
+  const getWeekDates = (baseDate: Date) => {
+    const d = new Date(baseDate)
+    const day = d.getDay()
+    d.setDate(d.getDate() - day) // 일요일부터
+    return Array.from({ length: 7 }, (_, i) => {
+      const date = new Date(d)
+      date.setDate(d.getDate() + i)
+      return date
+    })
+  }
+  const weekDates = getWeekDates(currentMonth)
 
   return (
     <>
@@ -804,53 +877,164 @@ export default function PatientsPage() {
           )}
         </>
       ) : (
-        <Card variant="glass" className="p-6">
-          <div className="flex items-center justify-between mb-6">
-            <Button variant="ghost" size="icon" onClick={() => setCurrentMonth(new Date(year, month - 1))}>
-              <ChevronLeft size={16} />
-            </Button>
-            <h2 className="text-foreground font-semibold text-lg">
-              {currentMonth.toLocaleDateString('ko', { timeZone: 'Asia/Seoul', year: 'numeric', month: 'long' })}
-            </h2>
-            <Button variant="ghost" size="icon" onClick={() => setCurrentMonth(new Date(year, month + 1))}>
-              <ChevronRight size={16} />
-            </Button>
+        <>
+          <Card variant="glass" className="p-6">
+          {/* 캘린더 헤더: 네비게이션 + 일/주/월 토글 */}
+          <div className="flex items-center justify-between mb-5">
+            <div className="flex items-center gap-2">
+              <Button variant="ghost" size="icon" onClick={() => {
+                const d = new Date(currentMonth)
+                if (calView === 'month') d.setMonth(d.getMonth() - 1)
+                else if (calView === 'week') d.setDate(d.getDate() - 7)
+                else d.setDate(d.getDate() - 1)
+                setCurrentMonth(d)
+              }}>
+                <ChevronLeft size={16} />
+              </Button>
+              <h2 className="text-foreground font-semibold text-lg min-w-[140px] text-center">
+                {calView === 'day'
+                  ? currentMonth.toLocaleDateString('ko', { timeZone: 'Asia/Seoul', month: 'long', day: 'numeric', weekday: 'short' })
+                  : calView === 'week'
+                    ? `${weekDates[0].toLocaleDateString('ko', { timeZone: 'Asia/Seoul', month: 'short', day: 'numeric' })} — ${weekDates[6].toLocaleDateString('ko', { timeZone: 'Asia/Seoul', month: 'short', day: 'numeric' })}`
+                    : currentMonth.toLocaleDateString('ko', { timeZone: 'Asia/Seoul', year: 'numeric', month: 'long' })}
+              </h2>
+              <Button variant="ghost" size="icon" onClick={() => {
+                const d = new Date(currentMonth)
+                if (calView === 'month') d.setMonth(d.getMonth() + 1)
+                else if (calView === 'week') d.setDate(d.getDate() + 7)
+                else d.setDate(d.getDate() + 1)
+                setCurrentMonth(d)
+              }}>
+                <ChevronRight size={16} />
+              </Button>
+              <Button variant="ghost" size="sm" className="ml-2 text-xs" onClick={() => setCurrentMonth(new Date())}>
+                오늘
+              </Button>
+            </div>
+            <div className="flex gap-1 bg-muted dark:bg-white/5 rounded-lg p-1">
+              {(['month', 'week', 'day'] as const).map(v => (
+                <Button
+                  key={v}
+                  variant={calView === v ? 'default' : 'ghost'}
+                  size="sm"
+                  className={`text-xs px-3 h-7 ${calView === v ? 'bg-brand-600 hover:bg-brand-700' : ''}`}
+                  onClick={() => { setCalView(v); setSelectedDate(null) }}
+                >
+                  {({ month: '월', week: '주', day: '일' } as const)[v]}
+                </Button>
+              ))}
+            </div>
           </div>
 
-          <div className="grid grid-cols-7 gap-1 mb-2">
-            {['일', '월', '화', '수', '목', '금', '토'].map(d => (
-              <div key={d} className="text-center text-xs text-muted-foreground py-2 font-medium">{d}</div>
-            ))}
-          </div>
+          {/* 월간 뷰 */}
+          {calView === 'month' && (
+            <>
+              <div className="grid grid-cols-7 gap-1 mb-2">
+                {['일', '월', '화', '수', '목', '금', '토'].map(d => (
+                  <div key={d} className="text-center text-xs text-muted-foreground py-2 font-medium">{d}</div>
+                ))}
+              </div>
+              <div className="grid grid-cols-7 gap-1">
+                {Array(firstDay).fill(null).map((_, i) => <div key={`e${i}`} />)}
+                {Array(daysInMonth).fill(null).map((_, i) => {
+                  const dayNum = i + 1
+                  const dateKey = new Date(year, month, dayNum).toLocaleDateString('en-CA', { timeZone: 'Asia/Seoul' })
+                  const dayBookings = bookingsByDate[dateKey] || []
+                  const isToday = todayKey === dateKey
+                  const isSelected = selectedDate === dateKey
+                  return (
+                    <button
+                      key={dayNum}
+                      onClick={() => setSelectedDate(isSelected ? null : dateKey)}
+                      className={`min-h-[60px] sm:min-h-[80px] rounded-xl p-1.5 sm:p-2 border transition-all text-left ${
+                        isSelected ? 'border-brand-500 bg-brand-500/10 ring-1 ring-brand-500/30' :
+                        isToday ? 'border-brand-500/40 bg-brand-500/5' :
+                        'border-border dark:border-white/5 hover:bg-muted dark:hover:bg-white/[0.03]'
+                      }`}
+                    >
+                      <div className="flex items-center justify-between mb-1">
+                        <span className={`text-xs font-medium ${isToday ? 'text-brand-400' : 'text-muted-foreground'}`}>{dayNum}</span>
+                        {dayBookings.length > 0 && (
+                          <span className="text-[10px] text-muted-foreground bg-muted dark:bg-white/10 rounded-full px-1.5">{dayBookings.length}</span>
+                        )}
+                      </div>
+                      <div className="space-y-0.5">
+                        {dayBookings.slice(0, 3).map((b: any) => {
+                          const c = STATUS_CONFIG[b.status] || { label: b.status, variant: 'secondary' as const }
+                          return (
+                            <div key={b.id} className="text-[10px] truncate">
+                              <Badge variant={c.variant} className="text-[10px] px-1 py-0">
+                                {formatTime(b.booking_datetime)} {b.customer?.name}
+                              </Badge>
+                            </div>
+                          )
+                        })}
+                        {dayBookings.length > 3 && <p className="text-[10px] text-brand-400 pl-1">+{dayBookings.length - 3}건</p>}
+                      </div>
+                    </button>
+                  )
+                })}
+              </div>
+            </>
+          )}
 
-          <div className="grid grid-cols-7 gap-1">
-            {Array(firstDay).fill(null).map((_, i) => <div key={`e${i}`} />)}
-            {Array(daysInMonth).fill(null).map((_, i) => {
-              const dayNum = i + 1
-              const dateKey = new Date(year, month, dayNum).toLocaleDateString('en-CA', { timeZone: 'Asia/Seoul' })
-              const dayBookings = bookingsByDate[dateKey] || []
-              const isToday = new Date().toLocaleDateString('en-CA', { timeZone: 'Asia/Seoul' }) === dateKey
-              return (
-                <div key={dayNum} className={`min-h-[60px] sm:min-h-[80px] rounded-xl p-1.5 sm:p-2 border transition-all ${isToday ? 'border-brand-500/40 bg-brand-500/5' : 'border-border dark:border-white/5 hover:bg-muted dark:hover:bg-white/[0.03]'}`}>
-                  <p className={`text-xs font-medium mb-1 ${isToday ? 'text-brand-400' : 'text-muted-foreground'}`}>{dayNum}</p>
-                  <div className="space-y-0.5">
-                    {dayBookings.slice(0, 3).map((b: any) => {
-                      const c = STATUS_CONFIG[b.status] || { label: b.status, variant: 'secondary' as const }
-                      return (
-                        <div key={b.id} className="text-[10px] truncate">
-                          <Badge variant={c.variant} className="text-[10px] px-1 py-0">
-                            {formatTime(b.booking_datetime)} {b.customer?.name}
-                          </Badge>
-                        </div>
-                      )
-                    })}
-                    {dayBookings.length > 3 && <p className="text-[10px] text-muted-foreground pl-1">+{dayBookings.length - 3}건</p>}
-                  </div>
-                </div>
-              )
-            })}
-          </div>
+          {/* 주간 뷰 */}
+          {calView === 'week' && (
+            <div className="grid grid-cols-7 gap-2">
+              {weekDates.map((date, i) => {
+                const dateKey = date.toLocaleDateString('en-CA', { timeZone: 'Asia/Seoul' })
+                const dayBookings = bookingsByDate[dateKey] || []
+                const isToday = todayKey === dateKey
+                const isSelected = selectedDate === dateKey
+                const dayNames = DAY_NAMES
+                return (
+                  <button
+                    key={i}
+                    onClick={() => setSelectedDate(isSelected ? null : dateKey)}
+                    className={`rounded-xl p-3 border transition-all text-left min-h-[200px] flex flex-col ${
+                      isSelected ? 'border-brand-500 bg-brand-500/10 ring-1 ring-brand-500/30' :
+                      isToday ? 'border-brand-500/40 bg-brand-500/5' :
+                      'border-border dark:border-white/5 hover:bg-muted dark:hover:bg-white/[0.03]'
+                    }`}
+                  >
+                    <div className="text-center mb-3">
+                      <p className="text-[10px] text-muted-foreground">{dayNames[i]}</p>
+                      <p className={`text-lg font-bold ${isToday ? 'text-brand-400' : 'text-foreground'}`}>{date.getDate()}</p>
+                      {dayBookings.length > 0 && (
+                        <span className="text-[10px] text-muted-foreground">{dayBookings.length}건</span>
+                      )}
+                    </div>
+                    <div className="space-y-1 flex-1 overflow-hidden">
+                      {dayBookings.slice(0, 6).map((b: any) => {
+                        const c = STATUS_CONFIG[b.status] || { label: b.status, variant: 'secondary' as const }
+                        return (
+                          <div key={b.id} className="text-[10px] truncate">
+                            <Badge variant={c.variant} className="text-[10px] px-1 py-0 w-full justify-start">
+                              {formatTime(b.booking_datetime)} {b.customer?.name}
+                            </Badge>
+                          </div>
+                        )
+                      })}
+                      {dayBookings.length > 6 && <p className="text-[10px] text-brand-400 text-center">+{dayBookings.length - 6}건</p>}
+                    </div>
+                  </button>
+                )
+              })}
+            </div>
+          )}
 
+          {/* 일간 뷰 */}
+          {calView === 'day' && (
+            <DayView
+              currentMonth={currentMonth}
+              bookingsByDate={bookingsByDate}
+              todayKey={todayKey}
+              selectedDate={selectedDate}
+              onSelectDate={setSelectedDate}
+            />
+          )}
+
+          {/* 범례 */}
           <div className="flex gap-4 mt-4 pt-4 border-t border-border dark:border-white/5">
             {Object.entries(STATUS_CONFIG).map(([k, v]) => (
               <div key={k} className="flex items-center gap-1.5">
@@ -860,6 +1044,83 @@ export default function PatientsPage() {
             ))}
           </div>
         </Card>
+
+        {/* 선택된 날짜의 예약 상세 패널 */}
+        {selectedDate && (
+          <Card variant="glass" className="p-5 mt-3">
+            <div className="flex items-center justify-between mb-4">
+              <div className="flex items-center gap-2">
+                <Calendar size={16} className="text-brand-400" />
+                <h3 className="text-sm font-semibold text-foreground">
+                  {new Date(selectedDate + 'T00:00:00+09:00').toLocaleDateString('ko', { timeZone: 'Asia/Seoul', month: 'long', day: 'numeric', weekday: 'long' })}
+                </h3>
+                <Badge variant="secondary" className="text-[10px]">
+                  {(bookingsByDate[selectedDate] || []).length}건
+                </Badge>
+              </div>
+              <Button variant="ghost" size="sm" className="text-xs h-7" onClick={() => setSelectedDate(null)}>
+                닫기
+              </Button>
+            </div>
+            {(bookingsByDate[selectedDate] || []).length === 0 ? (
+              <p className="text-sm text-muted-foreground text-center py-8">해당 날짜에 예약이 없습니다.</p>
+            ) : (
+              <div className="space-y-2">
+                {(bookingsByDate[selectedDate] || []).map((b: any) => {
+                  const c = STATUS_CONFIG[b.status] || { label: b.status, variant: 'secondary' as const }
+                  const totalPayment = (b.customer?.payments || []).reduce((s: number, p: any) => s + Number(p.payment_amount), 0)
+                  return (
+                    <div key={b.id} className="flex items-center gap-4 px-4 py-3 rounded-xl bg-muted/50 dark:bg-white/[0.03] border border-border dark:border-white/5">
+                      <div className="w-14 shrink-0 text-center">
+                        <p className="text-sm font-bold text-foreground">{formatTime(b.booking_datetime)}</p>
+                      </div>
+                      <div className="w-9 h-9 rounded-full bg-brand-600/20 flex items-center justify-center text-brand-400 font-bold text-sm shrink-0">
+                        {b.customer?.name?.[0] || '?'}
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <p className="text-sm font-medium text-foreground truncate">{b.customer?.name || '이름 없음'}</p>
+                        <p className="text-xs text-muted-foreground flex items-center gap-1"><Phone size={10} /> {b.customer?.phone_number}</p>
+                      </div>
+                      <div className="shrink-0" onClick={e => e.stopPropagation()}>
+                        <Select value={b.status} onValueChange={async (newStatus) => {
+                          if (newStatus === b.status) return
+                          try {
+                            const res = await fetch('/api/bookings', {
+                              method: 'PATCH',
+                              headers: { 'Content-Type': 'application/json' },
+                              body: JSON.stringify({ id: b.id, status: newStatus }),
+                            })
+                            if (!res.ok) throw new Error()
+                            toast.success(`"${STATUS_CONFIG[newStatus]?.label}"(으)로 변경되었습니다.`)
+                            fetchBookings()
+                          } catch { toast.error('상태 변경 실패') }
+                        }}>
+                          <SelectTrigger className="h-7 px-2 text-xs border-0 bg-transparent hover:bg-muted dark:hover:bg-white/5 focus:ring-0 w-auto">
+                            <Badge variant={c.variant} className="whitespace-nowrap">{c.label}</Badge>
+                          </SelectTrigger>
+                          <SelectContent>
+                            {Object.entries(STATUS_CONFIG).map(([k, v]) => (
+                              <SelectItem key={k} value={k}>
+                                <Badge variant={v.variant} className="text-[10px] px-1.5 py-0">{v.label}</Badge>
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </div>
+                      <div className="w-24 shrink-0 text-right">
+                        {totalPayment > 0
+                          ? <span className="text-sm font-semibold text-emerald-600 dark:text-emerald-400">₩{totalPayment.toLocaleString()}</span>
+                          : <span className="text-muted-foreground/60 text-xs">-</span>}
+                      </div>
+                      {b.notes && <p className="text-[10px] text-muted-foreground truncate max-w-[120px]" title={b.notes}>{b.notes}</p>}
+                    </div>
+                  )
+                })}
+              </div>
+            )}
+          </Card>
+        )}
+      </>
       )}
     </>
   )
