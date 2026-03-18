@@ -77,7 +77,7 @@ function BookingEditForm({ booking, onSave }: { booking: any; onSave: () => void
   return (
     <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 mt-3">
       <div className="space-y-2">
-        <Label className="text-xs text-slate-500">예약 상태</Label>
+        <Label className="text-xs text-muted-foreground">예약 상태</Label>
         <Select value={form.status} onValueChange={v => setForm(f => ({ ...f, status: v }))}>
           <SelectTrigger>
             <SelectValue />
@@ -90,7 +90,7 @@ function BookingEditForm({ booking, onSave }: { booking: any; onSave: () => void
         </Select>
       </div>
       <div className="space-y-2">
-        <Label className="text-xs text-slate-500">예약 일시</Label>
+        <Label className="text-xs text-muted-foreground">예약 일시</Label>
         <Input
           type="datetime-local"
           value={form.booking_datetime}
@@ -98,7 +98,7 @@ function BookingEditForm({ booking, onSave }: { booking: any; onSave: () => void
         />
       </div>
       <div className="space-y-2">
-        <Label className="text-xs text-slate-500">메모</Label>
+        <Label className="text-xs text-muted-foreground">메모</Label>
         <Input
           type="text"
           value={form.notes}
@@ -145,7 +145,7 @@ function ConsultationForm({ customerId, current, onSave }: { customerId: number;
   return (
     <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 mt-3">
       <div className="space-y-2">
-        <Label className="text-xs text-slate-500">상담 상태</Label>
+        <Label className="text-xs text-muted-foreground">상담 상태</Label>
         <Select value={form.status} onValueChange={v => setForm(f => ({ ...f, status: v }))}>
           <SelectTrigger>
             <SelectValue placeholder="선택" />
@@ -158,7 +158,7 @@ function ConsultationForm({ customerId, current, onSave }: { customerId: number;
         </Select>
       </div>
       <div className="space-y-2">
-        <Label className="text-xs text-slate-500">상담 일시</Label>
+        <Label className="text-xs text-muted-foreground">상담 일시</Label>
         <Input
           type="date"
           value={form.consultationDate}
@@ -166,7 +166,7 @@ function ConsultationForm({ customerId, current, onSave }: { customerId: number;
         />
       </div>
       <div className="space-y-2">
-        <Label className="text-xs text-slate-500">메모</Label>
+        <Label className="text-xs text-muted-foreground">메모</Label>
         <Input
           type="text"
           value={form.notes}
@@ -223,19 +223,19 @@ function PaymentSection({ customerId, payments, onSave, isSuperAdmin }: { custom
       {payments.length > 0 && (
         <Table className="mb-4">
           <TableHeader>
-            <TableRow className="border-b border-white/5 hover:bg-transparent">
-              <TableHead className="text-xs text-slate-500 uppercase tracking-wider font-medium">시술명</TableHead>
-              <TableHead className="text-xs text-slate-500 uppercase tracking-wider font-medium">금액</TableHead>
-              <TableHead className="text-xs text-slate-500 uppercase tracking-wider font-medium">결제일</TableHead>
-              {isSuperAdmin && <TableHead className="text-xs text-slate-500 uppercase tracking-wider font-medium w-10" />}
+            <TableRow className="border-b border-border dark:border-white/5 hover:bg-transparent">
+              <TableHead className="text-xs text-muted-foreground uppercase tracking-wider font-medium">시술명</TableHead>
+              <TableHead className="text-xs text-muted-foreground uppercase tracking-wider font-medium">금액</TableHead>
+              <TableHead className="text-xs text-muted-foreground uppercase tracking-wider font-medium">결제일</TableHead>
+              {isSuperAdmin && <TableHead className="text-xs text-muted-foreground uppercase tracking-wider font-medium w-10" />}
             </TableRow>
           </TableHeader>
           <TableBody>
             {payments.map((p: any) => (
-              <TableRow key={p.id} className="border-b border-white/5">
-                <TableCell className="text-white">{p.treatment_name}</TableCell>
+              <TableRow key={p.id} className="border-b border-border dark:border-white/5">
+                <TableCell className="text-foreground">{p.treatment_name}</TableCell>
                 <TableCell className="text-emerald-400 font-semibold">₩{Number(p.payment_amount).toLocaleString()}</TableCell>
-                <TableCell className="text-slate-400 text-xs">{formatDate(p.payment_date)}</TableCell>
+                <TableCell className="text-muted-foreground text-xs">{formatDate(p.payment_date)}</TableCell>
                 {isSuperAdmin && (
                   <TableCell>
                     <button
@@ -261,30 +261,30 @@ function PaymentSection({ customerId, payments, onSave, isSuperAdmin }: { custom
       )}
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
         <div className="space-y-2">
-          <Label className="text-xs text-slate-500">시술명 *</Label>
+          <Label className="text-xs text-muted-foreground">시술명 *</Label>
           <Input
             type="text"
             value={form.treatmentName}
             onChange={e => { setForm(f => ({ ...f, treatmentName: e.target.value })); setErrors(e => ({ ...e, treatmentName: '' })) }}
             placeholder="쌍꺼풀, 보톡스 등"
-            className={`bg-white/5 text-white placeholder-slate-600 ${errors.treatmentName ? 'border-red-500' : 'border-white/10'}`}
+            className={`bg-muted dark:bg-white/5 text-foreground placeholder:text-muted-foreground/60 ${errors.treatmentName ? 'border-red-500' : 'border-border dark:border-white/10'}`}
           />
           {errors.treatmentName && <p className="text-red-400 text-xs">{errors.treatmentName}</p>}
         </div>
         <div className="space-y-2">
-          <Label className="text-xs text-slate-500">결제 금액 (원) *</Label>
+          <Label className="text-xs text-muted-foreground">결제 금액 (원) *</Label>
           <Input
             type="number"
             value={form.paymentAmount}
             onChange={e => { setForm(f => ({ ...f, paymentAmount: e.target.value })); setErrors(e => ({ ...e, paymentAmount: '' })) }}
             placeholder="500000"
             min="0"
-            className={`bg-white/5 text-white placeholder-slate-600 ${errors.paymentAmount ? 'border-red-500' : 'border-white/10'}`}
+            className={`bg-muted dark:bg-white/5 text-foreground placeholder:text-muted-foreground/60 ${errors.paymentAmount ? 'border-red-500' : 'border-border dark:border-white/10'}`}
           />
           {errors.paymentAmount && <p className="text-red-400 text-xs">{errors.paymentAmount}</p>}
         </div>
         <div className="space-y-2">
-          <Label className="text-xs text-slate-500">결제 일시</Label>
+          <Label className="text-xs text-muted-foreground">결제 일시</Label>
           <Input
             type="date"
             value={form.paymentDate}
@@ -314,7 +314,7 @@ function BookingRow({ booking, onRefresh, isSuperAdmin }: { booking: any; onRefr
   return (
     <Card variant="glass" className="overflow-hidden">
       <button
-        className="w-full flex items-center gap-4 px-5 py-4 hover:bg-white/[0.03] transition-colors text-left"
+        className="w-full flex items-center gap-4 px-5 py-4 hover:bg-muted dark:hover:bg-white/[0.03] transition-colors text-left"
         onClick={() => setOpen(v => !v)}
         aria-expanded={open}
         aria-label={`${customer?.name || '고객'} 상세정보 ${open ? '접기' : '펼치기'}`}
@@ -323,10 +323,10 @@ function BookingRow({ booking, onRefresh, isSuperAdmin }: { booking: any; onRefr
           {customer?.name?.[0] || '?'}
         </div>
         <div className="flex-1 min-w-0">
-          <p className="font-medium text-white text-sm">{customer?.name || '이름 없음'}</p>
-          <p className="text-xs text-slate-500 flex items-center gap-1 mt-0.5"><Phone size={10} /> {customer?.phone_number}</p>
+          <p className="font-medium text-foreground text-sm">{customer?.name || '이름 없음'}</p>
+          <p className="text-xs text-muted-foreground flex items-center gap-1 mt-0.5"><Phone size={10} /> {customer?.phone_number}</p>
         </div>
-        <div className="w-44 shrink-0 text-xs text-slate-400 flex items-center gap-1">
+        <div className="w-44 shrink-0 text-xs text-muted-foreground flex items-center gap-1">
           <Clock size={11} />
           {booking.booking_datetime ? formatDateTime(booking.booking_datetime) : '-'}
         </div>
@@ -336,18 +336,18 @@ function BookingRow({ booking, onRefresh, isSuperAdmin }: { booking: any; onRefr
         <div className="w-20 shrink-0">
           {latestConsult
             ? <Badge variant="secondary">{latestConsult.status}</Badge>
-            : <span className="text-slate-600 text-xs">-</span>}
+            : <span className="text-muted-foreground/60 text-xs">-</span>}
         </div>
         <div className="w-28 shrink-0 text-right">
           {totalPayment > 0
             ? <span className="text-sm font-semibold text-emerald-400">₩{totalPayment.toLocaleString()}</span>
-            : <span className="text-slate-600 text-sm">-</span>}
+            : <span className="text-muted-foreground/60 text-sm">-</span>}
         </div>
-        {open ? <ChevronUp size={16} className="text-slate-500 shrink-0" /> : <ChevronDown size={16} className="text-slate-500 shrink-0" />}
+        {open ? <ChevronUp size={16} className="text-muted-foreground shrink-0" /> : <ChevronDown size={16} className="text-muted-foreground shrink-0" />}
       </button>
 
       {open && (
-        <div className="border-t border-white/5 px-5 py-4">
+        <div className="border-t border-border dark:border-white/5 px-5 py-4">
           <div className="flex gap-2 mb-4">
             {([
               { key: 'booking' as const, label: '예약 정보', icon: Edit2 },
@@ -370,7 +370,7 @@ function BookingRow({ booking, onRefresh, isSuperAdmin }: { booking: any; onRefr
           {tab === 'payment' && <PaymentSection customerId={customer?.id} payments={customer?.payments || []} onSave={onRefresh} isSuperAdmin={isSuperAdmin} />}
 
           {isSuperAdmin && (
-            <div className="mt-4 pt-4 border-t border-white/5 flex gap-2 justify-end">
+            <div className="mt-4 pt-4 border-t border-border dark:border-white/5 flex gap-2 justify-end">
               <Button
                 variant="ghost"
                 size="sm"
@@ -564,7 +564,7 @@ export default function PatientsPage() {
           <div className="space-y-4 py-4">
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
-                <Label className="text-xs text-slate-400">이름</Label>
+                <Label className="text-xs text-muted-foreground">이름</Label>
                 <Input
                   value={createForm.name}
                   onChange={e => setCreateForm(f => ({ ...f, name: e.target.value }))}
@@ -572,7 +572,7 @@ export default function PatientsPage() {
                 />
               </div>
               <div className="space-y-2">
-                <Label className="text-xs text-slate-400">전화번호 *</Label>
+                <Label className="text-xs text-muted-foreground">전화번호 *</Label>
                 <Input
                   type="tel"
                   value={createForm.phone_number}
@@ -583,7 +583,7 @@ export default function PatientsPage() {
             </div>
             <div className="grid grid-cols-3 gap-4">
               <div className="space-y-2">
-                <Label className="text-xs text-slate-400">예약 날짜 *</Label>
+                <Label className="text-xs text-muted-foreground">예약 날짜 *</Label>
                 <Input
                   type="date"
                   value={createForm.booking_date}
@@ -592,7 +592,7 @@ export default function PatientsPage() {
                 />
               </div>
               <div className="space-y-2">
-                <Label className="text-xs text-slate-400">예약 시간 *</Label>
+                <Label className="text-xs text-muted-foreground">예약 시간 *</Label>
                 <Select value={createForm.booking_time} onValueChange={v => setCreateForm(f => ({ ...f, booking_time: v }))}>
                   <SelectTrigger>
                     <SelectValue placeholder="시간 선택" />
@@ -609,7 +609,7 @@ export default function PatientsPage() {
                 </Select>
               </div>
               <div className="space-y-2">
-                <Label className="text-xs text-slate-400">유입 경로</Label>
+                <Label className="text-xs text-muted-foreground">유입 경로</Label>
                 <Select value={createForm.source} onValueChange={v => setCreateForm(f => ({ ...f, source: v }))}>
                   <SelectTrigger>
                     <SelectValue />
@@ -626,7 +626,7 @@ export default function PatientsPage() {
               </div>
             </div>
             <div className="space-y-2">
-              <Label className="text-xs text-slate-400">메모</Label>
+              <Label className="text-xs text-muted-foreground">메모</Label>
               <Textarea
                 value={createForm.notes}
                 onChange={e => setCreateForm(f => ({ ...f, notes: e.target.value }))}
@@ -653,8 +653,8 @@ export default function PatientsPage() {
           { label: '총 결제액', value: `₩${stats.revenue.toLocaleString()}` },
         ].map(({ label, value }) => (
           <Card key={label} variant="glass" className="p-4">
-            <p className="text-xs text-slate-400 uppercase tracking-widest mb-1">{label}</p>
-            {loading ? <Skeleton className="h-6 mt-1" /> : <p className="text-xl font-bold text-white">{value}</p>}
+            <p className="text-xs text-muted-foreground uppercase tracking-widest mb-1">{label}</p>
+            {loading ? <Skeleton className="h-6 mt-1" /> : <p className="text-xl font-bold text-foreground">{value}</p>}
           </Card>
         ))}
       </div>
@@ -663,13 +663,13 @@ export default function PatientsPage() {
         <>
           <div className="flex items-center gap-3 mb-4 flex-wrap">
             <Card variant="glass" className="flex items-center px-3 py-2">
-              <Search size={14} className="text-slate-500 mr-2" />
+              <Search size={14} className="text-muted-foreground mr-2" />
               <Input
                 type="text"
                 value={search}
                 onChange={e => setSearch(e.target.value)}
                 placeholder="이름 또는 전화번호"
-                className="bg-transparent border-0 text-sm text-white placeholder-slate-600 focus-visible:ring-0 w-44 p-0 h-auto"
+                className="bg-transparent border-0 text-sm text-foreground placeholder:text-muted-foreground/60 focus-visible:ring-0 w-44 p-0 h-auto"
               />
             </Card>
             <div className="flex gap-2 flex-wrap">
@@ -692,12 +692,12 @@ export default function PatientsPage() {
             <div className="space-y-2">{Array(5).fill(0).map((_, i) => <Skeleton key={i} className="h-16 rounded-2xl" />)}</div>
           ) : filtered.length === 0 ? (
             <Card variant="glass" className="p-12 text-center">
-              <p className="text-slate-400 text-sm">{search || statusFilter !== 'all' ? '검색 결과가 없습니다.' : '예약 데이터가 없습니다.'}</p>
+              <p className="text-muted-foreground text-sm">{search || statusFilter !== 'all' ? '검색 결과가 없습니다.' : '예약 데이터가 없습니다.'}</p>
             </Card>
           ) : (
             <div className="overflow-x-auto">
               {/* 컬럼 헤더 */}
-              <Card variant="glass" className="flex items-center gap-4 px-5 py-2 text-xs font-medium text-slate-500 uppercase tracking-wider mb-1 min-w-[640px]">
+              <Card variant="glass" className="flex items-center gap-4 px-5 py-2 text-xs font-medium text-muted-foreground uppercase tracking-wider mb-1 min-w-[640px]">
                 <div className="w-9 shrink-0" />
                 <div className="flex-1 min-w-0">고객명</div>
                 <div className="w-44 shrink-0">예약 일시</div>
@@ -720,7 +720,7 @@ export default function PatientsPage() {
             <Button variant="ghost" size="icon" onClick={() => setCurrentMonth(new Date(year, month - 1))}>
               <ChevronLeft size={16} />
             </Button>
-            <h2 className="text-white font-semibold text-lg">
+            <h2 className="text-foreground font-semibold text-lg">
               {currentMonth.toLocaleDateString('ko', { timeZone: 'Asia/Seoul', year: 'numeric', month: 'long' })}
             </h2>
             <Button variant="ghost" size="icon" onClick={() => setCurrentMonth(new Date(year, month + 1))}>
@@ -730,7 +730,7 @@ export default function PatientsPage() {
 
           <div className="grid grid-cols-7 gap-1 mb-2">
             {['일', '월', '화', '수', '목', '금', '토'].map(d => (
-              <div key={d} className="text-center text-xs text-slate-500 py-2 font-medium">{d}</div>
+              <div key={d} className="text-center text-xs text-muted-foreground py-2 font-medium">{d}</div>
             ))}
           </div>
 
@@ -742,8 +742,8 @@ export default function PatientsPage() {
               const dayBookings = bookingsByDate[dateKey] || []
               const isToday = new Date().toLocaleDateString('en-CA', { timeZone: 'Asia/Seoul' }) === dateKey
               return (
-                <div key={dayNum} className={`min-h-[60px] sm:min-h-[80px] rounded-xl p-1.5 sm:p-2 border transition-all ${isToday ? 'border-brand-500/40 bg-brand-500/5' : 'border-white/5 hover:bg-white/[0.03]'}`}>
-                  <p className={`text-xs font-medium mb-1 ${isToday ? 'text-brand-400' : 'text-slate-400'}`}>{dayNum}</p>
+                <div key={dayNum} className={`min-h-[60px] sm:min-h-[80px] rounded-xl p-1.5 sm:p-2 border transition-all ${isToday ? 'border-brand-500/40 bg-brand-500/5' : 'border-border dark:border-white/5 hover:bg-muted dark:hover:bg-white/[0.03]'}`}>
+                  <p className={`text-xs font-medium mb-1 ${isToday ? 'text-brand-400' : 'text-muted-foreground'}`}>{dayNum}</p>
                   <div className="space-y-0.5">
                     {dayBookings.slice(0, 3).map((b: any) => {
                       const c = STATUS_CONFIG[b.status] || { label: b.status, variant: 'secondary' as const }
@@ -755,18 +755,18 @@ export default function PatientsPage() {
                         </div>
                       )
                     })}
-                    {dayBookings.length > 3 && <p className="text-[10px] text-slate-500 pl-1">+{dayBookings.length - 3}건</p>}
+                    {dayBookings.length > 3 && <p className="text-[10px] text-muted-foreground pl-1">+{dayBookings.length - 3}건</p>}
                   </div>
                 </div>
               )
             })}
           </div>
 
-          <div className="flex gap-4 mt-4 pt-4 border-t border-white/5">
+          <div className="flex gap-4 mt-4 pt-4 border-t border-border dark:border-white/5">
             {Object.entries(STATUS_CONFIG).map(([k, v]) => (
               <div key={k} className="flex items-center gap-1.5">
                 <Badge variant={v.variant} className="w-2.5 h-2.5 p-0 rounded-full" />
-                <span className="text-xs text-slate-500">{v.label}</span>
+                <span className="text-xs text-muted-foreground">{v.label}</span>
               </div>
             ))}
           </div>

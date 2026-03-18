@@ -103,8 +103,8 @@ export default function PressPage() {
           }).length },
         ].map(({ label, value }) => (
           <Card key={label} variant="glass" className="p-4">
-            <p className="text-xs text-slate-500 mb-1">{label}</p>
-            {loading ? <Skeleton className="h-7 w-16" /> : <p className="text-2xl font-bold text-white">{value}</p>}
+            <p className="text-xs text-muted-foreground mb-1">{label}</p>
+            {loading ? <Skeleton className="h-7 w-16" /> : <p className="text-2xl font-bold text-foreground">{value}</p>}
           </Card>
         ))}
       </div>
@@ -131,24 +131,24 @@ export default function PressPage() {
         <div className="space-y-6">
           {dates.map(date => (
             <Card key={date} variant="glass" className="p-0 overflow-hidden">
-              <div className="px-5 py-3 border-b border-white/5 flex items-center gap-2">
+              <div className="px-5 py-3 border-b border-border dark:border-white/5 flex items-center gap-2">
                 <Newspaper size={13} className="text-brand-400" />
-                <span className="text-sm font-semibold text-white">{date}</span>
-                <span className="text-xs text-slate-500 ml-auto">{grouped[date].length}건</span>
+                <span className="text-sm font-semibold text-foreground">{date}</span>
+                <span className="text-xs text-muted-foreground ml-auto">{grouped[date].length}건</span>
               </div>
-              <div className="divide-y divide-white/5">
+              <div className="divide-y divide-border dark:divide-white/5">
                 {grouped[date].map(article => (
-                  <div key={article.id} className="px-5 py-3 flex items-center gap-4 hover:bg-white/[0.02] transition-colors group">
+                  <div key={article.id} className="px-5 py-3 flex items-center gap-4 hover:bg-muted/30 dark:hover:bg-white/[0.02] transition-colors group">
                     <div className="w-24 shrink-0">
-                      <span className="text-xs font-medium text-slate-400 truncate block">{article.source}</span>
+                      <span className="text-xs font-medium text-muted-foreground truncate block">{article.source}</span>
                     </div>
-                    <p className="flex-1 text-sm text-slate-200 min-w-0 truncate">{article.title}</p>
+                    <p className="flex-1 text-sm text-foreground/80 min-w-0 truncate">{article.title}</p>
                     {article.url && (
                       <a
                         href={article.url}
                         target="_blank"
                         rel="noopener noreferrer"
-                        className="opacity-0 group-hover:opacity-100 transition-opacity text-slate-500 hover:text-brand-400 shrink-0"
+                        className="opacity-0 group-hover:opacity-100 transition-opacity text-muted-foreground hover:text-brand-400 shrink-0"
                       >
                         <ExternalLink size={14} />
                       </a>

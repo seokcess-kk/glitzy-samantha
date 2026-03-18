@@ -115,7 +115,7 @@ function LeadFormContent() {
         <Card variant="glass" className="p-4 mb-6">
           <div className="flex items-center gap-2 mb-3">
             <Link2 size={14} className="text-brand-400" />
-            <span className="text-xs font-semibold text-slate-300">감지된 UTM 파라미터</span>
+            <span className="text-xs font-semibold text-foreground/80">감지된 UTM 파라미터</span>
           </div>
           <div className="flex flex-wrap gap-2">
             {utmSource && (
@@ -162,7 +162,7 @@ function LeadFormContent() {
         <form onSubmit={handleSubmit} className="space-y-5">
           <div className="space-y-2">
             <Label>
-              이름 <span className="text-slate-500">(선택)</span>
+              이름 <span className="text-muted-foreground">(선택)</span>
             </Label>
             <Input
               type="text"
@@ -187,14 +187,14 @@ function LeadFormContent() {
 
           {/* UTM 수동 입력 (접힌 상태) */}
           <details className="group">
-            <summary className="flex items-center gap-2 cursor-pointer text-sm text-slate-400 hover:text-slate-300">
+            <summary className="flex items-center gap-2 cursor-pointer text-sm text-muted-foreground hover:text-foreground/80">
               <Tag size={14} />
               UTM 파라미터 직접 입력
             </summary>
-            <div className="mt-4 space-y-3 pl-5 border-l border-white/10">
+            <div className="mt-4 space-y-3 pl-5 border-l border-border dark:border-white/10">
               <div className="grid grid-cols-2 gap-3">
                 <div className="space-y-1">
-                  <Label className="text-xs text-slate-500">utm_source</Label>
+                  <Label className="text-xs text-muted-foreground">utm_source</Label>
                   <Input
                     type="text"
                     value={utmSource}
@@ -204,7 +204,7 @@ function LeadFormContent() {
                   />
                 </div>
                 <div className="space-y-1">
-                  <Label className="text-xs text-slate-500">utm_medium</Label>
+                  <Label className="text-xs text-muted-foreground">utm_medium</Label>
                   <Input
                     type="text"
                     value={utmMedium}
@@ -215,7 +215,7 @@ function LeadFormContent() {
                 </div>
               </div>
               <div className="space-y-1">
-                <Label className="text-xs text-slate-500">utm_campaign</Label>
+                <Label className="text-xs text-muted-foreground">utm_campaign</Label>
                 <Input
                   type="text"
                   value={utmCampaign}
@@ -225,7 +225,7 @@ function LeadFormContent() {
                 />
               </div>
               <div className="space-y-1">
-                <Label className="text-xs text-slate-500">utm_content</Label>
+                <Label className="text-xs text-muted-foreground">utm_content</Label>
                 <Input
                   type="text"
                   value={utmContent}
@@ -235,7 +235,7 @@ function LeadFormContent() {
                 />
               </div>
               <div className="space-y-1">
-                <Label className="text-xs text-slate-500">utm_term</Label>
+                <Label className="text-xs text-muted-foreground">utm_term</Label>
                 <Input
                   type="text"
                   value={utmTerm}
@@ -287,7 +287,7 @@ function LeadFormContent() {
               {result.message}
             </p>
             {result.data && (
-              <div className="mt-2 text-xs text-slate-400 space-y-1">
+              <div className="mt-2 text-xs text-muted-foreground space-y-1">
                 <p>Lead ID: {result.data.leadId}</p>
                 <p>Customer ID: {result.data.customerId}</p>
                 <p>신규 고객: {result.data.isNewCustomer ? '예' : '아니오 (재방문)'}</p>
@@ -304,16 +304,16 @@ function LeadFormContent() {
 
       {/* 테스트 URL 안내 */}
       <Card variant="glass" className="mt-8 p-4">
-        <h3 className="text-sm font-semibold text-slate-300 mb-2">테스트 URL 예시</h3>
+        <h3 className="text-sm font-semibold text-foreground/80 mb-2">테스트 URL 예시</h3>
         <div className="space-y-2">
-          <code className="block text-xs text-slate-500 bg-black/30 p-2 rounded overflow-x-auto">
+          <code className="block text-xs text-muted-foreground bg-black/30 p-2 rounded overflow-x-auto">
             /lead-form?utm_source=meta&utm_medium=cpc&utm_campaign=spring_promo
           </code>
-          <code className="block text-xs text-slate-500 bg-black/30 p-2 rounded overflow-x-auto">
+          <code className="block text-xs text-muted-foreground bg-black/30 p-2 rounded overflow-x-auto">
             /lead-form?utm_source=google&utm_campaign=search_brand&utm_term=강남성형외과
           </code>
         </div>
-        <p className="text-xs text-slate-500 mt-3">
+        <p className="text-xs text-muted-foreground mt-3">
           위 URL로 접속하면 UTM 파라미터가 자동으로 감지됩니다.
         </p>
       </Card>

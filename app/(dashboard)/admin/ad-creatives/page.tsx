@@ -313,13 +313,13 @@ export default function AdCreativesPage() {
           <div className="space-y-4 py-4">
             {/* 소재 파일 업로드 */}
             <div className="space-y-2">
-              <Label className="text-xs text-slate-400">소재 파일 (이미지/동영상)</Label>
+              <Label className="text-xs text-muted-foreground">소재 파일 (이미지/동영상)</Label>
               {previewUrl ? (
                 <div className="relative inline-block">
                   {previewType?.startsWith('video/') ? (
-                    <video src={previewUrl} className="h-32 rounded-lg bg-white/5" controls muted />
+                    <video src={previewUrl} className="h-32 rounded-lg bg-muted dark:bg-white/5" controls muted />
                   ) : (
-                    <img src={previewUrl} alt="미리보기" className="h-32 rounded-lg object-contain bg-white/5" />
+                    <img src={previewUrl} alt="미리보기" className="h-32 rounded-lg object-contain bg-muted dark:bg-white/5" />
                   )}
                   <button
                     onClick={clearFile}
@@ -333,11 +333,11 @@ export default function AdCreativesPage() {
                   type="button"
                   onClick={() => fileInputRef.current?.click()}
                   disabled={uploading}
-                  className="w-full h-24 border-2 border-dashed border-white/10 rounded-lg flex flex-col items-center justify-center gap-1 text-slate-500 hover:border-brand-500/50 hover:text-slate-400 transition-colors"
+                  className="w-full h-24 border-2 border-dashed border-border dark:border-white/10 rounded-lg flex flex-col items-center justify-center gap-1 text-muted-foreground hover:border-brand-500/50 hover:text-muted-foreground transition-colors"
                 >
                   <Upload size={20} />
                   <span className="text-xs">{uploading ? '업로드 중...' : '클릭하여 파일 선택'}</span>
-                  <span className="text-[10px] text-slate-600">JPG, PNG, GIF, WebP, MP4, WebM (50MB 이하)</span>
+                  <span className="text-[10px] text-muted-foreground/60">JPG, PNG, GIF, WebP, MP4, WebM (50MB 이하)</span>
                 </button>
               )}
               <input
@@ -351,7 +351,7 @@ export default function AdCreativesPage() {
 
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
-                <Label className="text-xs text-slate-400">소재명 *</Label>
+                <Label className="text-xs text-muted-foreground">소재명 *</Label>
                 <Input
                   type="text"
                   value={form.name}
@@ -360,19 +360,19 @@ export default function AdCreativesPage() {
                 />
               </div>
               <div className="space-y-2">
-                <Label className="text-xs text-slate-400">UTM Content *</Label>
+                <Label className="text-xs text-muted-foreground">UTM Content *</Label>
                 <Input
                   type="text"
                   value={form.utm_content}
                   onChange={e => setForm(f => ({ ...f, utm_content: e.target.value.replace(/\s+/g, '_').toLowerCase() }))}
                   placeholder="예: video_30s_promo"
                 />
-                <p className="text-xs text-slate-500">UTM 링크에 사용될 값 (영문, 숫자, 언더스코어)</p>
+                <p className="text-xs text-muted-foreground">UTM 링크에 사용될 값 (영문, 숫자, 언더스코어)</p>
               </div>
             </div>
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
-                <Label className="text-xs text-slate-400">병원 *</Label>
+                <Label className="text-xs text-muted-foreground">병원 *</Label>
                 <Select value={form.clinic_id} onValueChange={v => setForm(f => ({ ...f, clinic_id: v, landing_page_id: '' }))}>
                   <SelectTrigger>
                     <SelectValue placeholder="병원 선택" />
@@ -385,7 +385,7 @@ export default function AdCreativesPage() {
                 </Select>
               </div>
               <div className="space-y-2">
-                <Label className="text-xs text-slate-400">광고 플랫폼</Label>
+                <Label className="text-xs text-muted-foreground">광고 플랫폼</Label>
                 <Select value={form.platform} onValueChange={v => setForm(f => ({ ...f, platform: v }))}>
                   <SelectTrigger>
                     <SelectValue placeholder="선택 (선택사항)" />
@@ -401,11 +401,11 @@ export default function AdCreativesPage() {
             </div>
 
             {/* UTM 파라미터 섹션 */}
-            <div className="border-t border-white/10 pt-4 mt-4">
-              <p className="text-xs text-slate-400 mb-3">UTM 파라미터 (선택사항 - UTM 생성기에서 자동 적용)</p>
+            <div className="border-t border-border dark:border-white/10 pt-4 mt-4">
+              <p className="text-xs text-muted-foreground mb-3">UTM 파라미터 (선택사항 - UTM 생성기에서 자동 적용)</p>
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">
-                  <Label className="text-xs text-slate-400">UTM Source</Label>
+                  <Label className="text-xs text-muted-foreground">UTM Source</Label>
                   <Input
                     type="text"
                     value={form.utm_source}
@@ -414,7 +414,7 @@ export default function AdCreativesPage() {
                   />
                 </div>
                 <div className="space-y-2">
-                  <Label className="text-xs text-slate-400">UTM Medium</Label>
+                  <Label className="text-xs text-muted-foreground">UTM Medium</Label>
                   <Input
                     type="text"
                     value={form.utm_medium}
@@ -425,7 +425,7 @@ export default function AdCreativesPage() {
               </div>
               <div className="grid grid-cols-2 gap-4 mt-3">
                 <div className="space-y-2">
-                  <Label className="text-xs text-slate-400">UTM Campaign</Label>
+                  <Label className="text-xs text-muted-foreground">UTM Campaign</Label>
                   <Input
                     type="text"
                     value={form.utm_campaign}
@@ -434,7 +434,7 @@ export default function AdCreativesPage() {
                   />
                 </div>
                 <div className="space-y-2">
-                  <Label className="text-xs text-slate-400">UTM Term</Label>
+                  <Label className="text-xs text-muted-foreground">UTM Term</Label>
                   <Input
                     type="text"
                     value={form.utm_term}
@@ -446,7 +446,7 @@ export default function AdCreativesPage() {
             </div>
 
             <div className="space-y-2">
-              <Label className="text-xs text-slate-400">연결 랜딩 페이지</Label>
+              <Label className="text-xs text-muted-foreground">연결 랜딩 페이지</Label>
               <Select
                 value={form.landing_page_id}
                 onValueChange={v => setForm(f => ({ ...f, landing_page_id: v }))}
@@ -466,7 +466,7 @@ export default function AdCreativesPage() {
               </Select>
             </div>
             <div className="space-y-2">
-              <Label className="text-xs text-slate-400">설명 (메모)</Label>
+              <Label className="text-xs text-muted-foreground">설명 (메모)</Label>
               <Textarea
                 value={form.description}
                 onChange={e => setForm(f => ({ ...f, description: e.target.value }))}
@@ -475,7 +475,7 @@ export default function AdCreativesPage() {
               />
             </div>
             <div className="flex items-center justify-between">
-              <Label className="text-xs text-slate-400">활성화</Label>
+              <Label className="text-xs text-muted-foreground">활성화</Label>
               <Switch
                 checked={form.is_active}
                 onCheckedChange={v => setForm(f => ({ ...f, is_active: v }))}
@@ -493,7 +493,7 @@ export default function AdCreativesPage() {
 
       {/* 소재 원본 보기 모달 */}
       <Dialog open={viewerOpen} onOpenChange={setViewerOpen}>
-        <DialogContent className="max-w-4xl p-2 bg-black/90 border-white/10">
+        <DialogContent className="max-w-4xl p-2 bg-black/90 border-border dark:border-white/10">
           {viewerSrc && (
             viewerType?.startsWith('video/') ? (
               <video src={viewerSrc} className="w-full max-h-[80vh] object-contain rounded-lg" controls autoPlay muted />
@@ -507,8 +507,8 @@ export default function AdCreativesPage() {
       <Card variant="glass" className="p-6">
         <div className="flex items-center justify-between mb-4">
           <div>
-            <h2 className="font-semibold text-white">광고 소재 목록 ({adCreatives.length})</h2>
-            <p className="text-xs text-slate-500 mt-1">소재별 UTM Content 값과 랜딩 페이지 연결을 관리합니다.</p>
+            <h2 className="font-semibold text-foreground">광고 소재 목록 ({adCreatives.length})</h2>
+            <p className="text-xs text-muted-foreground mt-1">소재별 UTM Content 값과 랜딩 페이지 연결을 관리합니다.</p>
           </div>
           <Button onClick={() => setDialogOpen(true)} size="sm" className="bg-brand-600 hover:bg-brand-700">
             <Plus size={14} /> 소재 등록
@@ -521,12 +521,12 @@ export default function AdCreativesPage() {
         ) : (
           <Table>
             <TableHeader>
-              <TableRow className="border-b border-white/5 hover:bg-transparent">
-                <TableHead className="text-xs text-slate-500 font-medium w-[76px]">소재</TableHead>
-                <TableHead className="text-xs text-slate-500 font-medium">소재명 / UTM Content</TableHead>
-                <TableHead className="text-xs text-slate-500 font-medium">플랫폼 / 병원</TableHead>
-                <TableHead className="text-xs text-slate-500 font-medium">상태</TableHead>
-                <TableHead className="text-xs text-slate-500 font-medium w-[100px]">작업</TableHead>
+              <TableRow className="border-b border-border dark:border-white/5 hover:bg-transparent">
+                <TableHead className="text-xs text-muted-foreground font-medium w-[76px]">소재</TableHead>
+                <TableHead className="text-xs text-muted-foreground font-medium">소재명 / UTM Content</TableHead>
+                <TableHead className="text-xs text-muted-foreground font-medium">플랫폼 / 병원</TableHead>
+                <TableHead className="text-xs text-muted-foreground font-medium">상태</TableHead>
+                <TableHead className="text-xs text-muted-foreground font-medium w-[100px]">작업</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -537,7 +537,7 @@ export default function AdCreativesPage() {
                   <React.Fragment key={creative.id}>
                     {/* 1단: 축소 행 */}
                     <TableRow
-                      className="border-b border-white/5 cursor-pointer hover:bg-white/[0.02] transition-colors"
+                      className="border-b border-border dark:border-white/5 cursor-pointer hover:bg-muted/30 dark:hover:bg-muted/30 dark:bg-white/[0.02] transition-colors"
                       onClick={() => setExpandedId(isExpanded ? null : creative.id)}
                     >
                       <TableCell>
@@ -554,33 +554,33 @@ export default function AdCreativesPage() {
                         >
                           {creative.file_name ? (
                             creative.file_type?.startsWith('video/') ? (
-                              <div className="w-[60px] h-[60px] rounded-lg bg-white/5 overflow-hidden relative">
+                              <div className="w-[60px] h-[60px] rounded-lg bg-muted dark:bg-white/5 overflow-hidden relative">
                                 <video src={getCreativeUrl(creative.file_name)} className="w-full h-full object-cover" muted preload="metadata" />
                                 <div className="absolute inset-0 flex items-center justify-center bg-black/30 hover:bg-black/10 transition-colors">
                                   <Film size={16} className="text-white/80" />
                                 </div>
                               </div>
                             ) : (
-                              <img src={getCreativeUrl(creative.file_name)} alt={creative.name} className="w-[60px] h-[60px] rounded-lg object-cover bg-white/5 hover:opacity-80 transition-opacity" />
+                              <img src={getCreativeUrl(creative.file_name)} alt={creative.name} className="w-[60px] h-[60px] rounded-lg object-cover bg-muted dark:bg-white/5 hover:opacity-80 transition-opacity" />
                             )
                           ) : (
-                            <div className="w-[60px] h-[60px] rounded-lg bg-white/5 flex items-center justify-center text-slate-600">
+                            <div className="w-[60px] h-[60px] rounded-lg bg-muted dark:bg-white/5 flex items-center justify-center text-muted-foreground/60">
                               <Image size={20} />
                             </div>
                           )}
                         </div>
                       </TableCell>
                       <TableCell>
-                        <div className="text-white font-medium text-sm">{creative.name}</div>
-                        <code className="text-[11px] text-brand-400 bg-white/5 px-1.5 py-0.5 rounded mt-1 inline-block">
+                        <div className="text-foreground font-medium text-sm">{creative.name}</div>
+                        <code className="text-[11px] text-brand-400 bg-muted dark:bg-white/5 px-1.5 py-0.5 rounded mt-1 inline-block">
                           {creative.utm_content}
                         </code>
                       </TableCell>
                       <TableCell>
-                        <div className="text-slate-400 text-xs">
+                        <div className="text-muted-foreground text-xs">
                           {PLATFORM_OPTIONS.find(p => p.value === creative.platform)?.label || '-'}
                         </div>
-                        <div className="text-slate-500 text-xs mt-0.5">{creative.clinic?.name || '-'}</div>
+                        <div className="text-muted-foreground text-xs mt-0.5">{creative.clinic?.name || '-'}</div>
                       </TableCell>
                       <TableCell>
                         <Badge variant={creative.is_active ? 'success' : 'secondary'}>
@@ -591,21 +591,21 @@ export default function AdCreativesPage() {
                         <div className="flex items-center gap-2">
                           <button
                             onClick={(e) => { e.stopPropagation(); handleEdit(creative) }}
-                            className="text-slate-400 hover:text-white transition-colors"
+                            className="text-muted-foreground hover:text-foreground transition-colors"
                             aria-label="수정"
                           >
                             <Pencil size={14} />
                           </button>
                           <button
                             onClick={(e) => { e.stopPropagation(); handleDelete(creative.id) }}
-                            className="text-slate-400 hover:text-red-400 transition-colors"
+                            className="text-muted-foreground hover:text-red-400 transition-colors"
                             aria-label="삭제"
                           >
                             <Trash2 size={14} />
                           </button>
                           <ChevronDown
                             size={14}
-                            className={`text-slate-500 transition-transform ${isExpanded ? 'rotate-180' : ''}`}
+                            className={`text-muted-foreground transition-transform ${isExpanded ? 'rotate-180' : ''}`}
                           />
                         </div>
                       </TableCell>
@@ -613,47 +613,47 @@ export default function AdCreativesPage() {
 
                     {/* 2단: 펼침 패널 */}
                     {isExpanded && (
-                      <TableRow className="border-b border-white/5 bg-white/[0.02]">
+                      <TableRow className="border-b border-border dark:border-white/5 bg-muted/30 dark:bg-white/[0.02]">
                         <TableCell colSpan={5} className="p-0">
                           <div className="px-4 py-4 grid grid-cols-1 md:grid-cols-2 gap-4">
                             {/* 좌측: UTM 파라미터 */}
                             <div className="space-y-2">
-                              <p className="text-xs text-slate-500 font-medium mb-2">UTM 파라미터</p>
+                              <p className="text-xs text-muted-foreground font-medium mb-2">UTM 파라미터</p>
                               <div className="grid grid-cols-2 gap-x-4 gap-y-1.5 text-xs">
                                 <div>
-                                  <span className="text-slate-500">Source: </span>
-                                  <span className="text-slate-300">{creative.utm_source || '-'}</span>
+                                  <span className="text-muted-foreground">Source: </span>
+                                  <span className="text-foreground/80">{creative.utm_source || '-'}</span>
                                 </div>
                                 <div>
-                                  <span className="text-slate-500">Medium: </span>
-                                  <span className="text-slate-300">{creative.utm_medium || '-'}</span>
+                                  <span className="text-muted-foreground">Medium: </span>
+                                  <span className="text-foreground/80">{creative.utm_medium || '-'}</span>
                                 </div>
                                 <div>
-                                  <span className="text-slate-500">Campaign: </span>
-                                  <span className="text-slate-300">{creative.utm_campaign || '-'}</span>
+                                  <span className="text-muted-foreground">Campaign: </span>
+                                  <span className="text-foreground/80">{creative.utm_campaign || '-'}</span>
                                 </div>
                                 <div>
-                                  <span className="text-slate-500">Term: </span>
-                                  <span className="text-slate-300">{creative.utm_term || '-'}</span>
+                                  <span className="text-muted-foreground">Term: </span>
+                                  <span className="text-foreground/80">{creative.utm_term || '-'}</span>
                                 </div>
                               </div>
                               <div className="text-xs mt-2">
-                                <span className="text-slate-500">랜딩페이지: </span>
+                                <span className="text-muted-foreground">랜딩페이지: </span>
                                 {creative.landing_page ? (
-                                  <span className="text-slate-300">{creative.landing_page.name}</span>
+                                  <span className="text-foreground/80">{creative.landing_page.name}</span>
                                 ) : (
-                                  <span className="text-slate-600">미연결</span>
+                                  <span className="text-muted-foreground/60">미연결</span>
                                 )}
                               </div>
                             </div>
 
                             {/* 우측: UTM URL + 액션 */}
                             <div className="space-y-2">
-                              <p className="text-xs text-slate-500 font-medium mb-2">UTM URL</p>
+                              <p className="text-xs text-muted-foreground font-medium mb-2">UTM URL</p>
                               {utmUrl ? (
                                 <>
-                                  <div className="bg-slate-800/50 rounded-lg p-2.5">
-                                    <p className="text-[11px] text-slate-300 break-all font-mono leading-relaxed">{utmUrl}</p>
+                                  <div className="bg-card rounded-lg p-2.5">
+                                    <p className="text-[11px] text-foreground/80 break-all font-mono leading-relaxed">{utmUrl}</p>
                                   </div>
                                   <div className="flex items-center gap-2 mt-2">
                                     <Button
@@ -690,9 +690,9 @@ export default function AdCreativesPage() {
                                   </div>
                                 </>
                               ) : (
-                                <div className="bg-slate-800/30 rounded-lg p-3 text-center">
-                                  <p className="text-xs text-slate-600">랜딩 페이지 미연결</p>
-                                  <p className="text-[10px] text-slate-700 mt-1">소재에 랜딩 페이지를 연결하면 UTM URL이 자동 생성됩니다.</p>
+                                <div className="bg-card rounded-lg p-3 text-center">
+                                  <p className="text-xs text-muted-foreground/60">랜딩 페이지 미연결</p>
+                                  <p className="text-[10px] text-muted-foreground/60 mt-1">소재에 랜딩 페이지를 연결하면 UTM URL이 자동 생성됩니다.</p>
                                 </div>
                               )}
                             </div>

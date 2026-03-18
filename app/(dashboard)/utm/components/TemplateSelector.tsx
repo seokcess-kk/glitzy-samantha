@@ -132,7 +132,7 @@ export function TemplateSelector({
         </DropdownMenuTrigger>
         <DropdownMenuContent className="w-[200px]">
           {templates.length === 0 ? (
-            <div className="px-2 py-3 text-xs text-slate-500 text-center">
+            <div className="px-2 py-3 text-xs text-muted-foreground text-center">
               저장된 템플릿이 없습니다.
             </div>
           ) : (
@@ -148,7 +148,7 @@ export function TemplateSelector({
                 </span>
                 <button
                   onClick={(e) => openDeleteDialog(template.id, e)}
-                  className="text-slate-500 hover:text-red-400 p-1"
+                  className="text-muted-foreground hover:text-red-400 p-1"
                   disabled={deleting}
                 >
                   <Trash2 className="h-3 w-3" />
@@ -186,7 +186,7 @@ export function TemplateSelector({
           </DialogHeader>
           <div className="space-y-4 py-4">
             <div>
-              <label className="text-sm text-slate-400 mb-1 block">템플릿 이름</label>
+              <label className="text-sm text-muted-foreground mb-1 block">템플릿 이름</label>
               <Input
                 value={templateName}
                 onChange={e => setTemplateName(e.target.value)}
@@ -200,13 +200,13 @@ export function TemplateSelector({
                 id="is-default"
                 checked={isDefault}
                 onChange={e => setIsDefault(e.target.checked)}
-                className="rounded border-slate-600"
+                className="rounded border-border"
               />
-              <label htmlFor="is-default" className="text-sm text-slate-400">
+              <label htmlFor="is-default" className="text-sm text-muted-foreground">
                 기본 템플릿으로 설정
               </label>
             </div>
-            <div className="text-xs text-slate-500 bg-slate-800/50 rounded-lg p-3">
+            <div className="text-xs text-muted-foreground bg-muted rounded-lg p-3">
               <p className="font-medium mb-2">저장될 설정:</p>
               <ul className="space-y-1">
                 {currentFormData.baseUrl && <li>URL: {currentFormData.baseUrl}</li>}
@@ -236,10 +236,10 @@ export function TemplateSelector({
             <DialogTitle>템플릿 삭제</DialogTitle>
           </DialogHeader>
           <div className="py-4">
-            <p className="text-sm text-slate-400">
-              <span className="text-white font-medium">{deleteTarget?.name}</span> 템플릿을 삭제하시겠습니까?
+            <p className="text-sm text-muted-foreground">
+              <span className="text-foreground font-medium">{deleteTarget?.name}</span> 템플릿을 삭제하시겠습니까?
             </p>
-            <p className="text-xs text-slate-500 mt-2">이 작업은 되돌릴 수 없습니다.</p>
+            <p className="text-xs text-muted-foreground mt-2">이 작업은 되돌릴 수 없습니다.</p>
           </div>
           <DialogFooter>
             <Button variant="ghost" onClick={() => setDeleteDialogOpen(false)} disabled={deleting}>

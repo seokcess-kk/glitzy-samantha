@@ -52,20 +52,20 @@ export default function LoginPage() {
           <div className="w-14 h-14 bg-gradient-to-br from-brand-500 to-brand-700 rounded-2xl flex items-center justify-center mb-4 shadow-lg shadow-brand-600/30">
             <Activity size={28} className="text-white" />
           </div>
-          <h1 className="text-2xl font-bold text-white">MMI 대시보드</h1>
-          <p className="text-sm text-slate-500 mt-1">Medical Marketing Intelligence</p>
+          <h1 className="text-2xl font-bold text-foreground">MMI 대시보드</h1>
+          <p className="text-sm text-muted-foreground mt-1">Medical Marketing Intelligence</p>
         </div>
 
         {/* 로그인 폼 */}
         <Card variant="glass" className="p-6">
           <div className="mb-6">
-            <h2 className="text-xl font-semibold text-white">로그인</h2>
-            <p className="text-sm text-slate-500 mt-1">계정 정보를 입력하여 로그인하세요</p>
+            <h2 className="text-xl font-semibold text-foreground">로그인</h2>
+            <p className="text-sm text-muted-foreground mt-1">계정 정보를 입력하여 로그인하세요</p>
           </div>
 
           <form onSubmit={handleSubmit} className="space-y-4">
             <div className="space-y-2">
-              <Label htmlFor="username" className="text-xs text-slate-400 font-medium">아이디</Label>
+              <Label htmlFor="username" className="text-xs text-muted-foreground font-medium">아이디</Label>
               <Input
                 id="username"
                 type="text"
@@ -78,7 +78,7 @@ export default function LoginPage() {
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="password" className="text-xs text-slate-400 font-medium">비밀번호</Label>
+              <Label htmlFor="password" className="text-xs text-muted-foreground font-medium">비밀번호</Label>
               <div className="relative">
                 <Input
                   id="password"
@@ -95,7 +95,7 @@ export default function LoginPage() {
                   variant="ghost"
                   size="icon"
                   onClick={() => setShowPw(v => !v)}
-                  className="absolute right-1 top-1/2 -translate-y-1/2 h-7 w-7 text-slate-500 hover:text-white hover:bg-white/10"
+                  className="absolute right-1 top-1/2 -translate-y-1/2 h-7 w-7 text-muted-foreground hover:text-foreground hover:bg-muted dark:hover:bg-white/10"
                 >
                   {showPw ? <EyeOff size={15} /> : <Eye size={15} />}
                 </Button>
@@ -127,7 +127,7 @@ export default function LoginPage() {
         </Card>
 
         {/* 푸터 */}
-        <p className="text-center text-xs text-slate-600 mt-6">
+        <p className="text-center text-xs text-muted-foreground/60 mt-6">
           &copy; 2024 Glitzy. All rights reserved.
         </p>
       </div>

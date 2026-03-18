@@ -61,9 +61,9 @@ export function FunnelSection({ data, loading }: FunnelSectionProps) {
       <div className="flex items-center justify-between mb-5">
         <div className="flex items-center gap-2">
           <Users size={16} className="text-brand-400" />
-          <h2 className="text-sm font-semibold text-white">전환 퍼널</h2>
+          <h2 className="text-sm font-semibold text-foreground">전환 퍼널</h2>
         </div>
-        <span className="text-xs text-slate-500">리드 → 결제 전환율</span>
+        <span className="text-xs text-muted-foreground">리드 → 결제 전환율</span>
       </div>
 
       {loading ? (
@@ -134,7 +134,7 @@ function FunnelProgress({
             <div key={stage.stage} className="flex flex-col items-center" style={{ minWidth: NODE_SIZE + 16 }}>
               <Link href={STAGE_LINKS[stage.stage] || '#'}>
                 <div
-                  className="rounded-full flex items-center justify-center font-bold text-white cursor-pointer
+                  className="rounded-full flex items-center justify-center font-bold text-white dark:text-white cursor-pointer
                     transition-all duration-200 hover:scale-110 hover:ring-2 hover:ring-white/20 hover:shadow-lg hover:shadow-brand-500/20"
                   style={{
                     width: NODE_SIZE,
@@ -159,8 +159,8 @@ function FunnelProgress({
                   {stage.count}
                 </div>
               </Link>
-              <p className="text-xs font-medium text-slate-300 mt-2">{stage.label}</p>
-              <p className="text-[11px] text-slate-500 tabular-nums">{stage.rate}%</p>
+              <p className="text-xs font-medium text-foreground/80 mt-2">{stage.label}</p>
+              <p className="text-[11px] text-muted-foreground tabular-nums">{stage.rate}%</p>
             </div>
           ))}
         </div>
@@ -217,10 +217,10 @@ function FunnelProgress({
               {/* 노드 행 */}
               <Link
                 href={STAGE_LINKS[stage.stage] || '#'}
-                className="flex items-center gap-3 py-1 rounded-lg hover:bg-white/5 transition-colors px-1 -mx-1"
+                className="flex items-center gap-3 py-1 rounded-lg hover:bg-muted dark:hover:bg-white/5 transition-colors px-1 -mx-1"
               >
                 <div
-                  className="rounded-full flex items-center justify-center font-bold text-white shrink-0"
+                  className="rounded-full flex items-center justify-center font-bold text-white dark:text-white shrink-0"
                   style={{
                     width: NODE_SIZE,
                     height: NODE_SIZE,
@@ -232,8 +232,8 @@ function FunnelProgress({
                   {stage.count}
                 </div>
                 <div className="min-w-0">
-                  <p className="text-sm font-medium text-slate-200">{stage.label}</p>
-                  <p className="text-xs text-slate-500 tabular-nums">
+                  <p className="text-sm font-medium text-foreground/90">{stage.label}</p>
+                  <p className="text-xs text-muted-foreground tabular-nums">
                     리드 대비 {stage.rate}%
                   </p>
                 </div>
@@ -245,14 +245,14 @@ function FunnelProgress({
 
       {/* 전체 전환율 */}
       {totalRate !== undefined && totalRate > 0 && (
-        <div className="mt-5 pt-4 border-t border-white/5">
+        <div className="mt-5 pt-4 border-t border-border dark:border-white/5">
           <div className="flex items-center justify-between mb-2">
-            <span className="text-xs text-slate-500">전체 전환율 (리드 → 결제)</span>
-            <span className="text-base font-bold text-emerald-400 tabular-nums">
+            <span className="text-xs text-muted-foreground">전체 전환율 (리드 → 결제)</span>
+            <span className="text-base font-bold text-emerald-600 dark:text-emerald-400 tabular-nums">
               {totalRate}%
             </span>
           </div>
-          <div className="w-full h-1.5 bg-white/5 rounded-full overflow-hidden">
+          <div className="w-full h-1.5 bg-muted dark:bg-white/5 rounded-full overflow-hidden">
             <div
               className="h-full rounded-full transition-all duration-700 ease-out"
               style={{
@@ -283,22 +283,22 @@ function FunnelTooltip({
 
   return (
     <div
-      className="bg-slate-800 border border-white/10 rounded-lg px-3 py-2 shadow-xl pointer-events-none"
+      className="bg-card border border-border rounded-lg px-3 py-2 shadow-xl pointer-events-none dark:border-white/10"
       style={style}
     >
-      <p className="text-xs font-semibold text-white mb-1">{stage.label}</p>
+      <p className="text-xs font-semibold text-foreground mb-1">{stage.label}</p>
       <div className="space-y-0.5 text-[11px]">
-        <p className="text-slate-300">
-          <span className="text-slate-500">인원:</span>{' '}
+        <p className="text-foreground/80">
+          <span className="text-muted-foreground">인원:</span>{' '}
           <span className="font-medium tabular-nums">{stage.count}명</span>
         </p>
-        <p className="text-slate-300">
-          <span className="text-slate-500">리드 대비:</span>{' '}
+        <p className="text-foreground/80">
+          <span className="text-muted-foreground">리드 대비:</span>{' '}
           <span className="font-medium tabular-nums">{stage.rate}%</span>
         </p>
         {prevRate && (
-          <p className="text-slate-300">
-            <span className="text-slate-500">{prevStage!.label} 대비:</span>{' '}
+          <p className="text-foreground/80">
+            <span className="text-muted-foreground">{prevStage!.label} 대비:</span>{' '}
             <span className="font-medium tabular-nums">{prevRate}%</span>
           </p>
         )}

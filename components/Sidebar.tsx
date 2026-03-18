@@ -86,6 +86,7 @@ const menuGroups: MenuGroup[] = [
 
 // 비밀번호 변경 다이얼로그 (lazy import 불필요 — 사이드바는 항상 마운트)
 import PasswordChangeDialog from '@/components/PasswordChangeDialog'
+import ThemeToggle from '@/components/ThemeToggle'
 
 export default function Sidebar({ onClose }: { onClose?: () => void }) {
   const pathname = usePathname()
@@ -129,27 +130,28 @@ export default function Sidebar({ onClose }: { onClose?: () => void }) {
   }
 
   return (
-    <aside className="w-60 h-screen flex flex-col border-r border-white/5 shrink-0 bg-[#0b0b18]">
+    <aside className="w-60 h-screen flex flex-col border-r border-border shrink-0 bg-background">
       {/* 로고 */}
-      <div className="flex items-center gap-3 px-6 py-5 border-b border-white/5">
+      <div className="flex items-center gap-3 px-6 py-5 border-b border-border">
         <div className="w-8 h-8 bg-brand-600 rounded-lg flex items-center justify-center">
           <Activity size={16} className="text-white" />
         </div>
-        <div>
-          <p className="text-sm font-bold text-white">MMI</p>
-          <p className="text-xs text-slate-500">마케팅 인텔리전스</p>
+        <div className="flex-1 min-w-0">
+          <p className="text-sm font-bold text-foreground">MMI</p>
+          <p className="text-xs text-muted-foreground">마케팅 인텔리전스</p>
         </div>
+        <ThemeToggle />
       </div>
 
       {/* 슈퍼어드민 / agency_staff: 클리닉 스위처 */}
       {(isSuperAdmin || isAgencyStaff) && (
-        <div className="px-3 py-3 border-b border-white/5">
-          <p className="text-[10px] text-slate-600 uppercase tracking-widest mb-2 px-1">병원 선택</p>
+        <div className="px-3 py-3 border-b border-border">
+          <p className="text-[10px] text-muted-foreground uppercase tracking-widest mb-2 px-1">병원 선택</p>
           <Select
             value={selectedClinicId?.toString() ?? 'all'}
             onValueChange={v => setSelectedClinicId(v === 'all' ? null : Number(v))}
           >
-            <SelectTrigger className="w-full bg-white/5 border-white/10 text-white text-sm">
+            <SelectTrigger className="w-full text-sm">
               <SelectValue placeholder="전체 병원" />
             </SelectTrigger>
             <SelectContent>
@@ -178,7 +180,7 @@ export default function Sidebar({ onClose }: { onClose?: () => void }) {
               {/* 그룹 헤더 */}
               {group.label && (
                 <div className="pt-4 pb-1">
-                  <p className="text-[10px] text-slate-600 uppercase tracking-widest px-3">
+                  <p className="text-[10px] text-muted-foreground uppercase tracking-widest px-3">
                     {group.label}
                   </p>
                 </div>
@@ -199,7 +201,7 @@ export default function Sidebar({ onClose }: { onClose?: () => void }) {
                       className={`flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-all ${
                         isActive
                           ? 'bg-brand-600/20 text-brand-400'
-                          : 'text-slate-400 hover:text-white hover:bg-white/[0.05]'
+                          : 'text-muted-foreground hover:text-foreground hover:bg-muted'
                       }`}
                     >
                       <Icon size={17} />
@@ -216,7 +218,7 @@ export default function Sidebar({ onClose }: { onClose?: () => void }) {
         {isClinicAdmin && (
           <div className="space-y-1 mt-2">
             <div className="pt-4 pb-1">
-              <p className="text-[10px] text-slate-600 uppercase tracking-widest px-3">관리</p>
+              <p className="text-[10px] text-muted-foreground uppercase tracking-widest px-3">관리</p>
             </div>
             <Link
               href="/staff"
@@ -224,7 +226,7 @@ export default function Sidebar({ onClose }: { onClose?: () => void }) {
               className={`flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-all ${
                 pathname === '/staff'
                   ? 'bg-brand-600/20 text-brand-400'
-                  : 'text-slate-400 hover:text-white hover:bg-white/[0.05]'
+                  : 'text-muted-foreground hover:text-foreground hover:bg-muted'
               }`}
             >
               <UserCog size={17} />
@@ -237,7 +239,7 @@ export default function Sidebar({ onClose }: { onClose?: () => void }) {
         {isSuperAdmin && (
           <>
             <div className="pt-4 pb-1">
-              <p className="text-[10px] text-slate-600 uppercase tracking-widest px-3">슈퍼어드민</p>
+              <p className="text-[10px] text-muted-foreground uppercase tracking-widest px-3">슈퍼어드민</p>
             </div>
             <div className="space-y-1">
               <Link
@@ -246,7 +248,7 @@ export default function Sidebar({ onClose }: { onClose?: () => void }) {
                 className={`flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-all ${
                   pathname === '/admin/ad-creatives'
                     ? 'bg-brand-600/20 text-brand-400'
-                    : 'text-slate-400 hover:text-white hover:bg-white/[0.05]'
+                    : 'text-muted-foreground hover:text-foreground hover:bg-muted'
                 }`}
               >
                 <Image size={17} />
@@ -258,7 +260,7 @@ export default function Sidebar({ onClose }: { onClose?: () => void }) {
                 className={`flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-all ${
                   pathname === '/admin/landing-pages'
                     ? 'bg-brand-600/20 text-brand-400'
-                    : 'text-slate-400 hover:text-white hover:bg-white/[0.05]'
+                    : 'text-muted-foreground hover:text-foreground hover:bg-muted'
                 }`}
               >
                 <FileText size={17} />
@@ -270,7 +272,7 @@ export default function Sidebar({ onClose }: { onClose?: () => void }) {
                 className={`flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-all ${
                   pathname === '/admin/clinics'
                     ? 'bg-brand-600/20 text-brand-400'
-                    : 'text-slate-400 hover:text-white hover:bg-white/[0.05]'
+                    : 'text-muted-foreground hover:text-foreground hover:bg-muted'
                 }`}
               >
                 <Building2 size={17} />
@@ -282,7 +284,7 @@ export default function Sidebar({ onClose }: { onClose?: () => void }) {
                 className={`flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-all ${
                   pathname === '/admin/users'
                     ? 'bg-brand-600/20 text-brand-400'
-                    : 'text-slate-400 hover:text-white hover:bg-white/[0.05]'
+                    : 'text-muted-foreground hover:text-foreground hover:bg-muted'
                 }`}
               >
                 <UserCog size={17} />
@@ -294,7 +296,7 @@ export default function Sidebar({ onClose }: { onClose?: () => void }) {
                 className={`flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-all ${
                   pathname.startsWith('/utm')
                     ? 'bg-brand-600/20 text-brand-400'
-                    : 'text-slate-400 hover:text-white hover:bg-white/[0.05]'
+                    : 'text-muted-foreground hover:text-foreground hover:bg-muted'
                 }`}
               >
                 <Link2 size={17} />
@@ -306,7 +308,7 @@ export default function Sidebar({ onClose }: { onClose?: () => void }) {
                 className={`flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-all ${
                   pathname === '/admin/login-logs'
                     ? 'bg-brand-600/20 text-brand-400'
-                    : 'text-slate-400 hover:text-white hover:bg-white/[0.05]'
+                    : 'text-muted-foreground hover:text-foreground hover:bg-muted'
                 }`}
               >
                 <Shield size={17} />
@@ -318,20 +320,20 @@ export default function Sidebar({ onClose }: { onClose?: () => void }) {
       </nav>
 
       {/* 사용자 메뉴 */}
-      <div className="px-3 pb-4 border-t border-white/5 pt-3">
+      <div className="px-3 pb-4 border-t border-border pt-3">
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
-            <button className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl hover:bg-white/[0.05] transition-colors text-left" aria-label="사용자 메뉴">
+            <button className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl hover:bg-muted transition-colors text-left cursor-pointer" aria-label="사용자 메뉴">
               <div className="w-8 h-8 rounded-full bg-brand-600/20 flex items-center justify-center text-brand-400 font-semibold text-sm shrink-0">
                 {(user?.name || user?.username)?.[0]?.toUpperCase() || <User size={14} />}
               </div>
               <div className="flex-1 min-w-0">
-                <p className="text-sm text-white font-medium truncate">{user?.name || user?.username}</p>
-                <p className="text-[10px] text-slate-500">
+                <p className="text-sm text-foreground font-medium truncate">{user?.name || user?.username}</p>
+                <p className="text-[10px] text-muted-foreground">
                   {isSuperAdmin ? '슈퍼어드민' : isAgencyStaff ? '실행사 담당자' : isClinicAdmin ? '병원 관리자' : '병원 담당자'}
                 </p>
               </div>
-              <ChevronUp size={14} className="text-slate-500 shrink-0" />
+              <ChevronUp size={14} className="text-muted-foreground shrink-0" />
             </button>
           </DropdownMenuTrigger>
           <DropdownMenuContent side="top" align="start" className="w-52">
@@ -345,7 +347,7 @@ export default function Sidebar({ onClose }: { onClose?: () => void }) {
             </DropdownMenuItem>
             <DropdownMenuItem
               onClick={() => signOut({ callbackUrl: '/login' })}
-              className="text-red-400 hover:text-red-300 focus:text-red-300"
+              className="text-red-500 hover:text-red-600 focus:text-red-600 dark:text-red-400 dark:hover:text-red-300 dark:focus:text-red-300"
             >
               <LogOut size={14} />
               로그아웃

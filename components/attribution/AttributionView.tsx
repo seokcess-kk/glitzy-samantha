@@ -132,48 +132,48 @@ export default function AttributionView() {
             </SelectContent>
           </Select>
           {(channelFilter || campaignFilter) && (
-            <Button variant="ghost" size="sm" onClick={() => { setChannelFilter(null); setCampaignFilter(null) }} className="text-xs text-slate-400">
+            <Button variant="ghost" size="sm" onClick={() => { setChannelFilter(null); setCampaignFilter(null) }} className="text-xs text-muted-foreground">
               필터 해제
             </Button>
           )}
         </div>
-        <p className="text-xs text-slate-500">퍼스트터치 귀속 (첫 유입 채널 기준)</p>
+        <p className="text-xs text-muted-foreground">퍼스트터치 귀속 (첫 유입 채널 기준)</p>
       </div>
 
       {/* 요약 카드 */}
       <div className="grid grid-cols-3 gap-3">
         <Card variant="glass" className="p-4">
-          <p className="text-[11px] text-slate-400 font-medium mb-2">총 귀속 매출</p>
+          <p className="text-[11px] text-muted-foreground font-medium mb-2">총 귀속 매출</p>
           {loading ? <Skeleton className="h-7" /> : (
-            <p className="text-xl font-bold text-white tabular-nums">{fmtKrw(totals.totalRevenue)}</p>
+            <p className="text-xl font-bold text-foreground tabular-nums">{fmtKrw(totals.totalRevenue)}</p>
           )}
         </Card>
         <Card variant="glass" className="p-4">
-          <p className="text-[11px] text-slate-400 font-medium mb-2">총 광고비</p>
+          <p className="text-[11px] text-muted-foreground font-medium mb-2">총 광고비</p>
           {loading ? <Skeleton className="h-7" /> : (
-            <p className="text-xl font-bold text-white tabular-nums">{fmtKrw(totals.totalSpend)}</p>
+            <p className="text-xl font-bold text-foreground tabular-nums">{fmtKrw(totals.totalSpend)}</p>
           )}
         </Card>
         <Card variant="glass" className="p-4">
-          <p className="text-[11px] text-slate-400 font-medium mb-2">결제 고객</p>
+          <p className="text-[11px] text-muted-foreground font-medium mb-2">결제 고객</p>
           {loading ? <Skeleton className="h-7" /> : (
-            <p className="text-xl font-bold text-white tabular-nums">{totals.totalCustomers}명</p>
+            <p className="text-xl font-bold text-foreground tabular-nums">{totals.totalCustomers}명</p>
           )}
         </Card>
       </div>
 
       {/* 채널별 귀속표 */}
       <Card variant="glass" className="p-5">
-        <h3 className="text-sm font-semibold text-white mb-4">채널별 매출 귀속</h3>
+        <h3 className="text-sm font-semibold text-foreground mb-4">채널별 매출 귀속</h3>
         {loading ? (
           <div className="space-y-2">{Array(3).fill(0).map((_, i) => <Skeleton key={i} className="h-10" />)}</div>
         ) : byChannel.length > 0 ? (
           <div className="overflow-x-auto -mx-2">
             <Table className="min-w-[650px]">
               <TableHeader>
-                <TableRow className="border-b border-white/5 hover:bg-transparent">
+                <TableRow className="border-b border-border dark:border-white/5 hover:bg-transparent">
                   {['채널', '리드', '광고비', '귀속 매출', '결제 고객', 'ROI', 'ROAS'].map(h => (
-                    <TableHead key={h} className={`text-[11px] text-slate-500 font-medium ${h !== '채널' ? 'text-right' : ''}`}>{h}</TableHead>
+                    <TableHead key={h} className={`text-[11px] text-muted-foreground font-medium ${h !== '채널' ? 'text-right' : ''}`}>{h}</TableHead>
                   ))}
                 </TableRow>
               </TableHeader>
@@ -181,50 +181,50 @@ export default function AttributionView() {
                 {byChannel.map(row => (
                   <TableRow
                     key={row.channel}
-                    className={`border-b border-white/[0.03] cursor-pointer transition-colors ${
-                      channelFilter === row.channel ? 'bg-brand-600/10' : 'hover:bg-white/[0.02]'
+                    className={`border-b border-border/50 dark:border-white/[0.03] cursor-pointer transition-colors ${
+                      channelFilter === row.channel ? 'bg-brand-600/10' : 'hover:bg-muted/50 dark:hover:bg-white/[0.02]'
                     }`}
                     onClick={() => handleChannelClick(row.channel)}
                   >
                     <TableCell>
                       <div className="flex items-center gap-2">
-                        <span className="text-slate-200 font-medium text-sm">{row.channel}</span>
+                        <span className="text-foreground/90 font-medium text-sm">{row.channel}</span>
                         {channelFilter === row.channel && <ChevronRight size={12} className="text-brand-400" />}
                       </div>
                     </TableCell>
-                    <TableCell className="text-right text-slate-400 tabular-nums">{row.leads}</TableCell>
-                    <TableCell className="text-right text-slate-400 tabular-nums">{fmtKrw(row.spend)}</TableCell>
-                    <TableCell className="text-right text-white font-semibold tabular-nums">{fmtKrw(row.revenue)}</TableCell>
-                    <TableCell className="text-right text-slate-300 tabular-nums">{row.customers}명</TableCell>
+                    <TableCell className="text-right text-muted-foreground tabular-nums">{row.leads}</TableCell>
+                    <TableCell className="text-right text-muted-foreground tabular-nums">{fmtKrw(row.spend)}</TableCell>
+                    <TableCell className="text-right text-foreground font-semibold tabular-nums">{fmtKrw(row.revenue)}</TableCell>
+                    <TableCell className="text-right text-foreground/80 tabular-nums">{row.customers}명</TableCell>
                     <TableCell className="text-right tabular-nums">
-                      <span className={`inline-flex items-center gap-0.5 font-semibold ${row.roi >= 0 ? 'text-emerald-400' : 'text-rose-400'}`}>
+                      <span className={`inline-flex items-center gap-0.5 font-semibold ${row.roi >= 0 ? 'text-emerald-600 dark:text-emerald-400' : 'text-rose-600 dark:text-rose-400'}`}>
                         {row.roi >= 0 ? <ArrowUpRight size={12} /> : <ArrowDownRight size={12} />}
                         {Math.abs(row.roi)}%
                       </span>
                     </TableCell>
-                    <TableCell className="text-right text-slate-300 tabular-nums">{row.roas > 0 ? `${(row.roas * 100).toFixed(0)}%` : '-'}</TableCell>
+                    <TableCell className="text-right text-foreground/80 tabular-nums">{row.roas > 0 ? `${(row.roas * 100).toFixed(0)}%` : '-'}</TableCell>
                   </TableRow>
                 ))}
               </TableBody>
             </Table>
           </div>
         ) : (
-          <p className="text-center text-slate-500 py-6 text-sm">귀속할 데이터가 없습니다.</p>
+          <p className="text-center text-muted-foreground py-6 text-sm">귀속할 데이터가 없습니다.</p>
         )}
       </Card>
 
       {/* 캠페인별 귀속표 */}
       <Card variant="glass" className="p-5">
-        <h3 className="text-sm font-semibold text-white mb-4">캠페인별 매출 귀속</h3>
+        <h3 className="text-sm font-semibold text-foreground mb-4">캠페인별 매출 귀속</h3>
         {loading ? (
           <div className="space-y-2">{Array(3).fill(0).map((_, i) => <Skeleton key={i} className="h-10" />)}</div>
         ) : byCampaign.length > 0 ? (
           <div className="overflow-x-auto -mx-2">
             <Table className="min-w-[700px]">
               <TableHeader>
-                <TableRow className="border-b border-white/5 hover:bg-transparent">
+                <TableRow className="border-b border-border dark:border-white/5 hover:bg-transparent">
                   {['캠페인', '채널', '리드', '광고비', '귀속 매출', '결제', 'ROI'].map(h => (
-                    <TableHead key={h} className={`text-[11px] text-slate-500 font-medium ${!['캠페인', '채널'].includes(h) ? 'text-right' : ''}`}>{h}</TableHead>
+                    <TableHead key={h} className={`text-[11px] text-muted-foreground font-medium ${!['캠페인', '채널'].includes(h) ? 'text-right' : ''}`}>{h}</TableHead>
                   ))}
                 </TableRow>
               </TableHeader>
@@ -232,27 +232,27 @@ export default function AttributionView() {
                 {byCampaign.map(row => (
                   <TableRow
                     key={row.campaign}
-                    className={`border-b border-white/[0.03] cursor-pointer transition-colors ${
-                      campaignFilter === row.campaign ? 'bg-brand-600/10' : 'hover:bg-white/[0.02]'
+                    className={`border-b border-border/50 dark:border-white/[0.03] cursor-pointer transition-colors ${
+                      campaignFilter === row.campaign ? 'bg-brand-600/10' : 'hover:bg-muted/50 dark:hover:bg-white/[0.02]'
                     }`}
                     onClick={() => handleCampaignClick(row.campaign)}
                   >
-                    <TableCell className="font-medium text-slate-200 truncate max-w-[180px]" title={row.campaign}>
+                    <TableCell className="font-medium text-foreground/90 truncate max-w-[180px]" title={row.campaign}>
                       {row.campaign}
                     </TableCell>
-                    <TableCell className="text-slate-400 text-xs">{row.channel}</TableCell>
-                    <TableCell className="text-right text-slate-400 tabular-nums">{row.leads}</TableCell>
-                    <TableCell className="text-right text-slate-400 tabular-nums">
-                      {row.spend > 0 ? fmtKrw(row.spend) : <span className="text-slate-600">오가닉</span>}
+                    <TableCell className="text-muted-foreground text-xs">{row.channel}</TableCell>
+                    <TableCell className="text-right text-muted-foreground tabular-nums">{row.leads}</TableCell>
+                    <TableCell className="text-right text-muted-foreground tabular-nums">
+                      {row.spend > 0 ? fmtKrw(row.spend) : <span className="text-muted-foreground/60">오가닉</span>}
                     </TableCell>
-                    <TableCell className="text-right text-white font-semibold tabular-nums">{fmtKrw(row.revenue)}</TableCell>
-                    <TableCell className="text-right text-slate-300 tabular-nums">{row.customers}명</TableCell>
+                    <TableCell className="text-right text-foreground font-semibold tabular-nums">{fmtKrw(row.revenue)}</TableCell>
+                    <TableCell className="text-right text-foreground/80 tabular-nums">{row.customers}명</TableCell>
                     <TableCell className="text-right tabular-nums">
                       {row.spend > 0 ? (
-                        <span className={`font-semibold ${row.roi >= 0 ? 'text-emerald-400' : 'text-rose-400'}`}>
+                        <span className={`font-semibold ${row.roi >= 0 ? 'text-emerald-600 dark:text-emerald-400' : 'text-rose-600 dark:text-rose-400'}`}>
                           {row.roi >= 0 ? '+' : ''}{row.roi}%
                         </span>
-                      ) : <span className="text-slate-600">-</span>}
+                      ) : <span className="text-muted-foreground/60">-</span>}
                     </TableCell>
                   </TableRow>
                 ))}
@@ -260,19 +260,19 @@ export default function AttributionView() {
             </Table>
           </div>
         ) : (
-          <p className="text-center text-slate-500 py-6 text-sm">캠페인 귀속 데이터가 없습니다.</p>
+          <p className="text-center text-muted-foreground py-6 text-sm">캠페인 귀속 데이터가 없습니다.</p>
         )}
       </Card>
 
       {/* 결제 고객 여정 */}
       <Card variant="glass" className="p-5">
         <div className="flex items-center justify-between mb-4">
-          <h3 className="text-sm font-semibold text-white">
+          <h3 className="text-sm font-semibold text-foreground">
             결제 고객 여정
             {channelFilter && <span className="ml-2 text-xs text-brand-400 font-normal">— {channelFilter}</span>}
             {campaignFilter && <span className="ml-2 text-xs text-brand-400 font-normal">— {campaignFilter}</span>}
           </h3>
-          <span className="text-xs text-slate-500">{customers.length}명</span>
+          <span className="text-xs text-muted-foreground">{customers.length}명</span>
         </div>
         {customersLoading ? (
           <div className="space-y-2">{Array(5).fill(0).map((_, i) => <Skeleton key={i} className="h-10" />)}</div>
@@ -280,9 +280,9 @@ export default function AttributionView() {
           <div className="overflow-x-auto -mx-2">
             <Table className="min-w-[600px]">
               <TableHeader>
-                <TableRow className="border-b border-white/5 hover:bg-transparent">
+                <TableRow className="border-b border-border dark:border-white/5 hover:bg-transparent">
                   {['고객명', '유입 채널', '캠페인', '첫 유입일', '결제액', '시술'].map(h => (
-                    <TableHead key={h} className="text-[11px] text-slate-500 font-medium">{h}</TableHead>
+                    <TableHead key={h} className="text-[11px] text-muted-foreground font-medium">{h}</TableHead>
                   ))}
                 </TableRow>
               </TableHeader>
@@ -290,22 +290,22 @@ export default function AttributionView() {
                 {customers.map(c => (
                   <TableRow
                     key={c.customerId}
-                    className="border-b border-white/[0.03] hover:bg-white/[0.02] cursor-pointer transition-colors"
+                    className="border-b border-border/50 dark:border-white/[0.03] hover:bg-muted/50 dark:hover:bg-white/[0.02] cursor-pointer transition-colors"
                     onClick={() => setSelectedCustomer(c)}
                   >
-                    <TableCell className="font-medium text-white">{maskName(c.name)}</TableCell>
-                    <TableCell className="text-slate-400 text-xs">{c.channel}</TableCell>
-                    <TableCell className="text-slate-400 text-xs truncate max-w-[120px]">{c.campaign || '-'}</TableCell>
-                    <TableCell className="text-slate-400 text-xs">{formatDate(c.firstLeadDate)}</TableCell>
-                    <TableCell className="text-white font-semibold tabular-nums">{fmtKrw(c.totalRevenue)}</TableCell>
-                    <TableCell className="text-slate-400 text-xs">{c.payments[0]?.treatment || '-'}</TableCell>
+                    <TableCell className="font-medium text-foreground">{maskName(c.name)}</TableCell>
+                    <TableCell className="text-muted-foreground text-xs">{c.channel}</TableCell>
+                    <TableCell className="text-muted-foreground text-xs truncate max-w-[120px]">{c.campaign || '-'}</TableCell>
+                    <TableCell className="text-muted-foreground text-xs">{formatDate(c.firstLeadDate)}</TableCell>
+                    <TableCell className="text-foreground font-semibold tabular-nums">{fmtKrw(c.totalRevenue)}</TableCell>
+                    <TableCell className="text-muted-foreground text-xs">{c.payments[0]?.treatment || '-'}</TableCell>
                   </TableRow>
                 ))}
               </TableBody>
             </Table>
           </div>
         ) : (
-          <p className="text-center text-slate-500 py-6 text-sm">
+          <p className="text-center text-muted-foreground py-6 text-sm">
             {channelFilter || campaignFilter ? '해당 조건의 결제 고객이 없습니다.' : '결제 고객 데이터가 없습니다.'}
           </p>
         )}

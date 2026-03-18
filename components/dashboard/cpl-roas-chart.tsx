@@ -34,9 +34,9 @@ const CplTooltip = ({ active, payload }: any) => {
   if (!active || !payload?.length) return null
   const d = payload[0]
   return (
-    <div className="bg-slate-900/95 border border-slate-700/50 rounded-lg px-3 py-2 text-xs shadow-xl backdrop-blur-sm">
-      <span className="text-slate-400">{d.payload.name}: </span>
-      <span className="text-white font-medium">₩{Number(d.value).toLocaleString()}</span>
+    <div className="bg-card border border-border rounded-lg px-3 py-2 text-xs shadow-xl backdrop-blur-sm">
+      <span className="text-muted-foreground">{d.payload.name}: </span>
+      <span className="text-foreground font-medium">₩{Number(d.value).toLocaleString()}</span>
     </div>
   )
 }
@@ -45,9 +45,9 @@ const RoasTooltip = ({ active, payload }: any) => {
   if (!active || !payload?.length) return null
   const d = payload[0]
   return (
-    <div className="bg-slate-900/95 border border-slate-700/50 rounded-lg px-3 py-2 text-xs shadow-xl backdrop-blur-sm">
-      <span className="text-slate-400">{d.payload.name}: </span>
-      <span className="text-white font-medium">{d.value}%</span>
+    <div className="bg-card border border-border rounded-lg px-3 py-2 text-xs shadow-xl backdrop-blur-sm">
+      <span className="text-muted-foreground">{d.payload.name}: </span>
+      <span className="text-foreground font-medium">{d.value}%</span>
     </div>
   )
 }
@@ -73,16 +73,16 @@ export function CplRoasChart({ cplData, roasData, loading }: CplRoasChartProps) 
       {/* CPL */}
       <Card variant="glass" className="p-5">
         <div className="flex items-center justify-between mb-1">
-          <h2 className="text-sm font-semibold text-white">매체별 CPL</h2>
-          <span className="text-[11px] text-slate-500">광고 + 콘텐츠</span>
+          <h2 className="text-sm font-semibold text-foreground">매체별 CPL</h2>
+          <span className="text-[11px] text-muted-foreground">광고 + 콘텐츠</span>
         </div>
-        <p className="text-xs text-slate-500 mb-4">DB 1건 획득 비용 (낮을수록 효율적)</p>
+        <p className="text-xs text-muted-foreground mb-4">DB 1건 획득 비용 (낮을수록 효율적)</p>
         {cplData.length > 0 ? (
           <ResponsiveContainer width="100%" height={chartHeight}>
             <BarChart layout="vertical" data={cplData} barSize={16}>
-              <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.05)" vertical={false} />
-              <XAxis type="number" tickFormatter={(v: number) => `₩${(v / 1000).toFixed(0)}k`} tick={{ fill: '#64748b', fontSize: 10 }} axisLine={false} tickLine={false} />
-              <YAxis type="category" dataKey="name" tick={{ fill: '#94a3b8', fontSize: 11 }} axisLine={false} tickLine={false} width={70} />
+              <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" vertical={false} />
+              <XAxis type="number" tickFormatter={(v: number) => `₩${(v / 1000).toFixed(0)}k`} tick={{ fill: 'hsl(var(--muted-foreground))', fontSize: 10 }} axisLine={false} tickLine={false} />
+              <YAxis type="category" dataKey="name" tick={{ fill: 'hsl(var(--muted-foreground))', fontSize: 11 }} axisLine={false} tickLine={false} width={70} />
               <Tooltip content={<CplTooltip />} />
               <Bar dataKey="cpl" radius={[0, 4, 4, 0]}>
                 {cplData.map((entry, i) => (
@@ -101,7 +101,7 @@ export function CplRoasChart({ cplData, roasData, loading }: CplRoasChartProps) 
       {/* ROAS */}
       <Card variant="glass" className="p-5">
         <div className="flex items-center justify-between mb-1">
-          <h2 className="text-sm font-semibold text-white">매체별 ROAS</h2>
+          <h2 className="text-sm font-semibold text-foreground">매체별 ROAS</h2>
           <Link
             href="/ads"
             className="inline-flex items-center gap-1 text-xs text-brand-400 hover:text-brand-300 transition-colors"
@@ -110,13 +110,13 @@ export function CplRoasChart({ cplData, roasData, loading }: CplRoasChartProps) 
             <ArrowRight size={12} />
           </Link>
         </div>
-        <p className="text-xs text-slate-500 mb-4">예산 대비 매출 (100% 이상 = 흑자)</p>
+        <p className="text-xs text-muted-foreground mb-4">예산 대비 매출 (100% 이상 = 흑자)</p>
         {roasData.length > 0 ? (
           <ResponsiveContainer width="100%" height={chartHeight}>
             <BarChart layout="vertical" data={roasData} barSize={16}>
-              <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.05)" vertical={false} />
-              <XAxis type="number" tickFormatter={(v: number) => `${v}%`} tick={{ fill: '#64748b', fontSize: 10 }} axisLine={false} tickLine={false} />
-              <YAxis type="category" dataKey="name" tick={{ fill: '#94a3b8', fontSize: 11 }} axisLine={false} tickLine={false} width={70} />
+              <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" vertical={false} />
+              <XAxis type="number" tickFormatter={(v: number) => `${v}%`} tick={{ fill: 'hsl(var(--muted-foreground))', fontSize: 10 }} axisLine={false} tickLine={false} />
+              <YAxis type="category" dataKey="name" tick={{ fill: 'hsl(var(--muted-foreground))', fontSize: 11 }} axisLine={false} tickLine={false} width={70} />
               <Tooltip content={<RoasTooltip />} />
               <Bar dataKey="roas" radius={[0, 4, 4, 0]}>
                 {roasData.map((entry, i) => (

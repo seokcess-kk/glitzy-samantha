@@ -186,16 +186,16 @@ export default function MonitoringInputPage() {
       {/* 병원 + 날짜 선택 */}
       <div className="flex items-center gap-4 mb-6 flex-wrap">
         <div className="space-y-1">
-          <Label className="text-xs text-slate-500">병원</Label>
+          <Label className="text-xs text-muted-foreground">병원</Label>
           <Select
             value={selectedClinicId ? String(selectedClinicId) : '_none'}
             onValueChange={v => setSelectedClinicId(v === '_none' ? null : Number(v))}
           >
-            <SelectTrigger className="w-[200px] bg-white/5 border-white/10 text-white">
+            <SelectTrigger className="w-[200px] bg-muted dark:bg-white/5 border-border dark:border-white/10 text-foreground">
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="_none" disabled className="text-slate-500">병원 선택</SelectItem>
+              <SelectItem value="_none" disabled className="text-muted-foreground">병원 선택</SelectItem>
               {clinics.map(c => (
                 <SelectItem key={c.id} value={String(c.id)}>{c.name}</SelectItem>
               ))}
@@ -203,7 +203,7 @@ export default function MonitoringInputPage() {
           </Select>
         </div>
         <div className="space-y-1">
-          <Label className="text-xs text-slate-500">날짜</Label>
+          <Label className="text-xs text-muted-foreground">날짜</Label>
           <div className="flex items-center gap-1">
             <Button variant="ghost" size="icon" onClick={() => changeDate(-1)} className="h-10 w-8">
               <ChevronLeft size={16} />
@@ -212,7 +212,7 @@ export default function MonitoringInputPage() {
               type="date"
               value={date}
               onChange={e => setDate(e.target.value)}
-              className="w-[160px] bg-white/5 border-white/10 text-white text-center"
+              className="w-[160px] bg-muted dark:bg-white/5 border-border dark:border-white/10 text-foreground text-center"
             />
             <Button variant="ghost" size="icon" onClick={() => changeDate(1)} className="h-10 w-8">
               <ChevronRight size={16} />
@@ -220,7 +220,7 @@ export default function MonitoringInputPage() {
           </div>
         </div>
         <div className="mt-5">
-          <span className="text-sm text-slate-400">({dayOfWeek})</span>
+          <span className="text-sm text-muted-foreground">({dayOfWeek})</span>
         </div>
       </div>
 
@@ -230,16 +230,16 @@ export default function MonitoringInputPage() {
         </Card>
       ) : entries.length === 0 ? (
         <Card variant="glass" className="p-12 text-center">
-          <p className="text-slate-500">{selectedClinicId ? '등록된 키워드가 없습니다.' : '병원을 선택해주세요.'}</p>
+          <p className="text-muted-foreground">{selectedClinicId ? '등록된 키워드가 없습니다.' : '병원을 선택해주세요.'}</p>
         </Card>
       ) : (
         <>
           {Object.entries(groupedEntries).map(([cat, items]) => (
             <Card key={cat} variant="glass" className="p-5 mb-4">
-              <h3 className="text-sm font-semibold text-white mb-4 pb-2 border-b border-white/10">{CATEGORY_LABELS[cat] || cat}</h3>
+              <h3 className="text-sm font-semibold text-foreground mb-4 pb-2 border-b border-border dark:border-white/10">{CATEGORY_LABELS[cat] || cat}</h3>
               <div className="space-y-3">
                 {/* 헤더 */}
-                <div className="flex items-center gap-4 text-xs text-slate-400 font-semibold uppercase tracking-wider flex-wrap">
+                <div className="flex items-center gap-4 text-xs text-muted-foreground font-semibold uppercase tracking-wider flex-wrap">
                   <span className="min-w-[140px] shrink-0">키워드</span>
                   <span className="w-[50px] text-center">전일</span>
                   <span className="w-[90px] text-center">순위</span>
@@ -247,9 +247,9 @@ export default function MonitoringInputPage() {
                 </div>
                 {items.map((entry) => (
                   <div key={entry.keyword_id} className="flex items-center gap-4 flex-wrap py-1">
-                    <span className="text-sm text-slate-300 min-w-[140px] shrink-0">{entry.keyword}</span>
+                    <span className="text-sm text-foreground/80 min-w-[140px] shrink-0">{entry.keyword}</span>
                     <span className={`w-[50px] text-center text-xs font-medium ${
-                      entry.prev_rank == null ? 'text-slate-700' :
+                      entry.prev_rank == null ? 'text-muted-foreground/60' :
                       entry.prev_rank <= 3 ? 'text-emerald-400' :
                       entry.prev_rank <= 10 ? 'text-yellow-400' : 'text-red-400'
                     }`}>
@@ -261,7 +261,7 @@ export default function MonitoringInputPage() {
                       value={entry.rank_position}
                       onChange={e => updateEntry(entry._idx, 'rank_position', e.target.value)}
                       placeholder="순위"
-                      className="w-[90px] bg-white/5 border-white/10 text-white text-center"
+                      className="w-[90px] bg-muted dark:bg-white/5 border-border dark:border-white/10 text-foreground text-center"
                     />
                     {cat === 'smartblock' && (
                       <Input
@@ -269,7 +269,7 @@ export default function MonitoringInputPage() {
                         value={entry.url}
                         onChange={e => updateEntry(entry._idx, 'url', e.target.value)}
                         placeholder="URL"
-                        className="flex-1 min-w-[200px] bg-white/5 border-white/10 text-white"
+                        className="flex-1 min-w-[200px] bg-muted dark:bg-white/5 border-border dark:border-white/10 text-foreground"
                       />
                     )}
                   </div>

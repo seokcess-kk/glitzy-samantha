@@ -107,7 +107,7 @@ export default function PasswordChangeDialog({ open, onOpenChange }: PasswordCha
                 variant="ghost"
                 size="icon"
                 onClick={() => setShowCurrent(v => !v)}
-                className="absolute right-1 top-1/2 -translate-y-1/2 h-7 w-7 text-slate-500 hover:text-white hover:bg-white/10"
+                className="absolute right-1 top-1/2 -translate-y-1/2 h-7 w-7 text-muted-foreground hover:text-foreground hover:bg-muted dark:hover:bg-white/10"
               >
                 {showCurrent ? <EyeOff size={15} /> : <Eye size={15} />}
               </Button>
@@ -133,7 +133,7 @@ export default function PasswordChangeDialog({ open, onOpenChange }: PasswordCha
                 variant="ghost"
                 size="icon"
                 onClick={() => setShowNew(v => !v)}
-                className="absolute right-1 top-1/2 -translate-y-1/2 h-7 w-7 text-slate-500 hover:text-white hover:bg-white/10"
+                className="absolute right-1 top-1/2 -translate-y-1/2 h-7 w-7 text-muted-foreground hover:text-foreground hover:bg-muted dark:hover:bg-white/10"
               >
                 {showNew ? <EyeOff size={15} /> : <Eye size={15} />}
               </Button>

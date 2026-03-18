@@ -28,8 +28,8 @@ const PieTooltip = ({ active, payload }: any) => {
   if (!active || !payload?.length) return null
   const d = payload[0]
   return (
-    <div className="bg-slate-900/95 border border-slate-700/50 rounded-lg px-3 py-2 text-xs shadow-xl backdrop-blur-sm">
-      <p className="text-slate-400">{d.name}: <span className="text-white font-medium">{fmtKrw(d.value)}</span></p>
+    <div className="bg-card border border-border rounded-lg px-3 py-2 text-xs shadow-xl backdrop-blur-sm">
+      <p className="text-muted-foreground">{d.name}: <span className="text-foreground font-medium">{fmtKrw(d.value)}</span></p>
     </div>
   )
 }
@@ -50,7 +50,7 @@ export function TreatmentPie({ data, loading }: TreatmentPieProps) {
 
   return (
     <Card variant="glass" className="p-5 w-full">
-      <h2 className="text-sm font-semibold text-white mb-4">시술별 매출 비중</h2>
+      <h2 className="text-sm font-semibold text-foreground mb-4">시술별 매출 비중</h2>
 
       {loading ? (
         <Skeleton className="h-[240px] rounded-lg" />
@@ -78,8 +78,8 @@ export function TreatmentPie({ data, loading }: TreatmentPieProps) {
             </ResponsiveContainer>
             <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
               <div className="text-center">
-                <p className="text-[10px] text-slate-500">총 매출</p>
-                <p className="text-sm font-bold text-white tabular-nums">{fmtKrw(total)}</p>
+                <p className="text-[10px] text-muted-foreground">총 매출</p>
+                <p className="text-sm font-bold text-foreground tabular-nums">{fmtKrw(total)}</p>
               </div>
             </div>
           </div>
@@ -94,9 +94,9 @@ export function TreatmentPie({ data, loading }: TreatmentPieProps) {
                       className="w-2 h-2 rounded-full shrink-0"
                       style={{ background: PIE_SHADES[i % PIE_SHADES.length] }}
                     />
-                    <span className="text-slate-400 truncate">{d.name}</span>
+                    <span className="text-muted-foreground truncate">{d.name}</span>
                   </span>
-                  <span className="font-semibold text-white tabular-nums shrink-0 ml-2">
+                  <span className="font-semibold text-foreground tabular-nums shrink-0 ml-2">
                     {fmtKrw(d.amount)} ({pct}%)
                   </span>
                 </li>

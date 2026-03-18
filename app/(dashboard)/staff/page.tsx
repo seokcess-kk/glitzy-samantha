@@ -116,7 +116,7 @@ export default function StaffPage() {
           </DialogHeader>
           <div className="space-y-4 py-4">
             <div className="space-y-2">
-              <Label className="text-xs text-slate-400">아이디 *</Label>
+              <Label className="text-xs text-muted-foreground">아이디 *</Label>
               <Input
                 type="text"
                 value={form.username}
@@ -125,7 +125,7 @@ export default function StaffPage() {
               />
             </div>
             <div className="space-y-2">
-              <Label className="text-xs text-slate-400">비밀번호 *</Label>
+              <Label className="text-xs text-muted-foreground">비밀번호 *</Label>
               <Input
                 type="password"
                 value={form.password}
@@ -133,7 +133,7 @@ export default function StaffPage() {
                 placeholder="8자 이상"
               />
             </div>
-            <p className="text-xs text-slate-500">
+            <p className="text-xs text-muted-foreground">
               생성된 계정은 예약/결제, 고객 조회, 캠페인 리드 메뉴에만 접근할 수 있습니다.
             </p>
           </div>
@@ -148,7 +148,7 @@ export default function StaffPage() {
 
       <Card variant="glass" className="p-6">
         <div className="flex items-center justify-between mb-4">
-          <h2 className="font-semibold text-white">담당자 목록 ({staff.length})</h2>
+          <h2 className="font-semibold text-foreground">담당자 목록 ({staff.length})</h2>
           <Button onClick={() => setDialogOpen(true)} size="sm" className="bg-brand-600 hover:bg-brand-700">
             <Plus size={14} /> 담당자 추가
           </Button>
@@ -160,17 +160,17 @@ export default function StaffPage() {
         ) : (
           <Table>
             <TableHeader>
-              <TableRow className="border-b border-white/5 hover:bg-transparent">
+              <TableRow className="border-b border-border dark:border-white/5 hover:bg-transparent">
                 {['아이디', '생성일', '상태', '활성화'].map(h => (
-                  <TableHead key={h} className="text-xs text-slate-500 uppercase tracking-wider font-medium">{h}</TableHead>
+                  <TableHead key={h} className="text-xs text-muted-foreground uppercase tracking-wider font-medium">{h}</TableHead>
                 ))}
               </TableRow>
             </TableHeader>
             <TableBody>
               {staff.map((s: any) => (
-                <TableRow key={s.id} className="border-b border-white/5">
-                  <TableCell className="text-white font-medium">{s.username}</TableCell>
-                  <TableCell className="text-slate-400 text-xs">{formatDate(s.created_at)}</TableCell>
+                <TableRow key={s.id} className="border-b border-border dark:border-white/5">
+                  <TableCell className="text-foreground font-medium">{s.username}</TableCell>
+                  <TableCell className="text-muted-foreground text-xs">{formatDate(s.created_at)}</TableCell>
                   <TableCell>
                     <Badge variant={s.is_active ? 'success' : 'secondary'}>
                       {s.is_active ? '활성' : '비활성'}
@@ -179,7 +179,7 @@ export default function StaffPage() {
                   <TableCell>
                     <button
                       onClick={() => toggleStaff(s.id, s.is_active)}
-                      className="text-slate-400 hover:text-white transition-colors"
+                      className="text-muted-foreground hover:text-foreground transition-colors"
                     >
                       {s.is_active ? <ToggleRight size={20} className="text-emerald-400" /> : <ToggleLeft size={20} />}
                     </button>

@@ -47,39 +47,39 @@ function AuditRow({ post, onAnalyze }: { post: any; onAnalyze: (id: number) => P
 
   return (
     <>
-      <TableRow className="border-b border-white/5 hover:bg-white/[0.03]">
+      <TableRow className="border-b border-border dark:border-white/5 hover:bg-muted dark:hover:bg-white/[0.03]">
         <TableCell>
           <Badge variant={PLATFORM_VARIANTS[post.platform] || 'secondary'}>{post.platform}</Badge>
         </TableCell>
         <TableCell>
-          <p className="text-sm text-slate-200 truncate max-w-[280px]">{post.post_title}</p>
+          <p className="text-sm text-foreground/80 truncate max-w-[280px]">{post.post_title}</p>
           {post.utm_campaign && (
-            <p className="text-xs text-slate-600 mt-0.5">{post.utm_campaign}</p>
+            <p className="text-xs text-muted-foreground/60 mt-0.5">{post.utm_campaign}</p>
           )}
         </TableCell>
         <TableCell>
           {riskCfg ? (
             <div className="flex items-center gap-2">
-              <div className="flex-1 h-1.5 bg-white/5 rounded-full overflow-hidden w-20">
+              <div className="flex-1 h-1.5 bg-muted dark:bg-white/5 rounded-full overflow-hidden w-20">
                 <div
                   className={`h-full rounded-full ${riskCfg.bar}`}
                   style={{ width: `${audit.risk_score}%` }}
                 />
               </div>
-              <span className="text-xs font-mono text-slate-400 w-8">{audit.risk_score}</span>
+              <span className="text-xs font-mono text-muted-foreground w-8">{audit.risk_score}</span>
             </div>
           ) : (
-            <span className="text-xs text-slate-600">미분석</span>
+            <span className="text-xs text-muted-foreground/60">미분석</span>
           )}
         </TableCell>
         <TableCell>
           {riskCfg ? (
             <Badge variant={riskCfg.variant}>{riskCfg.label}</Badge>
           ) : (
-            <span className="text-xs text-slate-600">—</span>
+            <span className="text-xs text-muted-foreground/60">—</span>
           )}
         </TableCell>
-        <TableCell className="text-xs text-slate-500">
+        <TableCell className="text-xs text-muted-foreground">
           {audit?.analyzed_at ? formatDate(audit.analyzed_at) : '—'}
         </TableCell>
         <TableCell>
@@ -97,7 +97,7 @@ function AuditRow({ post, onAnalyze }: { post: any; onAnalyze: (id: number) => P
             {audit?.findings?.length > 0 && (
               <button
                 onClick={() => setExpanded(!expanded)}
-                className="text-slate-500 hover:text-white transition-colors"
+                className="text-muted-foreground hover:text-foreground transition-colors"
                 aria-label={expanded ? '결과 접기' : '결과 펼치기'}
                 aria-expanded={expanded}
               >
@@ -108,18 +108,18 @@ function AuditRow({ post, onAnalyze }: { post: any; onAnalyze: (id: number) => P
         </TableCell>
       </TableRow>
       {expanded && audit && (
-        <TableRow className="border-b border-white/5 bg-white/[0.02]">
+        <TableRow className="border-b border-border dark:border-white/5 bg-muted/30 dark:bg-white/[0.02]">
           <TableCell colSpan={6} className="px-4 py-4">
             {audit.summary && (
-              <p className="text-sm text-slate-300 mb-3 italic">"{audit.summary}"</p>
+              <p className="text-sm text-foreground/80 mb-3 italic">"{audit.summary}"</p>
             )}
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
               {(audit.findings || []).map((f: any, i: number) => (
-                <div key={i} className={`flex items-start gap-2 p-3 rounded-lg ${f.detected ? 'bg-red-500/10 border border-red-500/20' : 'bg-white/[0.02] border border-white/5'}`}>
+                <div key={i} className={`flex items-start gap-2 p-3 rounded-lg ${f.detected ? 'bg-red-500/10 border border-red-500/20' : 'bg-muted/30 dark:bg-white/[0.02] border border-border dark:border-white/5'}`}>
                   <div className={`w-2 h-2 rounded-full mt-1 shrink-0 ${f.detected ? 'bg-red-400' : 'bg-emerald-500'}`} />
                   <div>
-                    <p className={`text-xs font-semibold mb-0.5 ${f.detected ? 'text-red-400' : 'text-slate-400'}`}>{f.category}</p>
-                    <p className="text-xs text-slate-500">{f.detail}</p>
+                    <p className={`text-xs font-semibold mb-0.5 ${f.detected ? 'text-red-400' : 'text-muted-foreground'}`}>{f.category}</p>
+                    <p className="text-xs text-muted-foreground">{f.detail}</p>
                   </div>
                 </div>
               ))}
@@ -198,13 +198,13 @@ export default function MonitorPage() {
       {/* 통계 카드 */}
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 md:gap-4 mb-6">
         {[
-          { label: '총 콘텐츠',  value: posts.length,         color: 'text-white' },
+          { label: '총 콘텐츠',  value: posts.length,         color: 'text-foreground' },
           { label: '위험',       value: dangerPosts.length,   color: 'text-red-400' },
           { label: '주의',       value: cautionPosts.length,  color: 'text-yellow-400' },
           { label: '안전',       value: safePosts.length,     color: 'text-emerald-400' },
         ].map(({ label, value, color }) => (
           <Card key={label} variant="glass" className="p-4">
-            <p className="text-xs text-slate-500 mb-1">{label}</p>
+            <p className="text-xs text-muted-foreground mb-1">{label}</p>
             {loading ? <Skeleton className="h-7 w-12" /> : <p className={`text-xl md:text-2xl font-bold ${color}`}>{value}</p>}
           </Card>
         ))}
@@ -221,7 +221,7 @@ export default function MonitorPage() {
             className={filterRisk === f.key ? 'bg-brand-600' : ''}
           >
             {f.label}
-            <span className={`ml-1.5 ${filterRisk === f.key ? 'opacity-70' : 'text-slate-600'}`}>({f.count})</span>
+            <span className={`ml-1.5 ${filterRisk === f.key ? 'opacity-70' : 'text-muted-foreground/60'}`}>({f.count})</span>
           </Button>
         ))}
       </div>
@@ -233,7 +233,7 @@ export default function MonitorPage() {
             {Array(5).fill(0).map((_, i) => <Skeleton key={i} className="h-12 rounded-xl" />)}
           </div>
         ) : filtered.length === 0 ? (
-          <div className="py-16 text-center text-slate-500">
+          <div className="py-16 text-center text-muted-foreground">
             <Scan size={32} className="mx-auto mb-3 opacity-30" />
             <p className="text-sm mb-1">콘텐츠가 없습니다.</p>
             <p className="text-xs">브랜드 콘텐츠 분석 메뉴에서 포스트를 먼저 등록하세요.</p>
@@ -242,9 +242,9 @@ export default function MonitorPage() {
           <div className="overflow-x-auto">
             <Table className="min-w-[540px]">
               <TableHeader>
-                <TableRow className="border-b border-white/5 hover:bg-transparent">
+                <TableRow className="border-b border-border dark:border-white/5 hover:bg-transparent">
                   {['플랫폼', '콘텐츠 제목', '위험도 점수', '등급', '마지막 분석', '액션'].map(h => (
-                    <TableHead key={h} className="text-xs text-slate-500 uppercase tracking-wider font-medium whitespace-nowrap">{h}</TableHead>
+                    <TableHead key={h} className="text-xs text-muted-foreground uppercase tracking-wider font-medium whitespace-nowrap">{h}</TableHead>
                   ))}
                 </TableRow>
               </TableHeader>

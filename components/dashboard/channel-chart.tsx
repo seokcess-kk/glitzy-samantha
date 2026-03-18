@@ -34,13 +34,13 @@ const BarTooltip = ({ active, payload }: any) => {
   const d = payload[0]?.payload
   if (!d) return null
   return (
-    <div className="bg-slate-900/95 border border-slate-700/50 rounded-lg px-3 py-2.5 text-xs shadow-xl backdrop-blur-sm">
-      <p className="font-medium text-white mb-1.5">{d.channel}</p>
-      <p className="text-slate-400">리드: <span className="text-white font-medium">{d.leads}건</span></p>
-      <p className="text-slate-400">결제: <span className="text-white font-medium">{d.payingCustomers ?? 0}건</span></p>
-      <p className="text-slate-400">결제액: <span className="text-white font-medium">₩{d.revenue?.toLocaleString()}</span></p>
-      <p className="text-slate-400">광고비: <span className="text-slate-300">₩{d.spend?.toLocaleString()}</span></p>
-      <p className="text-slate-400">ROAS: <span className={d.roas >= 1 ? 'text-emerald-400 font-medium' : 'text-rose-400'}>{d.roas > 0 ? `${(d.roas * 100).toFixed(0)}%` : '-'}</span></p>
+    <div className="bg-card border border-border rounded-lg px-3 py-2.5 text-xs shadow-xl backdrop-blur-sm">
+      <p className="font-medium text-foreground mb-1.5">{d.channel}</p>
+      <p className="text-muted-foreground">리드: <span className="text-foreground font-medium">{d.leads}건</span></p>
+      <p className="text-muted-foreground">결제: <span className="text-foreground font-medium">{d.payingCustomers ?? 0}건</span></p>
+      <p className="text-muted-foreground">결제액: <span className="text-foreground font-medium">₩{d.revenue?.toLocaleString()}</span></p>
+      <p className="text-muted-foreground">광고비: <span className="text-foreground/80">₩{d.spend?.toLocaleString()}</span></p>
+      <p className="text-muted-foreground">ROAS: <span className={d.roas >= 1 ? 'text-emerald-500 dark:text-emerald-400 font-medium' : 'text-rose-500 dark:text-rose-400'}>{d.roas > 0 ? `${(d.roas * 100).toFixed(0)}%` : '-'}</span></p>
     </div>
   )
 }
@@ -49,8 +49,8 @@ export function ChannelChart({ data, loading, days = '30' }: ChannelChartProps) 
   return (
     <Card variant="glass" className="p-5">
       <div className="flex items-center justify-between mb-4">
-        <h2 className="text-sm font-semibold text-white">채널별 리드 & 매출</h2>
-        <span className="text-xs text-slate-500">{days}</span>
+        <h2 className="text-sm font-semibold text-foreground">채널별 리드 & 매출</h2>
+        <span className="text-xs text-muted-foreground">{days}</span>
       </div>
 
       {loading ? (
@@ -60,24 +60,24 @@ export function ChannelChart({ data, loading, days = '30' }: ChannelChartProps) 
           {/* 수평 바차트 */}
           <ResponsiveContainer width="100%" height={Math.min(400, Math.max(180, data.length * 56 + 20))}>
             <BarChart layout="vertical" data={data} barGap={2} barCategoryGap="20%">
-              <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.05)" horizontal={false} />
+              <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" horizontal={false} />
               <XAxis
                 type="number"
-                tick={{ fill: '#64748b', fontSize: 10 }}
+                tick={{ fill: 'hsl(var(--muted-foreground))', fontSize: 10 }}
                 axisLine={false}
                 tickLine={false}
               />
               <YAxis
                 type="category"
                 dataKey="channel"
-                tick={{ fill: '#94a3b8', fontSize: 11 }}
+                tick={{ fill: 'hsl(var(--muted-foreground))', fontSize: 11 }}
                 axisLine={false}
                 tickLine={false}
                 width={70}
               />
               <Tooltip content={<BarTooltip />} />
               <Legend
-                wrapperStyle={{ fontSize: 11, color: '#94a3b8' }}
+                wrapperStyle={{ fontSize: 11, color: 'hsl(var(--muted-foreground))' }}
                 iconType="square"
                 iconSize={8}
               />
@@ -94,7 +94,7 @@ export function ChannelChart({ data, loading, days = '30' }: ChannelChartProps) 
             </BarChart>
           </ResponsiveContainer>
 
-          <div className="mt-3 pt-3 border-t border-white/5">
+          <div className="mt-3 pt-3 border-t border-border dark:border-white/5">
             <Link
               href="/ads"
               className="inline-flex items-center gap-1 text-xs text-brand-400 hover:text-brand-300 transition-colors"

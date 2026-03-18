@@ -59,9 +59,9 @@ export default function ChatbotPage() {
           <Card key={label} variant="glass" className="p-5">
             <div className="flex items-center gap-3 mb-2">
               <Icon size={18} className={color} />
-              <p className="text-xs text-slate-400 uppercase tracking-wider">{label}</p>
+              <p className="text-xs text-muted-foreground uppercase tracking-wider">{label}</p>
             </div>
-            {loading ? <Skeleton className="h-9 w-20" /> : <p className="text-3xl font-bold text-white">{value}</p>}
+            {loading ? <Skeleton className="h-9 w-20" /> : <p className="text-3xl font-bold text-foreground">{value}</p>}
           </Card>
         ))}
       </div>
@@ -69,17 +69,17 @@ export default function ChatbotPage() {
       {!loading && leads.length > 0 && (
         <Card variant="glass" className="p-5 mb-6">
           <div className="flex items-center justify-between mb-2">
-            <span className="text-sm text-slate-300 font-medium">챗봇 발송률</span>
-            <span className="text-sm font-bold text-white">{sentRate}%</span>
+            <span className="text-sm text-foreground/80 font-medium">챗봇 발송률</span>
+            <span className="text-sm font-bold text-foreground">{sentRate}%</span>
           </div>
-          <div className="h-2.5 bg-white/10 rounded-full overflow-hidden">
+          <div className="h-2.5 bg-muted dark:bg-white/10 rounded-full overflow-hidden">
             <div className="h-full bg-emerald-500 rounded-full transition-all" style={{ width: `${sentRate}%` }} />
           </div>
         </Card>
       )}
 
       <Card variant="glass" className="p-6">
-        <h2 className="font-semibold text-white mb-5">리드별 챗봇 발송 현황</h2>
+        <h2 className="font-semibold text-foreground mb-5">리드별 챗봇 발송 현황</h2>
         {loading ? (
           <div className="space-y-3">
             {Array(5).fill(0).map((_, i) => <Skeleton key={i} className="h-12 rounded-xl" />)}
@@ -87,9 +87,9 @@ export default function ChatbotPage() {
         ) : leads.length > 0 ? (
           <Table>
             <TableHeader>
-              <TableRow className="border-b border-white/5 hover:bg-transparent">
+              <TableRow className="border-b border-border dark:border-white/5 hover:bg-transparent">
                 {['고객명', '연락처', '유입 채널', '인입 시각', '챗봇 상태', '발송 시각'].map(h => (
-                  <TableHead key={h} className="text-xs text-slate-500 uppercase tracking-wider font-medium">{h}</TableHead>
+                  <TableHead key={h} className="text-xs text-muted-foreground uppercase tracking-wider font-medium">{h}</TableHead>
                 ))}
               </TableRow>
             </TableHeader>
@@ -97,13 +97,13 @@ export default function ChatbotPage() {
               {leads.map((lead: any) => {
                 const c = lead.customer
                 return (
-                  <TableRow key={lead.id} className="border-b border-white/5 hover:bg-white/[0.03]">
-                    <TableCell className="font-medium text-white">{c?.name || '-'}</TableCell>
-                    <TableCell className="text-slate-400">{c?.phone_number}</TableCell>
+                  <TableRow key={lead.id} className="border-b border-border dark:border-white/5 hover:bg-muted/40 dark:hover:bg-white/[0.03]">
+                    <TableCell className="font-medium text-foreground">{c?.name || '-'}</TableCell>
+                    <TableCell className="text-muted-foreground">{c?.phone_number}</TableCell>
                     <TableCell>
                       <ChannelBadge channel={c?.first_source || '-'} />
                     </TableCell>
-                    <TableCell className="text-slate-400 text-xs">{formatDateTime(lead.created_at)}</TableCell>
+                    <TableCell className="text-muted-foreground text-xs">{formatDateTime(lead.created_at)}</TableCell>
                     <TableCell>
                       {lead.chatbot_sent ? (
                         <Badge variant="success" className="gap-1">
@@ -115,7 +115,7 @@ export default function ChatbotPage() {
                         </Badge>
                       )}
                     </TableCell>
-                    <TableCell className="text-slate-400 text-xs">
+                    <TableCell className="text-muted-foreground text-xs">
                       {lead.chatbot_sent_at ? formatDateTime(lead.chatbot_sent_at) : '-'}
                     </TableCell>
                   </TableRow>
@@ -124,7 +124,7 @@ export default function ChatbotPage() {
             </TableBody>
           </Table>
         ) : (
-          <p className="text-slate-500 text-sm text-center py-8">인입된 리드가 없습니다.</p>
+          <p className="text-muted-foreground text-sm text-center py-8">인입된 리드가 없습니다.</p>
         )}
       </Card>
     </>

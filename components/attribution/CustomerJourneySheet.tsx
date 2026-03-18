@@ -58,26 +58,26 @@ export default function CustomerJourneySheet({ customer, open, onClose }: Custom
         {/* 고객 요약 */}
         <div className="mb-6 space-y-3">
           <div className="flex items-center justify-between">
-            <span className="text-sm text-slate-400">고객명</span>
-            <span className="text-sm font-medium text-white">{maskName(customer.name)}</span>
+            <span className="text-sm text-muted-foreground">고객명</span>
+            <span className="text-sm font-medium text-foreground">{maskName(customer.name)}</span>
           </div>
           <div className="flex items-center justify-between">
-            <span className="text-sm text-slate-400">유입 채널</span>
-            <span className="text-sm text-white">{customer.channel}</span>
+            <span className="text-sm text-muted-foreground">유입 채널</span>
+            <span className="text-sm text-foreground">{customer.channel}</span>
           </div>
           {customer.campaign && (
             <div className="flex items-center justify-between">
-              <span className="text-sm text-slate-400">캠페인</span>
+              <span className="text-sm text-muted-foreground">캠페인</span>
               <span className="text-sm text-brand-400">{customer.campaign}</span>
             </div>
           )}
           <div className="flex items-center justify-between">
-            <span className="text-sm text-slate-400">총 결제액</span>
-            <span className="text-sm font-bold text-emerald-400">₩{customer.totalRevenue.toLocaleString()}</span>
+            <span className="text-sm text-muted-foreground">총 결제액</span>
+            <span className="text-sm font-bold text-emerald-600 dark:text-emerald-400">₩{customer.totalRevenue.toLocaleString()}</span>
           </div>
         </div>
 
-        <div className="border-t border-white/5 pt-4">
+        <div className="border-t border-border dark:border-white/5 pt-4">
           <CustomerJourney
             leads={journey.leads || []}
             bookings={journey.bookings || []}

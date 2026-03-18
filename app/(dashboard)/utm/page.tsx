@@ -194,13 +194,13 @@ export default function UtmPage() {
 
       {/* 검색 */}
       <Card variant="glass" className="flex items-center px-3 py-2 mb-4">
-        <Search size={14} className="text-slate-500 mr-2" />
+        <Search size={14} className="text-muted-foreground mr-2" />
         <input
           type="text"
           value={historySearch}
           onChange={e => setHistorySearch(e.target.value)}
           placeholder="URL, 캠페인, 소스, 콘텐츠 검색..."
-          className="bg-transparent border-0 text-sm text-white placeholder-slate-600 focus:outline-none w-full"
+          className="bg-transparent border-0 text-sm text-foreground placeholder-muted-foreground/60 focus:outline-none w-full"
         />
       </Card>
 
@@ -208,12 +208,12 @@ export default function UtmPage() {
       <div className="space-y-2">
         {linksLoading ? (
           Array(5).fill(0).map((_, i) => (
-            <div key={i} className="h-16 rounded-2xl bg-white/[0.04] animate-pulse" />
+            <div key={i} className="h-16 rounded-2xl bg-muted/50 dark:bg-white/[0.04] animate-pulse" />
           ))
         ) : filteredLinks.length === 0 ? (
           <Card variant="glass" className="p-12 text-center">
-            <Link2 size={32} className="text-slate-600 mx-auto mb-3" />
-            <p className="text-slate-500 text-sm">
+            <Link2 size={32} className="text-muted-foreground/60 mx-auto mb-3" />
+            <p className="text-muted-foreground text-sm">
               {historySearch ? '검색 결과가 없습니다.' : '생성된 UTM 링크가 없습니다.'}
             </p>
             {!historySearch && (
@@ -226,21 +226,20 @@ export default function UtmPage() {
           filteredLinks.map(link => (
             <div
               key={link.id}
-              className="px-4 py-3 rounded-2xl"
-              style={{ background: 'rgba(255,255,255,0.04)', backdropFilter: 'blur(10px)', border: '1px solid rgba(255,255,255,0.08)' }}
+              className="px-4 py-3 rounded-2xl bg-muted/40 dark:bg-white/[0.04] border border-border dark:border-white/[0.08] backdrop-blur-md"
             >
               {/* 1행: 라벨 + URL + 시간 + 액션 */}
               <div className="flex items-center gap-3 mb-1.5">
                 {link.label && (
-                  <p className="text-sm font-semibold text-white truncate">{link.label}</p>
+                  <p className="text-sm font-semibold text-foreground truncate">{link.label}</p>
                 )}
                 <code className="text-xs text-brand-400 truncate flex-1">{link.original_url}</code>
-                <span className="text-[10px] text-slate-600 shrink-0">
+                <span className="text-[10px] text-muted-foreground/60 shrink-0">
                   {toUtcDate(link.created_at).toLocaleString('ko', DATE_FORMAT_OPTIONS)}
                 </span>
                 <button
                   onClick={() => handleCopy(link)}
-                  className="text-slate-500 hover:text-white transition-colors shrink-0"
+                  className="text-muted-foreground hover:text-foreground transition-colors shrink-0"
                   aria-label="URL 복사"
                 >
                   {copiedId === link.id ? <Check size={14} className="text-emerald-400" /> : <Copy size={14} />}
@@ -249,14 +248,14 @@ export default function UtmPage() {
                   href={link.original_url}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="text-slate-500 hover:text-white transition-colors shrink-0"
+                  className="text-muted-foreground hover:text-foreground transition-colors shrink-0"
                   aria-label="새 탭에서 열기"
                 >
                   <ExternalLink size={14} />
                 </a>
                 <button
                   onClick={() => handleDelete(link.id)}
-                  className="text-slate-500 hover:text-red-400 transition-colors shrink-0"
+                  className="text-muted-foreground hover:text-red-400 transition-colors shrink-0"
                   aria-label="삭제"
                 >
                   <Trash2 size={14} />
@@ -683,11 +682,11 @@ function UtmGenerator({ onBack }: { onBack: () => void }) {
   return (
     <div className="max-w-4xl mx-auto">
       <div className="mb-6">
-        <Button variant="ghost" size="sm" onClick={onBack} className="text-slate-400 hover:text-white mb-3">
+        <Button variant="ghost" size="sm" onClick={onBack} className="text-muted-foreground hover:text-foreground mb-3">
           <ArrowLeft size={14} /> UTM 목록
         </Button>
-        <h1 className="text-2xl font-bold text-white">UTM 생성</h1>
-        <p className="text-sm text-slate-400 mt-1">광고 매체 및 콘텐츠 유입 추적을 위한 UTM 파라미터 URL 생성</p>
+        <h1 className="text-2xl font-bold text-foreground">UTM 생성</h1>
+        <p className="text-sm text-muted-foreground mt-1">광고 매체 및 콘텐츠 유입 추적을 위한 UTM 파라미터 URL 생성</p>
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
@@ -697,7 +696,7 @@ function UtmGenerator({ onBack }: { onBack: () => void }) {
           {/* 템플릿 선택 */}
           <Card variant="glass" className="p-5">
             <div className="flex items-center justify-between mb-3">
-              <h2 className="text-sm font-semibold text-slate-300">템플릿</h2>
+              <h2 className="text-sm font-semibold text-foreground/80">템플릿</h2>
               <Button
                 variant="ghost"
                 size="sm"
@@ -724,8 +723,8 @@ function UtmGenerator({ onBack }: { onBack: () => void }) {
             <Card variant="glass" className="p-5 border-brand-500/20">
               <div className="flex items-center gap-2 mb-3">
                 <Image size={14} className="text-brand-400" />
-                <h2 className="text-sm font-semibold text-slate-300">광고 소재 선택</h2>
-                <span className="text-xs text-slate-500">(utm_content + 랜딩 페이지 자동 연결)</span>
+                <h2 className="text-sm font-semibold text-foreground/80">광고 소재 선택</h2>
+                <span className="text-xs text-muted-foreground">(utm_content + 랜딩 페이지 자동 연결)</span>
               </div>
               <Select
                 value={selectedCreative}
@@ -758,7 +757,7 @@ function UtmGenerator({ onBack }: { onBack: () => void }) {
             <Card variant="glass" className="p-5">
               <div className="flex items-center gap-2 mb-3">
                 <FileText size={14} className="text-brand-400" />
-                <h2 className="text-sm font-semibold text-slate-300">랜딩 페이지 선택</h2>
+                <h2 className="text-sm font-semibold text-foreground/80">랜딩 페이지 선택</h2>
                 {selectedCreative && <span className="text-xs text-emerald-400">(소재에서 자동 설정됨)</span>}
               </div>
               <Select
@@ -788,7 +787,7 @@ function UtmGenerator({ onBack }: { onBack: () => void }) {
 
           {/* 기본 URL */}
           <Card variant="glass" className="p-5">
-            <h2 className="text-sm font-semibold text-slate-300 mb-3">기본 URL</h2>
+            <h2 className="text-sm font-semibold text-foreground/80 mb-3">기본 URL</h2>
             <Input
               value={baseUrl}
               onChange={e => {
@@ -802,13 +801,13 @@ function UtmGenerator({ onBack }: { onBack: () => void }) {
 
           {/* 매체 선택 */}
           <Card variant="glass" className="p-5">
-            <h2 className="text-sm font-semibold text-slate-300 mb-4">매체 선택</h2>
+            <h2 className="text-sm font-semibold text-foreground/80 mb-4">매체 선택</h2>
 
             {GROUPS.map(group => {
               const items = Object.entries(PLATFORM_PRESETS).filter(([, p]) => p.group === group)
               return (
                 <div key={group} className="mb-4 last:mb-0">
-                  <p className="text-[10px] text-slate-500 uppercase tracking-widest mb-2">{group}</p>
+                  <p className="text-[10px] text-muted-foreground uppercase tracking-widest mb-2">{group}</p>
                   <div className="flex flex-wrap gap-2">
                     {items.map(([key, preset]) => (
                       <Button
@@ -826,9 +825,9 @@ function UtmGenerator({ onBack }: { onBack: () => void }) {
               )
             })}
 
-            <div className="grid grid-cols-2 gap-3 mt-4 pt-4 border-t border-white/5">
+            <div className="grid grid-cols-2 gap-3 mt-4 pt-4 border-t border-border dark:border-white/5">
               <div>
-                <Label className="text-xs text-slate-500 mb-1 block">
+                <Label className="text-xs text-muted-foreground mb-1 block">
                   utm_source *
                   {platform !== 'custom' && (
                     <span className="ml-1 text-brand-400">(자동입력)</span>
@@ -841,7 +840,7 @@ function UtmGenerator({ onBack }: { onBack: () => void }) {
                 />
               </div>
               <div>
-                <Label className="text-xs text-slate-500 mb-1 block">
+                <Label className="text-xs text-muted-foreground mb-1 block">
                   utm_medium *
                   {platform !== 'custom' && (
                     <span className="ml-1 text-brand-400">(자동입력)</span>
@@ -858,11 +857,11 @@ function UtmGenerator({ onBack }: { onBack: () => void }) {
 
           {/* 캠페인 정보 */}
           <Card variant="glass" className="p-5">
-            <h2 className="text-sm font-semibold text-slate-300 mb-3">캠페인 정보</h2>
+            <h2 className="text-sm font-semibold text-foreground/80 mb-3">캠페인 정보</h2>
             <div className="space-y-3">
               <div>
-                <Label className="text-xs text-slate-500 mb-1 block">
-                  utm_campaign <span className="text-slate-600">(캠페인명)</span>
+                <Label className="text-xs text-muted-foreground mb-1 block">
+                  utm_campaign <span className="text-muted-foreground/60">(캠페인명)</span>
                 </Label>
                 <Input
                   value={campaign}
@@ -871,8 +870,8 @@ function UtmGenerator({ onBack }: { onBack: () => void }) {
                 />
               </div>
               <div>
-                <Label className="text-xs text-slate-500 mb-1 block">
-                  광고그룹 <span className="text-slate-600">(utm_content 앞에 prefix로 결합)</span>
+                <Label className="text-xs text-muted-foreground mb-1 block">
+                  광고그룹 <span className="text-muted-foreground/60">(utm_content 앞에 prefix로 결합)</span>
                 </Label>
                 <Input
                   value={adGroup}
@@ -881,8 +880,8 @@ function UtmGenerator({ onBack }: { onBack: () => void }) {
                 />
               </div>
               <div>
-                <Label className="text-xs text-slate-500 mb-1 block">
-                  utm_content <span className="text-slate-600">(광고소재 / 콘텐츠명)</span>
+                <Label className="text-xs text-muted-foreground mb-1 block">
+                  utm_content <span className="text-muted-foreground/60">(광고소재 / 콘텐츠명)</span>
                 </Label>
                 <Input
                   value={content}
@@ -894,8 +893,8 @@ function UtmGenerator({ onBack }: { onBack: () => void }) {
                 )}
               </div>
               <div>
-                <Label className="text-xs text-slate-500 mb-1 block">
-                  utm_term <span className="text-slate-600">(키워드 — 검색광고 전용)</span>
+                <Label className="text-xs text-muted-foreground mb-1 block">
+                  utm_term <span className="text-muted-foreground/60">(키워드 — 검색광고 전용)</span>
                 </Label>
                 <Input
                   value={term}
@@ -912,7 +911,7 @@ function UtmGenerator({ onBack }: { onBack: () => void }) {
               <div className="flex items-center justify-between mb-3">
                 <div className="flex items-center gap-2">
                   <Link2 size={14} className="text-brand-400" />
-                  <h2 className="text-sm font-semibold text-white">생성된 URL</h2>
+                  <h2 className="text-sm font-semibold text-foreground">생성된 URL</h2>
                 </div>
                 <div className="flex gap-2">
                   <Button variant="glass" size="sm" onClick={() => setQrDialogOpen(true)}>
@@ -929,7 +928,7 @@ function UtmGenerator({ onBack }: { onBack: () => void }) {
                   </Button>
                 </div>
               </div>
-              <div className="bg-black/30 rounded-lg p-3 border border-white/5">
+              <div className="bg-black/30 rounded-lg p-3 border border-border dark:border-white/5">
                 <p className="text-xs text-brand-300 break-all font-mono">
                   {generatedUrl}
                 </p>
@@ -938,8 +937,8 @@ function UtmGenerator({ onBack }: { onBack: () => void }) {
               {params.length > 0 && (
                 <div className="mt-3 flex flex-wrap gap-2">
                   {params.map(p => (
-                    <span key={p.label} className="inline-flex items-center gap-1 px-2 py-1 bg-white/5 border border-white/10 rounded text-xs">
-                      <span className="text-slate-500">{p.label}=</span>
+                    <span key={p.label} className="inline-flex items-center gap-1 px-2 py-1 bg-muted dark:bg-white/5 border border-border dark:border-white/10 rounded text-xs">
+                      <span className="text-muted-foreground">{p.label}=</span>
                       <span className="text-brand-400 font-medium">{p.value}</span>
                     </span>
                   ))}
@@ -976,7 +975,7 @@ function UtmGenerator({ onBack }: { onBack: () => void }) {
                 aria-expanded={showHistory}
                 aria-label={`히스토리 ${showHistory ? '접기' : '펼치기'}`}
               >
-                <h2 className="text-sm font-semibold text-slate-300">
+                <h2 className="text-sm font-semibold text-foreground/80">
                   생성된 UTM 목록
                   {links.length > 0 && (
                     <span className="ml-2 px-1.5 py-0.5 text-xs bg-brand-500/20 text-brand-400 rounded-full">
@@ -984,7 +983,7 @@ function UtmGenerator({ onBack }: { onBack: () => void }) {
                     </span>
                   )}
                 </h2>
-                <ChevronDown className={`w-4 h-4 text-slate-500 transition-transform ${showHistory ? 'rotate-180' : ''}`} />
+                <ChevronDown className={`w-4 h-4 text-muted-foreground transition-transform ${showHistory ? 'rotate-180' : ''}`} />
               </button>
               <Button
                 variant="ghost"
@@ -1011,25 +1010,25 @@ function UtmGenerator({ onBack }: { onBack: () => void }) {
                 )}
 
                 {linksLoading ? (
-                  <div className="text-xs text-slate-500 text-center py-6">불러오는 중...</div>
+                  <div className="text-xs text-muted-foreground text-center py-6">불러오는 중...</div>
                 ) : links.length === 0 ? (
-                  <p className="text-xs text-slate-500 text-center py-6">
+                  <p className="text-xs text-muted-foreground text-center py-6">
                     생성된 URL을 저장하면<br />여기에 표시됩니다.
                   </p>
                 ) : (
                   <div className="space-y-2 max-h-[500px] overflow-y-auto">
                     {filteredLinks.map(item => (
-                      <div key={item.id} className="border border-white/5 rounded-lg p-3 hover:bg-white/[0.03] transition-colors">
+                      <div key={item.id} className="border border-border dark:border-white/5 rounded-lg p-3 hover:bg-muted dark:hover:bg-white/[0.03] transition-colors">
                         <div className="flex items-start justify-between gap-2">
                           <div className="flex-1 min-w-0">
-                            <p className="text-xs font-medium text-white truncate">{item.label || '무제'}</p>
-                            <p className="text-[10px] text-slate-500 mt-0.5">
+                            <p className="text-xs font-medium text-foreground truncate">{item.label || '무제'}</p>
+                            <p className="text-[10px] text-muted-foreground mt-0.5">
                               {toUtcDate(item.created_at).toLocaleDateString('ko-KR', DATE_FORMAT_OPTIONS)}
                             </p>
                           </div>
                           <button
                             onClick={() => handleDeleteLink(item.id)}
-                            className="text-slate-600 hover:text-red-400 shrink-0 transition-colors"
+                            className="text-muted-foreground/60 hover:text-red-400 shrink-0 transition-colors"
                             aria-label={`${item.label} 삭제`}
                           >
                             <Trash2 className="w-3 h-3" />
@@ -1060,8 +1059,8 @@ function UtmGenerator({ onBack }: { onBack: () => void }) {
                           )}
                         </div>
 
-                        <p className="text-[10px] text-slate-600 truncate mt-2 font-mono">{item.original_url}</p>
-                        <div className="flex gap-2 mt-2 pt-2 border-t border-white/5">
+                        <p className="text-[10px] text-muted-foreground/60 truncate mt-2 font-mono">{item.original_url}</p>
+                        <div className="flex gap-2 mt-2 pt-2 border-t border-border dark:border-white/5">
                           <button
                             onClick={() => { navigator.clipboard.writeText(item.original_url); toast.success('복사됨') }}
                             className="flex items-center gap-1 text-xs text-brand-400 hover:text-brand-300"
@@ -1070,7 +1069,7 @@ function UtmGenerator({ onBack }: { onBack: () => void }) {
                           </button>
                           <button
                             onClick={() => handleLoadLink(item)}
-                            className="flex items-center gap-1 text-xs text-slate-400 hover:text-white"
+                            className="flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground"
                           >
                             <RefreshCw className="w-3 h-3" /> 불러오기
                           </button>
@@ -1078,7 +1077,7 @@ function UtmGenerator({ onBack }: { onBack: () => void }) {
                             href={item.original_url}
                             target="_blank"
                             rel="noopener noreferrer"
-                            className="flex items-center gap-1 text-xs text-slate-400 hover:text-white"
+                            className="flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground"
                           >
                             <ExternalLink className="w-3 h-3" /> 열기
                           </a>
@@ -1086,7 +1085,7 @@ function UtmGenerator({ onBack }: { onBack: () => void }) {
                       </div>
                     ))}
                     {historySearch && filteredLinks.length === 0 && (
-                      <p className="text-xs text-slate-500 text-center py-4">
+                      <p className="text-xs text-muted-foreground text-center py-4">
                         검색 결과가 없습니다.
                       </p>
                     )}
@@ -1096,45 +1095,45 @@ function UtmGenerator({ onBack }: { onBack: () => void }) {
             )}
 
             {!showHistory && links.length > 0 && (
-              <p className="text-xs text-slate-500">{links.length}개 저장됨. 클릭하여 펼치기</p>
+              <p className="text-xs text-muted-foreground">{links.length}개 저장됨. 클릭하여 펼치기</p>
             )}
           </Card>
 
           {/* 파라미터 가이드 */}
           <Card variant="glass" className="p-5 mt-4">
-            <h3 className="text-xs font-semibold text-slate-400 mb-3">파라미터 가이드</h3>
-            <dl className="space-y-2 text-xs text-slate-500">
+            <h3 className="text-xs font-semibold text-muted-foreground mb-3">파라미터 가이드</h3>
+            <dl className="space-y-2 text-xs text-muted-foreground">
               <div>
-                <dt className="font-medium text-slate-400">utm_source</dt>
+                <dt className="font-medium text-muted-foreground">utm_source</dt>
                 <dd>유입 출처: meta, google, naver, tiktok</dd>
               </div>
               <div>
-                <dt className="font-medium text-slate-400">utm_medium</dt>
+                <dt className="font-medium text-muted-foreground">utm_medium</dt>
                 <dd>채널 유형: cpc, display, video, short, social, blog</dd>
               </div>
               <div>
-                <dt className="font-medium text-slate-400">utm_campaign</dt>
+                <dt className="font-medium text-muted-foreground">utm_campaign</dt>
                 <dd>캠페인명 또는 코드</dd>
               </div>
               <div>
-                <dt className="font-medium text-slate-400">utm_content</dt>
+                <dt className="font-medium text-muted-foreground">utm_content</dt>
                 <dd>광고소재 / 콘텐츠 구분</dd>
               </div>
               <div>
-                <dt className="font-medium text-slate-400">utm_term</dt>
+                <dt className="font-medium text-muted-foreground">utm_term</dt>
                 <dd>검색 키워드 (SA 전용)</dd>
               </div>
             </dl>
 
-            <div className="mt-4 pt-3 border-t border-white/5">
-              <h3 className="text-xs font-semibold text-slate-400 mb-2">medium 기본값</h3>
-              <div className="space-y-1 text-xs text-slate-500">
-                <p><span className="text-slate-400 font-medium">cpc</span> — Meta, Google SA, 네이버SA, 카카오</p>
-                <p><span className="text-slate-400 font-medium">display</span> — 네이버 DA</p>
-                <p><span className="text-slate-400 font-medium">video</span> — 유튜브</p>
-                <p><span className="text-slate-400 font-medium">short</span> — 쇼츠, 릴스, 틱톡</p>
-                <p><span className="text-slate-400 font-medium">social</span> — 인스타 피드 (오가닉)</p>
-                <p><span className="text-slate-400 font-medium">blog</span> — 네이버 블로그</p>
+            <div className="mt-4 pt-3 border-t border-border dark:border-white/5">
+              <h3 className="text-xs font-semibold text-muted-foreground mb-2">medium 기본값</h3>
+              <div className="space-y-1 text-xs text-muted-foreground">
+                <p><span className="text-muted-foreground font-medium">cpc</span> — Meta, Google SA, 네이버SA, 카카오</p>
+                <p><span className="text-muted-foreground font-medium">display</span> — 네이버 DA</p>
+                <p><span className="text-muted-foreground font-medium">video</span> — 유튜브</p>
+                <p><span className="text-muted-foreground font-medium">short</span> — 쇼츠, 릴스, 틱톡</p>
+                <p><span className="text-muted-foreground font-medium">social</span> — 인스타 피드 (오가닉)</p>
+                <p><span className="text-muted-foreground font-medium">blog</span> — 네이버 블로그</p>
               </div>
             </div>
           </Card>

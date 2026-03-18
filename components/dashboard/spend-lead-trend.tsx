@@ -28,12 +28,12 @@ interface SpendLeadTrendProps {
 function DualTooltip({ active, payload, label }: any) {
   if (!active || !payload?.length) return null
   return (
-    <div className="bg-slate-900/95 border border-slate-700/50 rounded-lg p-3 text-xs shadow-xl backdrop-blur-sm">
-      <p className="font-medium text-slate-300 mb-1.5">{label}</p>
+    <div className="bg-card border border-border rounded-lg p-3 text-xs shadow-xl backdrop-blur-sm">
+      <p className="font-medium text-foreground/80 mb-1.5">{label}</p>
       {payload.map((p: any) => (
-        <p key={p.dataKey} className="text-slate-400">
+        <p key={p.dataKey} className="text-muted-foreground">
           {p.name}:{' '}
-          <span className="text-white font-medium">
+          <span className="text-foreground font-medium">
             {p.dataKey === 'spend' ? fmtKrw(p.value) : `${p.value}건`}
           </span>
         </p>
@@ -59,10 +59,10 @@ function DualChart({ data, height, fontSize, dotRadius, gradientId, showLegend }
             <stop offset="100%" stopColor={BRAND} stopOpacity={0} />
           </linearGradient>
         </defs>
-        <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.05)" />
-        <XAxis dataKey="date" tick={{ fill: '#64748b', fontSize }} axisLine={false} tickLine={false} />
-        <YAxis yAxisId="spend" tickFormatter={fmtKrw} tick={{ fill: '#64748b', fontSize }} axisLine={false} tickLine={false} />
-        <YAxis yAxisId="leads" orientation="right" tick={{ fill: '#64748b', fontSize }} axisLine={false} tickLine={false} unit="건" />
+        <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
+        <XAxis dataKey="date" tick={{ fill: 'hsl(var(--muted-foreground))', fontSize }} axisLine={false} tickLine={false} />
+        <YAxis yAxisId="spend" tickFormatter={fmtKrw} tick={{ fill: 'hsl(var(--muted-foreground))', fontSize }} axisLine={false} tickLine={false} />
+        <YAxis yAxisId="leads" orientation="right" tick={{ fill: 'hsl(var(--muted-foreground))', fontSize }} axisLine={false} tickLine={false} unit="건" />
         <Tooltip content={<DualTooltip />} />
         {showLegend && (
           <Legend
@@ -70,7 +70,7 @@ function DualChart({ data, height, fontSize, dotRadius, gradientId, showLegend }
             align="right"
             iconType="circle"
             iconSize={8}
-            wrapperStyle={{ fontSize: 11, color: '#94a3b8', paddingBottom: 8 }}
+            wrapperStyle={{ fontSize: 11, color: 'hsl(var(--muted-foreground))', paddingBottom: 8 }}
           />
         )}
         <Area yAxisId="spend" type="monotone" dataKey="spend" name="광고비" stroke={BRAND} fill={`url(#${gradientId})`} strokeWidth={2} />
@@ -84,8 +84,8 @@ export function SpendLeadTrend({ data, loading }: SpendLeadTrendProps) {
   return (
     <Card variant="glass" className="p-5 w-full">
       <div className="flex items-center justify-between mb-4">
-        <h2 className="text-sm font-semibold text-white">광고비 · 리드 추이</h2>
-        <span className="text-xs text-slate-500">최근 8주</span>
+        <h2 className="text-sm font-semibold text-foreground">광고비 · 리드 추이</h2>
+        <span className="text-xs text-muted-foreground">최근 8주</span>
       </div>
       {loading ? (
         <Skeleton className="h-[240px] md:h-[300px] rounded-lg" />
@@ -99,8 +99,8 @@ export function SpendLeadTrend({ data, loading }: SpendLeadTrendProps) {
           </div>
         </>
       ) : (
-        <div className="h-[240px] md:h-[300px] flex flex-col gap-2 items-center justify-center text-slate-500 text-sm">
-          <TrendingUp size={28} className="text-slate-600 mb-1" />
+        <div className="h-[240px] md:h-[300px] flex flex-col gap-2 items-center justify-center text-muted-foreground text-sm">
+          <TrendingUp size={28} className="text-muted-foreground/50 mb-1" />
           <span>진행 중인 광고 캠페인이 없습니다.</span>
         </div>
       )}

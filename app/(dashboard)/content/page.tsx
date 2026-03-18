@@ -115,7 +115,7 @@ function AddContentModal({ open, onClose, onSaved, clinicId }: { open: boolean; 
         </DialogHeader>
         <div className="space-y-4">
           <div>
-            <Label className="text-xs text-slate-500 mb-2 block">플랫폼 *</Label>
+            <Label className="text-xs text-muted-foreground mb-2 block">플랫폼 *</Label>
             <div className="flex flex-wrap gap-2">
               {Object.entries(PLATFORM_CONFIG).map(([key, cfg]) => (
                 <Button
@@ -132,7 +132,7 @@ function AddContentModal({ open, onClose, onSaved, clinicId }: { open: boolean; 
           </div>
           <div className="grid grid-cols-2 gap-3">
             <div className="col-span-2">
-              <Label className="text-xs text-slate-500 mb-1 block">제목 *</Label>
+              <Label className="text-xs text-muted-foreground mb-1 block">제목 *</Label>
               <Input
                 value={form.title}
                 onChange={e => setForm(f => ({ ...f, title: e.target.value }))}
@@ -140,7 +140,7 @@ function AddContentModal({ open, onClose, onSaved, clinicId }: { open: boolean; 
               />
             </div>
             <div>
-              <Label className="text-xs text-slate-500 mb-1 block">URL</Label>
+              <Label className="text-xs text-muted-foreground mb-1 block">URL</Label>
               <Input
                 type="url"
                 value={form.url}
@@ -149,7 +149,7 @@ function AddContentModal({ open, onClose, onSaved, clinicId }: { open: boolean; 
               />
             </div>
             <div>
-              <Label className="text-xs text-slate-500 mb-1 block">발행일</Label>
+              <Label className="text-xs text-muted-foreground mb-1 block">발행일</Label>
               <Input
                 type="date"
                 value={form.published_at}
@@ -157,7 +157,7 @@ function AddContentModal({ open, onClose, onSaved, clinicId }: { open: boolean; 
               />
             </div>
             <div>
-              <Label className="text-xs text-slate-500 mb-1 block">예산 (₩)</Label>
+              <Label className="text-xs text-muted-foreground mb-1 block">예산 (₩)</Label>
               <Input
                 type="number"
                 value={form.budget}
@@ -168,13 +168,13 @@ function AddContentModal({ open, onClose, onSaved, clinicId }: { open: boolean; 
             </div>
           </div>
           <div>
-            <Label className="text-xs text-slate-500 mb-2 block">현재 통계</Label>
+            <Label className="text-xs text-muted-foreground mb-2 block">현재 통계</Label>
             <div className="grid grid-cols-2 sm:grid-cols-5 gap-2">
               {platCfg?.statFields.map(field => {
                 const statField = field as StatField
                 return (
                   <div key={field}>
-                    <Label className="text-[10px] text-slate-600 mb-1 block">{STAT_LABEL[field]}</Label>
+                    <Label className="text-[10px] text-muted-foreground/60 mb-1 block">{STAT_LABEL[field]}</Label>
                     <Input
                       type="number"
                       value={form[statField]}
@@ -189,13 +189,13 @@ function AddContentModal({ open, onClose, onSaved, clinicId }: { open: boolean; 
             </div>
           </div>
           <details>
-            <summary className="text-xs text-slate-500 cursor-pointer hover:text-slate-300">UTM 파라미터 (선택)</summary>
+            <summary className="text-xs text-muted-foreground cursor-pointer hover:text-foreground/80">UTM 파라미터 (선택)</summary>
             <div className="grid grid-cols-2 gap-2 mt-3">
               {([['utm_source', 'Source'], ['utm_medium', 'Medium'], ['utm_campaign', 'Campaign'], ['utm_content', 'Content'], ['utm_term', 'Term']] as const).map(([key, label]) => {
                 const utmField = key as UtmField
                 return (
                   <div key={key}>
-                    <Label className="text-[10px] text-slate-600 mb-1 block">{label}</Label>
+                    <Label className="text-[10px] text-muted-foreground/60 mb-1 block">{label}</Label>
                     <Input
                       value={form[utmField]}
                       onChange={e => setForm(f => ({ ...f, [utmField]: e.target.value }))}
@@ -207,7 +207,7 @@ function AddContentModal({ open, onClose, onSaved, clinicId }: { open: boolean; 
             </div>
           </details>
         </div>
-        <div className="flex justify-end gap-2 pt-4 border-t border-white/5">
+        <div className="flex justify-end gap-2 pt-4 border-t border-border dark:border-white/5">
           <Button variant="ghost" onClick={onClose}>취소</Button>
           <Button onClick={handleSave} disabled={saving || !form.title}>
             {saving ? '저장 중...' : '추가'}
@@ -245,7 +245,7 @@ function StatEditRow({ post, onSaved }: { post: any; onSaved: () => void }) {
       <div className="flex items-end gap-2">
         {platCfg?.statFields.map(field => (
           <div key={field} className="flex-1">
-            <Label className="text-[10px] text-slate-500 mb-1 block">{STAT_LABEL[field]}</Label>
+            <Label className="text-[10px] text-muted-foreground mb-1 block">{STAT_LABEL[field]}</Label>
             <Input
               type="number"
               value={form[field] || 0}
@@ -257,7 +257,7 @@ function StatEditRow({ post, onSaved }: { post: any; onSaved: () => void }) {
       </div>
       <div className="flex items-end gap-2">
         <div className="flex-1">
-          <Label className="text-[10px] text-slate-500 mb-1 block">예산 (₩)</Label>
+          <Label className="text-[10px] text-muted-foreground mb-1 block">예산 (₩)</Label>
           <Input
             type="number"
             value={budget}
@@ -289,22 +289,22 @@ function ContentRow({ post, onDelete, onRefresh }: { post: any; onDelete: (id: n
           <Badge variant={platCfg.variant}>{platCfg.label}</Badge>
         </TableCell>
         <TableCell className="max-w-[280px]">
-          <p className="text-white text-sm font-medium truncate">{post.title}</p>
+          <p className="text-foreground text-sm font-medium truncate">{post.title}</p>
           {post.utm_campaign && <span className="text-[10px] text-brand-400">{post.utm_campaign}</span>}
         </TableCell>
-        <TableCell className="text-slate-400 text-xs whitespace-nowrap">
+        <TableCell className="text-muted-foreground text-xs whitespace-nowrap">
           {post.published_at ? formatDate(post.published_at) : '-'}
         </TableCell>
-        <TableCell className="text-slate-300 text-xs text-right">
-          {latestStat.views > 0 ? latestStat.views.toLocaleString() : <span className="text-slate-600">-</span>}
+        <TableCell className="text-foreground/80 text-xs text-right">
+          {latestStat.views > 0 ? latestStat.views.toLocaleString() : <span className="text-muted-foreground/60">-</span>}
         </TableCell>
-        <TableCell className="text-slate-300 text-xs text-right">
-          {engagement > 0 ? engagement.toLocaleString() : <span className="text-slate-600">-</span>}
+        <TableCell className="text-foreground/80 text-xs text-right">
+          {engagement > 0 ? engagement.toLocaleString() : <span className="text-muted-foreground/60">-</span>}
         </TableCell>
         <TableCell className="text-xs text-right">
           {post.budget > 0
             ? <span className="text-amber-400 font-medium">₩{Number(post.budget).toLocaleString()}</span>
-            : <span className="text-slate-600">-</span>}
+            : <span className="text-muted-foreground/60">-</span>}
         </TableCell>
         <TableCell>
           <div className="flex items-center justify-end gap-1">
@@ -318,14 +318,14 @@ function ContentRow({ post, onDelete, onRefresh }: { post: any; onDelete: (id: n
             <Button variant="glass" size="sm" onClick={() => setExpanded(v => !v)} className="text-xs h-7">
               {expanded ? '닫기' : '수정'}
             </Button>
-            <Button variant="ghost" size="icon" onClick={() => onDelete(post.id)} className="h-7 w-7 text-slate-600 hover:text-red-400">
+            <Button variant="ghost" size="icon" onClick={() => onDelete(post.id)} className="h-7 w-7 text-muted-foreground/60 hover:text-red-400">
               <Trash2 size={13} />
             </Button>
           </div>
         </TableCell>
       </TableRow>
       {expanded && (
-        <TableRow className="bg-white/[0.02]">
+        <TableRow className="bg-muted/30 dark:bg-white/[0.02]">
           <TableCell colSpan={7} className="px-4 pt-2 pb-4">
             <StatEditRow post={post} onSaved={() => { setExpanded(false); onRefresh() }} />
           </TableCell>
@@ -503,16 +503,16 @@ export default function ContentPage() {
       {/* KPI 카드 */}
       <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-7 gap-3 mb-5">
         {[
-          { label: '총 조회수',    value: totalViews.toLocaleString(),                                                    color: 'text-white' },
-          { label: '총 참여수',    value: totalEngagement.toLocaleString(),                                               color: 'text-white' },
+          { label: '총 조회수',    value: totalViews.toLocaleString(),                                                    color: 'text-foreground' },
+          { label: '총 참여수',    value: totalEngagement.toLocaleString(),                                               color: 'text-foreground' },
           { label: '총 예산',      value: totalBudget > 0 ? `₩${totalBudget.toLocaleString()}` : '-',                    color: 'text-amber-400' },
           { label: 'DB 유입',      value: totalLeads > 0 ? `${totalLeads}건` : '-',                                      color: 'text-blue-400' },
           { label: '총 결제 금액', value: totalRevenue > 0 ? `₩${totalRevenue.toLocaleString()}` : '-',                  color: 'text-emerald-400' },
-          { label: 'CPL',          value: overallCpl > 0 ? `₩${overallCpl.toLocaleString()}` : '-',                     color: 'text-white' },
-          { label: 'ROAS',         value: overallRoas > 0 ? `${overallRoas}%` : '-',                                    color: overallRoas >= 100 ? 'text-emerald-400' : overallRoas > 0 ? 'text-red-400' : 'text-slate-500' },
+          { label: 'CPL',          value: overallCpl > 0 ? `₩${overallCpl.toLocaleString()}` : '-',                     color: 'text-foreground' },
+          { label: 'ROAS',         value: overallRoas > 0 ? `${overallRoas}%` : '-',                                    color: overallRoas >= 100 ? 'text-emerald-400' : overallRoas > 0 ? 'text-red-400' : 'text-muted-foreground' },
         ].map(({ label, value, color }) => (
           <Card key={label} variant="glass" className="p-3">
-            <p className="text-[10px] text-slate-400 uppercase tracking-widest mb-1 leading-tight">{label}</p>
+            <p className="text-[10px] text-muted-foreground uppercase tracking-widest mb-1 leading-tight">{label}</p>
             {loading ? <Skeleton className="h-6 w-16" /> : <p className={`text-lg font-bold ${color}`}>{value}</p>}
           </Card>
         ))}
@@ -522,15 +522,15 @@ export default function ContentPage() {
       {(cplChartData.length > 0 || roasChartData.length > 0) && (
         <div className="grid grid-cols-2 gap-4 mb-5">
           <Card variant="glass" className="p-5">
-            <h3 className="text-sm font-semibold text-white mb-1">플랫폼별 CPL</h3>
-            <p className="text-xs text-slate-500 mb-4">DB 1건 획득 비용</p>
+            <h3 className="text-sm font-semibold text-foreground mb-1">플랫폼별 CPL</h3>
+            <p className="text-xs text-muted-foreground mb-4">DB 1건 획득 비용</p>
             {cplChartData.length > 0 ? (
               <ResponsiveContainer width="100%" height={180}>
                 <BarChart data={cplChartData} barSize={32}>
-                  <CartesianGrid strokeDasharray="3 3" stroke="#1e1e3a" />
-                  <XAxis dataKey="label" tick={{ fill: '#64748b', fontSize: 11 }} axisLine={false} tickLine={false} />
-                  <YAxis tickFormatter={(v: number) => `₩${(v / 1000).toFixed(0)}k`} tick={{ fill: '#64748b', fontSize: 10 }} axisLine={false} tickLine={false} />
-                  <Tooltip contentStyle={{ background: '#1a1a2e', border: 'none', borderRadius: 8, fontSize: 12 }}
+                  <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
+                  <XAxis dataKey="label" tick={{ fill: 'hsl(var(--muted-foreground))', fontSize: 11 }} axisLine={false} tickLine={false} />
+                  <YAxis tickFormatter={(v: number) => `₩${(v / 1000).toFixed(0)}k`} tick={{ fill: 'hsl(var(--muted-foreground))', fontSize: 10 }} axisLine={false} tickLine={false} />
+                  <Tooltip contentStyle={{ background: 'hsl(var(--card))', border: '1px solid hsl(var(--border))', borderRadius: 8, fontSize: 12 }}
                     formatter={(v: any) => [`₩${Number(v).toLocaleString()}`, 'CPL']} />
                   <Bar dataKey="cpl" radius={[4, 4, 0, 0]}>
                     {cplChartData.map((entry, i) => (
@@ -539,18 +539,18 @@ export default function ContentPage() {
                   </Bar>
                 </BarChart>
               </ResponsiveContainer>
-            ) : <div className="h-[180px] flex items-center justify-center text-slate-600 text-xs">예산 입력 후 표시</div>}
+            ) : <div className="h-[180px] flex items-center justify-center text-muted-foreground/60 text-xs">예산 입력 후 표시</div>}
           </Card>
           <Card variant="glass" className="p-5">
-            <h3 className="text-sm font-semibold text-white mb-1">플랫폼별 ROAS</h3>
-            <p className="text-xs text-slate-500 mb-4">예산 대비 매출 (100% 이상 = 흑자)</p>
+            <h3 className="text-sm font-semibold text-foreground mb-1">플랫폼별 ROAS</h3>
+            <p className="text-xs text-muted-foreground mb-4">예산 대비 매출 (100% 이상 = 흑자)</p>
             {roasChartData.length > 0 ? (
               <ResponsiveContainer width="100%" height={180}>
                 <BarChart data={roasChartData} barSize={32}>
-                  <CartesianGrid strokeDasharray="3 3" stroke="#1e1e3a" />
-                  <XAxis dataKey="label" tick={{ fill: '#64748b', fontSize: 11 }} axisLine={false} tickLine={false} />
-                  <YAxis tickFormatter={(v: number) => `${v}%`} tick={{ fill: '#64748b', fontSize: 10 }} axisLine={false} tickLine={false} />
-                  <Tooltip contentStyle={{ background: '#1a1a2e', border: 'none', borderRadius: 8, fontSize: 12 }}
+                  <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
+                  <XAxis dataKey="label" tick={{ fill: 'hsl(var(--muted-foreground))', fontSize: 11 }} axisLine={false} tickLine={false} />
+                  <YAxis tickFormatter={(v: number) => `${v}%`} tick={{ fill: 'hsl(var(--muted-foreground))', fontSize: 10 }} axisLine={false} tickLine={false} />
+                  <Tooltip contentStyle={{ background: 'hsl(var(--card))', border: '1px solid hsl(var(--border))', borderRadius: 8, fontSize: 12 }}
                     formatter={(v: any) => [`${v}%`, 'ROAS']} />
                   <Bar dataKey="roas" radius={[4, 4, 0, 0]}>
                     {roasChartData.map((entry, i) => (
@@ -559,15 +559,15 @@ export default function ContentPage() {
                   </Bar>
                 </BarChart>
               </ResponsiveContainer>
-            ) : <div className="h-[180px] flex items-center justify-center text-slate-600 text-xs">예산 입력 후 표시</div>}
+            ) : <div className="h-[180px] flex items-center justify-center text-muted-foreground/60 text-xs">예산 입력 후 표시</div>}
           </Card>
         </div>
       )}
 
       {/* 분석 상세 테이블 */}
       <Card variant="glass" className="mb-5 overflow-hidden">
-        <div className="flex items-center justify-between p-4 border-b border-white/5">
-          <h3 className="text-sm font-semibold text-white">상세 분석</h3>
+        <div className="flex items-center justify-between p-4 border-b border-border dark:border-white/5">
+          <h3 className="text-sm font-semibold text-foreground">상세 분석</h3>
           <div className="flex gap-1">
             {([['campaign', '캠페인별'], ['month', '월별'], ['post', '콘텐츠별']] as const).map(([val, label]) => (
               <Button
@@ -587,14 +587,14 @@ export default function ContentPage() {
             {Array(3).fill(0).map((_, i) => <Skeleton key={i} className="h-10" />)}
           </div>
         ) : detailAnalytics.length === 0 ? (
-          <div className="p-8 text-center text-slate-500 text-sm">분석 데이터가 없습니다.</div>
+          <div className="p-8 text-center text-muted-foreground text-sm">분석 데이터가 없습니다.</div>
         ) : (
           <div className="overflow-x-auto">
             <Table>
               <TableHeader>
                 <TableRow>
                   {['구분', '포스트', '예산', 'DB 유입', '결제 매출', 'CPL', 'ROAS'].map(h => (
-                    <TableHead key={h} className="text-xs text-slate-500 uppercase tracking-wider font-medium">{h}</TableHead>
+                    <TableHead key={h} className="text-xs text-muted-foreground uppercase tracking-wider font-medium">{h}</TableHead>
                   ))}
                 </TableRow>
               </TableHeader>
@@ -602,19 +602,19 @@ export default function ContentPage() {
                 {detailAnalytics.map(row => (
                   <TableRow key={row.key}>
                     <TableCell>
-                      <p className="text-white text-xs font-medium truncate max-w-[200px]">{row.label}</p>
+                      <p className="text-foreground text-xs font-medium truncate max-w-[200px]">{row.label}</p>
                       {row.platform && (
                         <Badge variant={PLATFORM_CONFIG[row.platform]?.variant || 'secondary'} className="mt-1 text-[10px]">
                           {PLATFORM_CONFIG[row.platform]?.label || row.platform}
                         </Badge>
                       )}
                     </TableCell>
-                    <TableCell className="text-slate-400 text-xs">{row.postCount}개</TableCell>
-                    <TableCell className="text-xs">{row.budget > 0 ? <span className="text-amber-400 font-medium">₩{row.budget.toLocaleString()}</span> : <span className="text-slate-600">-</span>}</TableCell>
-                    <TableCell className="text-xs">{row.leads > 0 ? <span className="text-blue-400">{row.leads}건</span> : <span className="text-slate-600">-</span>}</TableCell>
-                    <TableCell className="text-xs">{row.revenue > 0 ? <span className="text-emerald-400">₩{row.revenue.toLocaleString()}</span> : <span className="text-slate-600">-</span>}</TableCell>
-                    <TableCell className="text-xs">{row.cpl > 0 ? <span className="text-white font-semibold">₩{row.cpl.toLocaleString()}</span> : <span className="text-slate-600">-</span>}</TableCell>
-                    <TableCell className="text-xs">{row.roas > 0 ? <span className={`font-semibold ${row.roas >= 100 ? 'text-emerald-400' : 'text-red-400'}`}>{row.roas}%</span> : <span className="text-slate-600">-</span>}</TableCell>
+                    <TableCell className="text-muted-foreground text-xs">{row.postCount}개</TableCell>
+                    <TableCell className="text-xs">{row.budget > 0 ? <span className="text-amber-400 font-medium">₩{row.budget.toLocaleString()}</span> : <span className="text-muted-foreground/60">-</span>}</TableCell>
+                    <TableCell className="text-xs">{row.leads > 0 ? <span className="text-blue-400">{row.leads}건</span> : <span className="text-muted-foreground/60">-</span>}</TableCell>
+                    <TableCell className="text-xs">{row.revenue > 0 ? <span className="text-emerald-400">₩{row.revenue.toLocaleString()}</span> : <span className="text-muted-foreground/60">-</span>}</TableCell>
+                    <TableCell className="text-xs">{row.cpl > 0 ? <span className="text-foreground font-semibold">₩{row.cpl.toLocaleString()}</span> : <span className="text-muted-foreground/60">-</span>}</TableCell>
+                    <TableCell className="text-xs">{row.roas > 0 ? <span className={`font-semibold ${row.roas >= 100 ? 'text-emerald-400' : 'text-red-400'}`}>{row.roas}%</span> : <span className="text-muted-foreground/60">-</span>}</TableCell>
                   </TableRow>
                 ))}
               </TableBody>
@@ -625,10 +625,10 @@ export default function ContentPage() {
 
       {/* ── 콘텐츠 목록 ── */}
       <Card variant="glass" className="overflow-hidden">
-        <div className="flex items-center justify-between px-4 py-3 border-b border-white/5">
-          <h3 className="text-sm font-semibold text-slate-300">콘텐츠 목록 <span className="text-slate-500 font-normal">({filteredPosts.length})</span></h3>
+        <div className="flex items-center justify-between px-4 py-3 border-b border-border dark:border-white/5">
+          <h3 className="text-sm font-semibold text-foreground/80">콘텐츠 목록 <span className="text-muted-foreground font-normal">({filteredPosts.length})</span></h3>
           <div className="relative">
-            <Search size={13} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-500" />
+            <Search size={13} className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
             <Input
               value={searchQuery}
               onChange={e => setSearchQuery(e.target.value)}
@@ -644,20 +644,20 @@ export default function ContentPage() {
           </div>
         ) : filteredPosts.length === 0 ? (
           <div className="p-12 text-center">
-            <p className="text-slate-400 text-sm">{searchQuery ? '검색 결과가 없습니다.' : '콘텐츠 데이터가 없습니다.'}</p>
+            <p className="text-muted-foreground text-sm">{searchQuery ? '검색 결과가 없습니다.' : '콘텐츠 데이터가 없습니다.'}</p>
           </div>
         ) : (
           <div className="overflow-x-auto">
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead className="text-xs text-slate-500 uppercase tracking-wider font-medium">플랫폼</TableHead>
-                  <TableHead className="text-xs text-slate-500 uppercase tracking-wider font-medium">제목 / UTM</TableHead>
-                  <TableHead className="text-xs text-slate-500 uppercase tracking-wider font-medium">발행일</TableHead>
-                  <TableHead className="text-xs text-slate-500 uppercase tracking-wider font-medium text-right">조회수</TableHead>
-                  <TableHead className="text-xs text-slate-500 uppercase tracking-wider font-medium text-right">참여수</TableHead>
-                  <TableHead className="text-xs text-slate-500 uppercase tracking-wider font-medium text-right">예산</TableHead>
-                  <TableHead className="text-xs text-slate-500 uppercase tracking-wider font-medium"></TableHead>
+                  <TableHead className="text-xs text-muted-foreground uppercase tracking-wider font-medium">플랫폼</TableHead>
+                  <TableHead className="text-xs text-muted-foreground uppercase tracking-wider font-medium">제목 / UTM</TableHead>
+                  <TableHead className="text-xs text-muted-foreground uppercase tracking-wider font-medium">발행일</TableHead>
+                  <TableHead className="text-xs text-muted-foreground uppercase tracking-wider font-medium text-right">조회수</TableHead>
+                  <TableHead className="text-xs text-muted-foreground uppercase tracking-wider font-medium text-right">참여수</TableHead>
+                  <TableHead className="text-xs text-muted-foreground uppercase tracking-wider font-medium text-right">예산</TableHead>
+                  <TableHead className="text-xs text-muted-foreground uppercase tracking-wider font-medium"></TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>

@@ -29,7 +29,7 @@ import { formatDate } from '@/lib/date'
 // 퍼널 단계 정의
 type FunnelStage = 'lead' | 'booked' | 'visited' | 'consulted' | 'paid'
 const FUNNEL_STAGES: Record<FunnelStage, { label: string; color: string; icon: string }> = {
-  lead:      { label: '리드', color: 'bg-slate-500/20 text-slate-400', icon: '' },
+  lead:      { label: '리드', color: 'bg-muted text-muted-foreground', icon: '' },
   booked:    { label: '예약', color: 'bg-blue-500/20 text-blue-400', icon: '' },
   visited:   { label: '방문', color: 'bg-purple-500/20 text-purple-400', icon: '' },
   consulted: { label: '상담', color: 'bg-amber-500/20 text-amber-400', icon: '' },
@@ -56,8 +56,8 @@ function getFunnelStage(customer: any): FunnelStage {
 const GRADE_CONFIG: Record<string, { color: string; icon: string }> = {
   VIP:  { color: 'bg-yellow-500/20 text-yellow-400 border border-yellow-500/30', icon: '' },
   골드:  { color: 'bg-amber-500/20 text-amber-400 border border-amber-500/30',    icon: '' },
-  실버:  { color: 'bg-slate-400/20 text-slate-300 border border-slate-400/30',    icon: '' },
-  일반:  { color: 'bg-slate-700/20 text-slate-500 border border-slate-700/30',    icon: '' },
+  실버:  { color: 'bg-muted text-foreground/60 border border-border',             icon: '' },
+  일반:  { color: 'bg-muted/50 text-muted-foreground border border-border',       icon: '' },
 }
 
 function getGrade(totalPayment: number, treatmentCount: number): keyof typeof GRADE_CONFIG {
@@ -110,7 +110,7 @@ function CustomerDetail({ lead, onDelete }: { lead: any; onDelete?: (leadId: num
         </div>
         <div className="flex-1">
           <div className="flex items-center gap-2 flex-wrap mb-1">
-            <h3 className="font-semibold text-white">{c?.name || '이름 없음'}</h3>
+            <h3 className="font-semibold text-foreground">{c?.name || '이름 없음'}</h3>
             <ChannelBadge channel={c?.first_source || 'Unknown'} />
             <span className={`text-xs font-bold px-2 py-0.5 rounded-full ${gradeStyle.color}`}>
               {grade}
@@ -125,14 +125,14 @@ function CustomerDetail({ lead, onDelete }: { lead: any; onDelete?: (leadId: num
               <Badge variant="info">{leadCount}회 유입</Badge>
             )}
           </div>
-          <div className="flex items-center gap-4 text-xs text-slate-500">
+          <div className="flex items-center gap-4 text-xs text-muted-foreground">
             <span className="flex items-center gap-1"><Phone size={11} />{c?.phone_number}</span>
             <span className="flex items-center gap-1"><Calendar size={11} />{formatDate(lead.created_at)}</span>
           </div>
         </div>
         {totalPayment > 0 && (
           <div className="text-right shrink-0">
-            <p className="text-xs text-slate-500 mb-0.5">누적 결제액</p>
+            <p className="text-xs text-muted-foreground mb-0.5">누적 결제액</p>
             <p className="text-lg font-bold text-emerald-400">₩{totalPayment.toLocaleString()}</p>
           </div>
         )}
@@ -140,29 +140,29 @@ function CustomerDetail({ lead, onDelete }: { lead: any; onDelete?: (leadId: num
 
       {/* 랜딩 페이지 및 설문 응답 */}
       {(landingPage || (customData && Object.keys(customData).length > 0)) && (
-        <div className="mb-5 p-4 bg-white/[0.03] rounded-xl border border-white/5">
+        <div className="mb-5 p-4 bg-muted/40 dark:bg-white/[0.03] rounded-xl border border-border dark:border-white/5">
           {landingPage && (
             <div className="flex items-center gap-2 mb-3">
               <FileText size={12} className="text-brand-400" />
-              <span className="text-xs font-semibold text-slate-400">유입 랜딩 페이지:</span>
+              <span className="text-xs font-semibold text-muted-foreground">유입 랜딩 페이지:</span>
               <span className="text-sm text-brand-400">{landingPage.name}</span>
             </div>
           )}
           {customData?.survey && Object.keys(customData.survey).length > 0 && (
             <div>
-              <p className="text-xs font-semibold text-slate-400 mb-2 flex items-center gap-2">
+              <p className="text-xs font-semibold text-muted-foreground mb-2 flex items-center gap-2">
                 <Info size={12} /> 설문 응답
               </p>
               <div className="space-y-1.5">
                 {Object.entries(customData.survey).map(([key, value]) => (
                   <div key={key} className="flex items-center justify-between text-xs">
-                    <span className="text-slate-500">{key}</span>
-                    <span className="text-slate-300">{String(value)}</span>
+                    <span className="text-muted-foreground">{key}</span>
+                    <span className="text-foreground/80">{String(value)}</span>
                   </div>
                 ))}
               </div>
               {customData.marketing_consent !== undefined && (
-                <p className="text-xs text-slate-500 mt-2 pt-2 border-t border-white/5">
+                <p className="text-xs text-muted-foreground mt-2 pt-2 border-t border-border dark:border-white/5">
                   마케팅 수신 동의: {customData.marketing_consent ? '동의' : '미동의'}
                 </p>
               )}
@@ -173,23 +173,23 @@ function CustomerDetail({ lead, onDelete }: { lead: any; onDelete?: (leadId: num
 
       {/* 시술 이력 */}
       {Object.keys(treatmentMap).length > 0 && (
-        <div className="mb-5 p-4 bg-white/[0.03] rounded-xl border border-white/5">
-          <p className="text-xs font-semibold text-slate-400 mb-3 flex items-center gap-2">
+        <div className="mb-5 p-4 bg-muted/40 dark:bg-white/[0.03] rounded-xl border border-border dark:border-white/5">
+          <p className="text-xs font-semibold text-muted-foreground mb-3 flex items-center gap-2">
             <TrendingUp size={12} /> 시술 이력
           </p>
           <div className="space-y-2">
             {Object.entries(treatmentMap).map(([name, { count, total }]) => (
               <div key={name} className="flex items-center justify-between">
                 <div className="flex items-center gap-2">
-                  <span className="text-sm text-slate-300">{name}</span>
-                  <span className="text-xs text-slate-500 bg-white/5 px-2 py-0.5 rounded-full">{count}회</span>
+                  <span className="text-sm text-foreground/80">{name}</span>
+                  <span className="text-xs text-muted-foreground bg-muted dark:bg-white/5 px-2 py-0.5 rounded-full">{count}회</span>
                 </div>
                 <span className="text-sm font-semibold text-emerald-400">₩{total.toLocaleString()}</span>
               </div>
             ))}
           </div>
-          <div className="flex items-center justify-between mt-3 pt-3 border-t border-white/5">
-            <span className="text-xs text-slate-500">총 {payments.length}회 시술</span>
+          <div className="flex items-center justify-between mt-3 pt-3 border-t border-border dark:border-white/5">
+            <span className="text-xs text-muted-foreground">총 {payments.length}회 시술</span>
             <span className="text-sm font-bold text-emerald-400">₩{totalPayment.toLocaleString()}</span>
           </div>
         </div>
@@ -205,7 +205,7 @@ function CustomerDetail({ lead, onDelete }: { lead: any; onDelete?: (leadId: num
 
       {/* 삭제 버튼 (superadmin) */}
       {onDelete && (
-        <div className="mt-5 pt-4 border-t border-white/5 flex justify-end">
+        <div className="mt-5 pt-4 border-t border-border dark:border-white/5 flex justify-end">
           <Button
             variant="ghost"
             size="sm"
@@ -222,7 +222,7 @@ function CustomerDetail({ lead, onDelete }: { lead: any; onDelete?: (leadId: num
 
 export default function LeadsPage() {
   return (
-    <Suspense fallback={<div className="text-slate-500 text-center py-12">로딩 중...</div>}>
+    <Suspense fallback={<div className="text-muted-foreground text-center py-12">로딩 중...</div>}>
       <LeadsContent />
     </Suspense>
   )
@@ -349,13 +349,13 @@ function LeadsContent() {
         description="광고 인입 → 챗봇 → 상담 → 결제 전체 여정을 추적합니다."
         actions={
           <Card variant="glass" className="flex items-center px-3 py-2">
-            <Search size={14} className="text-slate-500 mr-2" />
+            <Search size={14} className="text-muted-foreground mr-2" />
             <Input
               type="text"
               value={search}
               onChange={e => setSearch(e.target.value)}
               placeholder="이름 또는 전화번호 검색"
-              className="bg-transparent border-0 text-sm text-white placeholder-slate-600 focus-visible:ring-0 w-52 p-0 h-auto"
+              className="bg-transparent border-0 text-sm text-foreground placeholder:text-muted-foreground/60 focus-visible:ring-0 w-52 p-0 h-auto"
             />
           </Card>
         }
@@ -367,13 +367,12 @@ function LeadsContent() {
           <button
             key={key}
             onClick={() => setStageFilter(stageFilter === key ? 'all' : key)}
-            className={`p-3 text-center transition-all rounded-2xl ${stageFilter === key ? 'ring-1 ring-brand-500' : 'hover:bg-white/[0.03]'}`}
-            style={{ background: 'rgba(255, 255, 255, 0.04)', backdropFilter: 'blur(10px)', border: '1px solid rgba(255, 255, 255, 0.08)' }}
+            className={`p-3 text-center transition-all rounded-2xl bg-muted/40 dark:bg-white/[0.04] border border-border dark:border-white/[0.08] backdrop-blur-md ${stageFilter === key ? 'ring-1 ring-brand-500' : 'hover:bg-muted dark:hover:bg-white/[0.03]'}`}
             aria-pressed={stageFilter === key}
             aria-label={`${stage.label} 필터 ${stageFilter === key ? '해제' : '적용'}`}
           >
-            {loading ? <Skeleton className="h-6 w-12 mx-auto mb-1" /> : <p className="text-lg font-bold text-white">{stageCounts[key]}</p>}
-            <p className="text-xs text-slate-500">{stage.label}</p>
+            {loading ? <Skeleton className="h-6 w-12 mx-auto mb-1" /> : <p className="text-lg font-bold text-foreground">{stageCounts[key]}</p>}
+            <p className="text-xs text-muted-foreground">{stage.label}</p>
           </button>
         ))}
       </div>
@@ -391,7 +390,7 @@ function LeadsContent() {
               {t.key === 'new'     && <User  size={13} />}
               {t.key === 'revisit' && <Users size={13} />}
               {t.label}
-              <span className={`text-xs px-1.5 py-0 rounded-full ml-1 ${tab === t.key ? 'bg-white/20' : 'bg-white/5 text-slate-500'}`}>
+              <span className={`text-xs px-1.5 py-0 rounded-full ml-1 ${tab === t.key ? 'bg-white/20' : 'bg-muted dark:bg-white/5 text-muted-foreground'}`}>
                 {t.count}
               </span>
             </Button>
@@ -399,11 +398,11 @@ function LeadsContent() {
         </div>
 
         <div className="flex items-center gap-2 ml-auto flex-wrap">
-          <Filter size={14} className="text-slate-500" />
+          <Filter size={14} className="text-muted-foreground" />
 
           {channels.length > 0 && (
             <Select value={channelFilter} onValueChange={setChannelFilter}>
-              <SelectTrigger className="w-[130px] glass-card border-0 text-white text-xs">
+              <SelectTrigger className="w-[130px] glass-card border-0 text-foreground text-xs">
                 <SelectValue placeholder="전체 채널" />
               </SelectTrigger>
               <SelectContent>
@@ -417,7 +416,7 @@ function LeadsContent() {
 
           {landingPages.length > 0 && (
             <Select value={landingPageFilter} onValueChange={v => { setLandingPageFilter(v); setSelected(null) }}>
-              <SelectTrigger className="w-[150px] glass-card border-0 text-white text-xs">
+              <SelectTrigger className="w-[150px] glass-card border-0 text-foreground text-xs">
                 <SelectValue placeholder="전체 랜딩페이지" />
               </SelectTrigger>
               <SelectContent>
@@ -431,7 +430,7 @@ function LeadsContent() {
 
           {campaigns.length > 0 && (
             <Select value={campaignFilter} onValueChange={v => { setCampaignFilter(v); setSelected(null) }}>
-              <SelectTrigger className="w-[150px] glass-card border-0 text-white text-xs">
+              <SelectTrigger className="w-[150px] glass-card border-0 text-foreground text-xs">
                 <SelectValue placeholder="전체 캠페인" />
               </SelectTrigger>
               <SelectContent>
@@ -448,7 +447,7 @@ function LeadsContent() {
               variant="ghost"
               size="sm"
               onClick={() => { setLandingPageFilter('all'); setCampaignFilter('all'); setChannelFilter('all') }}
-              className="text-xs text-slate-400 hover:text-white"
+              className="text-xs text-muted-foreground hover:text-foreground"
             >
               <X size={12} /> 필터 초기화
             </Button>
@@ -461,7 +460,7 @@ function LeadsContent() {
         <Sheet open={!!selected} onOpenChange={(open) => !open && setSelected(null)}>
           <SheetContent side="right" className="w-full sm:max-w-lg overflow-y-auto">
             <SheetHeader className="mb-4">
-              <SheetTitle className="text-white">고객 상세</SheetTitle>
+              <SheetTitle className="text-foreground">고객 상세</SheetTitle>
             </SheetHeader>
             {selected && <CustomerDetail lead={selected} onDelete={isSuperAdmin ? handleDeleteLead : undefined} />}
           </SheetContent>
@@ -488,8 +487,7 @@ function LeadsContent() {
                 <button
                   key={lead.id}
                   onClick={() => setSelected(isSelected ? null : lead)}
-                  className={`w-full px-4 py-3 flex items-center gap-3 text-left transition-all rounded-2xl ${isSelected ? 'ring-1 ring-brand-500' : 'hover:bg-white/[0.03]'}`}
-                  style={{ background: 'rgba(255, 255, 255, 0.04)', backdropFilter: 'blur(10px)', border: '1px solid rgba(255, 255, 255, 0.08)' }}
+                  className={`w-full px-4 py-3 flex items-center gap-3 text-left transition-all rounded-2xl bg-muted/40 dark:bg-white/[0.04] border border-border dark:border-white/[0.08] backdrop-blur-md ${isSelected ? 'ring-1 ring-brand-500' : 'hover:bg-muted dark:hover:bg-white/[0.03]'}`}
                   aria-pressed={isSelected}
                   aria-label={`${c?.name || '이름 없음'} 고객 ${isSelected ? '선택 해제' : '선택'}`}
                 >
@@ -503,7 +501,7 @@ function LeadsContent() {
                   </div>
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-1.5 mb-0.5">
-                      <p className="text-sm font-medium text-white truncate">{c?.name || '이름 없음'}</p>
+                      <p className="text-sm font-medium text-foreground truncate">{c?.name || '이름 없음'}</p>
                       {grade !== '일반' && (
                         <span className={`text-[10px] font-bold px-1.5 rounded-full shrink-0 ${gradeStyle.color}`}>
                           {grade}
@@ -513,10 +511,10 @@ function LeadsContent() {
                         {stageConfig.label}
                       </span>
                     </div>
-                    <div className="flex items-center gap-2 text-xs text-slate-500">
+                    <div className="flex items-center gap-2 text-xs text-muted-foreground">
                       <span className="truncate">{c?.phone_number}</span>
                       {lead.utm_campaign && (
-                        <span className="text-slate-600 truncate">· {lead.utm_campaign}</span>
+                        <span className="text-muted-foreground/60 truncate">· {lead.utm_campaign}</span>
                       )}
                       {leadCount > 1 && (
                         <span className="text-brand-400 shrink-0">({leadCount}회 유입)</span>
@@ -529,7 +527,7 @@ function LeadsContent() {
             })
           }
           {!loading && displayed.length === 0 && (
-            <Card variant="glass" className="p-8 text-center text-slate-500 text-sm">
+            <Card variant="glass" className="p-8 text-center text-muted-foreground text-sm">
               {search
                 ? `'${search}' 검색 결과 없음`
                 : tab === 'revisit' ? '재방문 고객이 없습니다.'
@@ -545,17 +543,17 @@ function LeadsContent() {
             <CustomerDetail lead={selected} onDelete={isSuperAdmin ? handleDeleteLead : undefined} />
           ) : (
             <Card variant="glass" className="p-12 text-center">
-              <Star size={32} className="text-slate-600 mx-auto mb-3" />
-              <p className="text-slate-500 text-sm">좌측 목록에서 고객을 선택하면<br />전체 여정 및 시술 이력을 확인할 수 있습니다.</p>
+              <Star size={32} className="text-muted-foreground/60 mx-auto mb-3" />
+              <p className="text-muted-foreground text-sm">좌측 목록에서 고객을 선택하면<br />전체 여정 및 시술 이력을 확인할 수 있습니다.</p>
               <div className="mt-6 grid grid-cols-3 gap-3 text-center">
                 {[
                   { label: '전체 고객', value: filtered.length },
                   { label: '신규 고객', value: newLeads.length },
                   { label: '재방문 고객', value: revisitLeads.length },
                 ].map(({ label, value }) => (
-                  <div key={label} className="bg-white/[0.03] rounded-xl p-3">
-                    {loading ? <Skeleton className="h-6 w-12 mx-auto mb-1" /> : <p className="text-lg font-bold text-white">{value}</p>}
-                    <p className="text-xs text-slate-500 mt-0.5">{label}</p>
+                  <div key={label} className="bg-muted/40 dark:bg-white/[0.03] rounded-xl p-3">
+                    {loading ? <Skeleton className="h-6 w-12 mx-auto mb-1" /> : <p className="text-lg font-bold text-foreground">{value}</p>}
+                    <p className="text-xs text-muted-foreground mt-0.5">{label}</p>
                   </div>
                 ))}
               </div>

@@ -14,10 +14,10 @@ export function PageHeader({ title, description, actions, icon: Icon }: PageHead
       <div>
         <div className="flex items-center gap-3">
           {Icon && <Icon className="text-brand-400 shrink-0" size={24} />}
-          <h1 className="text-xl md:text-2xl font-bold text-white">{title}</h1>
+          <h1 className="text-xl md:text-2xl font-bold text-foreground">{title}</h1>
         </div>
         {description && (
-          <p className={`text-sm text-slate-400 mt-1${Icon ? ' pl-9' : ''}`}>{description}</p>
+          <p className={`text-sm text-muted-foreground mt-1${Icon ? ' pl-9' : ''}`}>{description}</p>
         )}
       </div>
       {actions && <div className="flex items-center gap-2">{actions}</div>}

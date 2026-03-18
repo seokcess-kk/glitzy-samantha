@@ -25,35 +25,35 @@ export function StatsCard({ label, value, loading, icon: Icon, trend, onClick, s
     <Card
       variant="glass"
       className={`${isLg ? 'p-5 md:p-6' : 'p-4 md:p-5'} h-full animate-fade-in-up overflow-hidden ${
-        clickable ? 'cursor-pointer hover:border-white/20 hover:bg-white/[0.03] transition-all' : ''
+        clickable ? 'cursor-pointer hover:border-border dark:hover:border-white/20 hover:bg-muted/30 dark:hover:bg-white/[0.03] transition-all' : ''
       }`}
       onClick={onClick}
     >
       <div className="flex items-center justify-between mb-3">
-        <p className={`${isLg ? 'text-xs' : 'text-[11px]'} text-slate-400 font-medium truncate`}>
+        <p className={`${isLg ? 'text-xs' : 'text-[11px]'} text-muted-foreground font-medium truncate`}>
           {label}
         </p>
-        {Icon && <Icon size={isLg ? 16 : 14} className="text-slate-500 shrink-0" />}
+        {Icon && <Icon size={isLg ? 16 : 14} className="text-muted-foreground/70 shrink-0" />}
       </div>
       {loading ? (
         <Skeleton className={`${isLg ? 'h-9 md:h-10' : 'h-7 md:h-8'} mb-2`} />
       ) : (
-        <p className={`${isLg ? 'text-2xl md:text-3xl' : 'text-xl md:text-2xl'} font-bold text-white mb-1 truncate tabular-nums`}>
+        <p className={`${isLg ? 'text-2xl md:text-3xl' : 'text-xl md:text-2xl'} font-bold text-foreground mb-1 truncate tabular-nums`}>
           {value}
         </p>
       )}
       {subtitle && !loading && (
         <p className={`text-[11px] truncate ${
-          subtitleColor === 'positive' ? 'text-emerald-400' :
-          subtitleColor === 'negative' ? 'text-rose-400' :
-          'text-slate-500'
+          subtitleColor === 'positive' ? 'text-emerald-500 dark:text-emerald-400' :
+          subtitleColor === 'negative' ? 'text-rose-500 dark:text-rose-400' :
+          'text-muted-foreground'
         }`}>{subtitle}</p>
       )}
       {trend && !loading && (
         <div className={`inline-flex items-center gap-1 text-xs font-medium mt-1 px-1.5 py-0.5 rounded ${
           trend.isPositive
-            ? 'text-emerald-400 bg-emerald-500/10'
-            : 'text-rose-400 bg-rose-500/10'
+            ? 'text-emerald-600 bg-emerald-500/10 dark:text-emerald-400'
+            : 'text-rose-600 bg-rose-500/10 dark:text-rose-400'
         }`}>
           {trend.isPositive ? <ArrowUpRight size={12} /> : <ArrowDownRight size={12} />}
           <span className="tabular-nums">{Math.abs(trend.value)}%</span>

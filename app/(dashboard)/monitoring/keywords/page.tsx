@@ -141,16 +141,16 @@ export default function MonitoringKeywordsPage() {
 
       {/* 병원 선택 */}
       <div className="mb-6">
-        <Label className="text-xs text-slate-500 mb-1 block">병원</Label>
+        <Label className="text-xs text-muted-foreground mb-1 block">병원</Label>
         <Select
           value={selectedClinicId ? String(selectedClinicId) : '_none'}
           onValueChange={v => setSelectedClinicId(v === '_none' ? null : Number(v))}
         >
-          <SelectTrigger className="w-[200px] bg-white/5 border-white/10 text-white">
+          <SelectTrigger className="w-[200px] bg-muted dark:bg-white/5 border-border dark:border-white/10 text-foreground">
             <SelectValue />
           </SelectTrigger>
           <SelectContent>
-            <SelectItem value="_none" disabled className="text-slate-500">병원 선택</SelectItem>
+            <SelectItem value="_none" disabled className="text-muted-foreground">병원 선택</SelectItem>
             {clinics.map(c => (
               <SelectItem key={c.id} value={String(c.id)}>{c.name}</SelectItem>
             ))}
@@ -165,7 +165,7 @@ export default function MonitoringKeywordsPage() {
           </DialogHeader>
           <div className="space-y-4 py-4">
             <div className="space-y-2">
-              <Label className="text-xs text-slate-400">키워드 *</Label>
+              <Label className="text-xs text-muted-foreground">키워드 *</Label>
               <Input
                 value={form.keyword}
                 onChange={e => setForm(f => ({ ...f, keyword: e.target.value }))}
@@ -173,7 +173,7 @@ export default function MonitoringKeywordsPage() {
               />
             </div>
             <div className="space-y-2">
-              <Label className="text-xs text-slate-400">카테고리 *</Label>
+              <Label className="text-xs text-muted-foreground">카테고리 *</Label>
               <Select value={form.category} onValueChange={v => setForm(f => ({ ...f, category: v }))}>
                 <SelectTrigger>
                   <SelectValue />
@@ -197,7 +197,7 @@ export default function MonitoringKeywordsPage() {
 
       {!selectedClinicId ? (
         <Card variant="glass" className="p-12 text-center">
-          <p className="text-slate-500">병원을 선택해주세요.</p>
+          <p className="text-muted-foreground">병원을 선택해주세요.</p>
         </Card>
       ) : loading ? (
         <Card variant="glass" className="p-6">
@@ -218,19 +218,19 @@ export default function MonitoringKeywordsPage() {
           ) : (
             Object.entries(grouped).map(([cat, items]: [string, any[]]) => (
               <Card key={cat} variant="glass" className="p-5 mb-4">
-                <h3 className="text-sm font-semibold text-white mb-3">{CATEGORY_LABELS[cat] || cat}</h3>
+                <h3 className="text-sm font-semibold text-foreground mb-3">{CATEGORY_LABELS[cat] || cat}</h3>
                 <Table>
                   <TableHeader>
-                    <TableRow className="border-b border-white/5 hover:bg-transparent">
-                      <TableHead className="text-xs text-slate-500 uppercase tracking-wider font-medium">키워드</TableHead>
-                      <TableHead className="text-xs text-slate-500 uppercase tracking-wider font-medium w-[100px]">상태</TableHead>
-                      <TableHead className="text-xs text-slate-500 uppercase tracking-wider font-medium w-[80px]">활성화</TableHead>
+                    <TableRow className="border-b border-border dark:border-white/5 hover:bg-transparent">
+                      <TableHead className="text-xs text-muted-foreground uppercase tracking-wider font-medium">키워드</TableHead>
+                      <TableHead className="text-xs text-muted-foreground uppercase tracking-wider font-medium w-[100px]">상태</TableHead>
+                      <TableHead className="text-xs text-muted-foreground uppercase tracking-wider font-medium w-[80px]">활성화</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
                     {items.map((kw: any) => (
-                      <TableRow key={kw.id} className="border-b border-white/5">
-                        <TableCell className="text-white">{kw.keyword}</TableCell>
+                      <TableRow key={kw.id} className="border-b border-border dark:border-white/5">
+                        <TableCell className="text-foreground">{kw.keyword}</TableCell>
                         <TableCell>
                           <Badge variant={kw.is_active ? 'success' : 'secondary'}>
                             {kw.is_active ? '활성' : '비활성'}
@@ -239,7 +239,7 @@ export default function MonitoringKeywordsPage() {
                         <TableCell>
                           <button
                             onClick={() => toggleActive(kw.id, kw.is_active)}
-                            className="text-slate-400 hover:text-white transition-colors"
+                            className="text-muted-foreground hover:text-foreground transition-colors"
                           >
                             <Power size={16} className={kw.is_active ? 'text-emerald-400' : ''} />
                           </button>

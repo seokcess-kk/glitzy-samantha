@@ -20,7 +20,7 @@ import { formatDateTime } from '@/lib/date'
 
 const LEAD_STATUS_CONFIG: Record<string, { label: string; color: string }> = {
   new:        { label: '신규',     color: 'bg-blue-500/20 text-blue-400 border-blue-500/30' },
-  no_answer:  { label: '부재',     color: 'bg-slate-500/20 text-slate-400 border-slate-500/30' },
+  no_answer:  { label: '부재',     color: 'bg-muted text-muted-foreground border-border dark:bg-slate-500/20 dark:text-slate-400 dark:border-slate-500/30' },
   consulted:  { label: '상담완료', color: 'bg-amber-500/20 text-amber-400 border-amber-500/30' },
   booked:     { label: '예약완료', color: 'bg-emerald-500/20 text-emerald-400 border-emerald-500/30' },
   hold:       { label: '보류',     color: 'bg-purple-500/20 text-purple-400 border-purple-500/30' },
@@ -94,7 +94,7 @@ function CampaignList({ campaigns, loading, onSelect, onRefresh }: {
       {/* 요약 카드 */}
       <div className="grid grid-cols-3 gap-3 mb-6">
         {[
-          { label: '활성 캠페인', value: campaigns.length, color: 'text-white' },
+          { label: '활성 캠페인', value: campaigns.length, color: 'text-foreground' },
           { label: '전체 리드', value: totalLeads, color: 'text-brand-400' },
           { label: '오늘 유입', value: todayLeads, color: 'text-emerald-400' },
         ].map(({ label, value, color }) => (
@@ -102,7 +102,7 @@ function CampaignList({ campaigns, loading, onSelect, onRefresh }: {
             {loading ? <Skeleton className="h-7 w-12 mx-auto mb-1" /> : (
               <p className={`text-2xl font-bold ${color}`}>{value}</p>
             )}
-            <p className="text-xs text-slate-500 mt-1">{label}</p>
+            <p className="text-xs text-muted-foreground mt-1">{label}</p>
           </Card>
         ))}
       </div>
@@ -114,16 +114,15 @@ function CampaignList({ campaigns, loading, onSelect, onRefresh }: {
           : campaigns.length === 0
             ? (
               <Card variant="glass" className="p-12 text-center">
-                <Megaphone size={32} className="text-slate-600 mx-auto mb-3" />
-                <p className="text-slate-500 text-sm">진행 중인 캠페인이 없습니다.</p>
+                <Megaphone size={32} className="text-muted-foreground/60 mx-auto mb-3" />
+                <p className="text-muted-foreground text-sm">진행 중인 캠페인이 없습니다.</p>
               </Card>
             )
             : campaigns.map(c => (
               <button
                 key={c.campaign}
                 onClick={() => onSelect(c.campaign)}
-                className="w-full p-4 text-left transition-all rounded-2xl hover:ring-1 hover:ring-brand-500/50"
-                style={{ background: 'rgba(255,255,255,0.04)', backdropFilter: 'blur(10px)', border: '1px solid rgba(255,255,255,0.08)' }}
+                className="w-full p-4 text-left transition-all rounded-2xl hover:ring-1 hover:ring-brand-500/50 bg-muted/40 dark:bg-white/[0.04] border border-border dark:border-white/[0.08] backdrop-blur-[10px]"
               >
                 <div className="flex items-center gap-3">
                   <div className="w-10 h-10 rounded-xl bg-brand-600/20 flex items-center justify-center shrink-0">
@@ -131,13 +130,13 @@ function CampaignList({ campaigns, loading, onSelect, onRefresh }: {
                   </div>
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-2 mb-1">
-                      <p className="text-sm font-semibold text-white truncate">{c.campaign}</p>
+                      <p className="text-sm font-semibold text-foreground truncate">{c.campaign}</p>
                       <ChannelBadge channel={c.channel} />
                       {c.today_count > 0 && (
                         <Badge variant="success" className="text-[10px]">오늘 +{c.today_count}</Badge>
                       )}
                     </div>
-                    <div className="flex items-center gap-3 text-xs text-slate-500">
+                    <div className="flex items-center gap-3 text-xs text-muted-foreground">
                       <span className="text-brand-400 font-semibold">{c.lead_count}건</span>
                       <span className="flex items-center gap-1">
                         <MessageCircle size={10} />
@@ -156,7 +155,7 @@ function CampaignList({ campaigns, loading, onSelect, onRefresh }: {
                       </span>
                     </div>
                   </div>
-                  <ChevronRight size={16} className="text-slate-600 shrink-0" />
+                  <ChevronRight size={16} className="text-muted-foreground/60 shrink-0" />
                 </div>
               </button>
             ))
@@ -189,27 +188,26 @@ function LeadCard({ lead, onStatusChange, onNotesChange }: {
 
   return (
     <div
-      className="px-4 py-3 rounded-2xl"
-      style={{ background: 'rgba(255,255,255,0.04)', backdropFilter: 'blur(10px)', border: '1px solid rgba(255,255,255,0.08)' }}
+      className="px-4 py-3 rounded-2xl bg-muted/40 dark:bg-white/[0.04] border border-border dark:border-white/[0.08] backdrop-blur-[10px]"
     >
       {/* 1행: 기본 정보 + 상태 */}
       <div className="flex items-center gap-2 mb-2">
         <div className="w-8 h-8 rounded-full bg-brand-600/20 flex items-center justify-center text-brand-400 font-semibold text-sm shrink-0">
           {leadName[0] || <User size={14} />}
         </div>
-        <p className="text-sm font-semibold text-white shrink-0">{leadName}</p>
-        <span className="text-xs text-slate-500 flex items-center gap-1 shrink-0">
+        <p className="text-sm font-semibold text-foreground shrink-0">{leadName}</p>
+        <span className="text-xs text-muted-foreground flex items-center gap-1 shrink-0">
           <Phone size={10} />
           {lead.customer?.phone_number || '-'}
         </span>
         <ChannelBadge channel={lead.utm_source || '-'} />
         {marketingConsent !== undefined && (
-          <span className={`flex items-center gap-1 text-[10px] shrink-0 ${marketingConsent ? 'text-emerald-500' : 'text-slate-600'}`}>
+          <span className={`flex items-center gap-1 text-[10px] shrink-0 ${marketingConsent ? 'text-emerald-500' : 'text-muted-foreground/60'}`}>
             <ShieldCheck size={10} />
             {marketingConsent ? '수신동의' : '미동의'}
           </span>
         )}
-        <span className="text-[10px] text-slate-600 shrink-0 ml-auto">
+        <span className="text-[10px] text-muted-foreground/60 shrink-0 ml-auto">
           {formatDateTime(lead.created_at)}
         </span>
         <Select value={status} onValueChange={v => onStatusChange(lead.id, v)}>
@@ -232,15 +230,15 @@ function LeadCard({ lead, onStatusChange, onNotesChange }: {
           </span>
         )}
         {lead.utm_content && (
-          <span className="text-[10px] px-2 py-0.5 rounded-full bg-white/5 text-slate-500 border border-white/10 shrink-0">
+          <span className="text-[10px] px-2 py-0.5 rounded-full bg-muted dark:bg-white/5 text-muted-foreground border border-border dark:border-white/10 shrink-0">
             {lead.utm_content}
           </span>
         )}
         {surveyEntries.length > 0 && (
           <>
-            <span className="text-slate-700 text-[10px] mx-0.5">│</span>
+            <span className="text-border text-[10px] mx-0.5">│</span>
             {surveyEntries.map((value, idx) => (
-              <span key={idx} className="text-[10px] px-2 py-0.5 rounded-full bg-white/5 text-slate-400 border border-white/10">
+              <span key={idx} className="text-[10px] px-2 py-0.5 rounded-full bg-muted dark:bg-white/5 text-muted-foreground border border-border dark:border-white/10">
                 {String(value)}
               </span>
             ))}
@@ -258,16 +256,16 @@ function LeadCard({ lead, onStatusChange, onNotesChange }: {
               onChange={e => setNotesValue(e.target.value)}
               onKeyDown={e => e.key === 'Enter' && handleNotesSave()}
               placeholder="메모 입력..."
-              className="flex-1 text-xs bg-white/5 border border-white/10 rounded-lg px-3 py-1.5 text-white placeholder-slate-600 focus:outline-none focus:border-brand-500"
+              className="flex-1 text-xs bg-muted dark:bg-white/5 border border-border dark:border-white/10 rounded-lg px-3 py-1.5 text-foreground placeholder-muted-foreground/60 focus:outline-none focus:border-brand-500"
               autoFocus
             />
             <button onClick={handleNotesSave} className="text-[10px] text-brand-400 hover:text-brand-300 shrink-0">저장</button>
-            <button onClick={() => { setEditingNotes(false); setNotesValue(lead.notes || '') }} className="text-[10px] text-slate-500 hover:text-slate-400 shrink-0">취소</button>
+            <button onClick={() => { setEditingNotes(false); setNotesValue(lead.notes || '') }} className="text-[10px] text-muted-foreground hover:text-muted-foreground shrink-0">취소</button>
           </div>
         ) : (
           <button
             onClick={() => setEditingNotes(true)}
-            className="flex items-center gap-1.5 text-[11px] text-slate-500 hover:text-slate-300 transition-colors"
+            className="flex items-center gap-1.5 text-[11px] text-muted-foreground hover:text-foreground/80 transition-colors"
           >
             <StickyNote size={10} />
             {lead.notes || '메모 추가...'}
@@ -340,7 +338,7 @@ function CampaignDetail({ campaign, onBack }: { campaign: string; onBack: () => 
   return (
     <>
       <div className="mb-6">
-        <Button variant="ghost" size="sm" onClick={onBack} className="text-slate-400 hover:text-white mb-3">
+        <Button variant="ghost" size="sm" onClick={onBack} className="text-muted-foreground hover:text-foreground mb-3">
           <ArrowLeft size={14} /> 캠페인 목록
         </Button>
         <div className="flex items-center gap-3">
@@ -348,8 +346,8 @@ function CampaignDetail({ campaign, onBack }: { campaign: string; onBack: () => 
             <Megaphone size={18} className="text-brand-400" />
           </div>
           <div>
-            <h1 className="text-xl font-bold text-white">{campaign}</h1>
-            <p className="text-xs text-slate-500">
+            <h1 className="text-xl font-bold text-foreground">{campaign}</h1>
+            <p className="text-xs text-muted-foreground">
               {loading ? '로딩 중...' : `${leads.length}건의 리드`}
             </p>
           </div>
@@ -364,7 +362,7 @@ function CampaignDetail({ campaign, onBack }: { campaign: string; onBack: () => 
             return (
               <Card key={key} variant="glass" className="p-2.5 text-center">
                 <p className={`text-lg font-bold ${cfg.color.split(' ')[1]}`}>{count}</p>
-                <p className="text-[10px] text-slate-500">{cfg.label}</p>
+                <p className="text-[10px] text-muted-foreground">{cfg.label}</p>
               </Card>
             )
           })}
@@ -377,7 +375,7 @@ function CampaignDetail({ campaign, onBack }: { campaign: string; onBack: () => 
           ? Array(5).fill(0).map((_, i) => <Skeleton key={i} className="h-16 rounded-2xl" />)
           : leads.length === 0
             ? (
-              <Card variant="glass" className="p-8 text-center text-slate-500 text-sm">
+              <Card variant="glass" className="p-8 text-center text-muted-foreground text-sm">
                 이 캠페인에서 유입된 리드가 없습니다.
               </Card>
             )
@@ -392,7 +390,7 @@ function CampaignDetail({ campaign, onBack }: { campaign: string; onBack: () => 
 
 export default function CampaignsPage() {
   return (
-    <Suspense fallback={<div className="text-slate-500 text-center py-12">로딩 중...</div>}>
+    <Suspense fallback={<div className="text-muted-foreground text-center py-12">로딩 중...</div>}>
       <CampaignsContent />
     </Suspense>
   )

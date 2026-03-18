@@ -229,7 +229,7 @@ export default function LandingPagesPage() {
           </DialogHeader>
           <div className="space-y-4 py-4">
             <div className="space-y-2">
-              <Label className="text-xs text-slate-400">이름 *</Label>
+              <Label className="text-xs text-muted-foreground">이름 *</Label>
               <Input
                 type="text"
                 value={form.name}
@@ -238,19 +238,19 @@ export default function LandingPagesPage() {
               />
             </div>
             <div className="space-y-2">
-              <Label className="text-xs text-slate-400">HTML 파일 *</Label>
+              <Label className="text-xs text-muted-foreground">HTML 파일 *</Label>
               <div className="flex gap-1 mb-2">
                 <button
                   type="button"
                   onClick={() => { setFileMode('select'); setUploadFile(null) }}
-                  className={`text-xs px-3 py-1.5 rounded-md transition-colors ${fileMode === 'select' ? 'bg-brand-600 text-white' : 'bg-white/5 text-slate-400 hover:text-white'}`}
+                  className={`text-xs px-3 py-1.5 rounded-md transition-colors ${fileMode === 'select' ? 'bg-brand-600 text-white' : 'bg-muted dark:bg-white/5 text-muted-foreground hover:text-foreground'}`}
                 >
                   기존 파일 선택
                 </button>
                 <button
                   type="button"
                   onClick={() => { setFileMode('upload'); setForm(f => ({ ...f, file_name: '' })) }}
-                  className={`text-xs px-3 py-1.5 rounded-md transition-colors ${fileMode === 'upload' ? 'bg-brand-600 text-white' : 'bg-white/5 text-slate-400 hover:text-white'}`}
+                  className={`text-xs px-3 py-1.5 rounded-md transition-colors ${fileMode === 'upload' ? 'bg-brand-600 text-white' : 'bg-muted dark:bg-white/5 text-muted-foreground hover:text-foreground'}`}
                 >
                   새 파일 업로드
                 </button>
@@ -267,26 +267,26 @@ export default function LandingPagesPage() {
                       ))}
                     </SelectContent>
                   </Select>
-                  <p className="text-xs text-slate-500">public/landing/ 폴더에 있는 HTML 파일</p>
+                  <p className="text-xs text-muted-foreground">public/landing/ 폴더에 있는 HTML 파일</p>
                 </>
               ) : (
                 <>
                   {uploadFile ? (
-                    <div className="flex items-center gap-2 bg-white/5 border border-white/10 rounded-lg px-3 py-2.5">
+                    <div className="flex items-center gap-2 bg-muted dark:bg-white/5 border border-border dark:border-white/10 rounded-lg px-3 py-2.5">
                       <FileText size={16} className="text-brand-400 shrink-0" />
-                      <span className="text-sm text-white truncate flex-1">{uploadFile.name}</span>
-                      <span className="text-xs text-slate-500 shrink-0">{(uploadFile.size / 1024).toFixed(1)}KB</span>
+                      <span className="text-sm text-foreground truncate flex-1">{uploadFile.name}</span>
+                      <span className="text-xs text-muted-foreground shrink-0">{(uploadFile.size / 1024).toFixed(1)}KB</span>
                       <button
                         type="button"
                         onClick={() => setUploadFile(null)}
-                        className="text-slate-400 hover:text-red-400 transition-colors shrink-0"
+                        className="text-muted-foreground hover:text-red-400 transition-colors shrink-0"
                       >
                         <X size={14} />
                       </button>
                     </div>
                   ) : (
                     <label
-                      className="flex flex-col items-center justify-center gap-2 border-2 border-dashed border-white/10 hover:border-brand-500/50 rounded-lg py-6 cursor-pointer transition-colors"
+                      className="flex flex-col items-center justify-center gap-2 border-2 border-dashed border-border dark:border-white/10 hover:border-brand-500/50 rounded-lg py-6 cursor-pointer transition-colors"
                       onDragOver={(e) => { e.preventDefault(); e.currentTarget.classList.add('border-brand-500/50') }}
                       onDragLeave={(e) => { e.preventDefault(); e.currentTarget.classList.remove('border-brand-500/50') }}
                       onDrop={(e) => {
@@ -300,9 +300,9 @@ export default function LandingPagesPage() {
                         }
                       }}
                     >
-                      <Upload size={24} className="text-slate-500" />
-                      <span className="text-sm text-slate-400">HTML 파일을 선택하거나 여기에 드래그하세요</span>
-                      <span className="text-xs text-slate-600">최대 5MB, .html</span>
+                      <Upload size={24} className="text-muted-foreground" />
+                      <span className="text-sm text-muted-foreground">HTML 파일을 선택하거나 여기에 드래그하세요</span>
+                      <span className="text-xs text-muted-foreground/60">최대 5MB, .html</span>
                       <input
                         type="file"
                         accept=".html"
@@ -318,7 +318,7 @@ export default function LandingPagesPage() {
               )}
             </div>
             <div className="space-y-2">
-              <Label className="text-xs text-slate-400">배정 병원</Label>
+              <Label className="text-xs text-muted-foreground">배정 병원</Label>
               <Select value={form.clinic_id} onValueChange={v => setForm(f => ({ ...f, clinic_id: v }))}>
                 <SelectTrigger>
                   <SelectValue placeholder="선택 (미배정 가능)" />
@@ -332,7 +332,7 @@ export default function LandingPagesPage() {
               </Select>
             </div>
             <div className="space-y-2">
-              <Label className="text-xs text-slate-400">설명 (메모)</Label>
+              <Label className="text-xs text-muted-foreground">설명 (메모)</Label>
               <Textarea
                 value={form.description}
                 onChange={e => setForm(f => ({ ...f, description: e.target.value }))}
@@ -341,16 +341,16 @@ export default function LandingPagesPage() {
               />
             </div>
             <div className="space-y-2">
-              <Label className="text-xs text-slate-400">GTM ID</Label>
+              <Label className="text-xs text-muted-foreground">GTM ID</Label>
               <Input
                 value={form.gtm_id}
                 onChange={e => setForm(f => ({ ...f, gtm_id: e.target.value }))}
                 placeholder="GTM-XXXXXXX (미입력 시 기본값 사용)"
               />
-              <p className="text-[10px] text-slate-600">랜딩페이지 서빙 시 자동 삽입됩니다. 비워두면 기본 GTM ID가 적용됩니다.</p>
+              <p className="text-[10px] text-muted-foreground/60">랜딩페이지 서빙 시 자동 삽입됩니다. 비워두면 기본 GTM ID가 적용됩니다.</p>
             </div>
             <div className="flex items-center justify-between">
-              <Label className="text-xs text-slate-400">활성화</Label>
+              <Label className="text-xs text-muted-foreground">활성화</Label>
               <Switch
                 checked={form.is_active}
                 onCheckedChange={v => setForm(f => ({ ...f, is_active: v }))}
@@ -368,7 +368,7 @@ export default function LandingPagesPage() {
 
       <Card variant="glass" className="p-6">
         <div className="flex items-center justify-between mb-4">
-          <h2 className="font-semibold text-white">랜딩 페이지 목록 ({landingPages.length})</h2>
+          <h2 className="font-semibold text-foreground">랜딩 페이지 목록 ({landingPages.length})</h2>
           <Button onClick={() => setDialogOpen(true)} size="sm" className="bg-brand-600 hover:bg-brand-700">
             <Plus size={14} /> 랜딩 페이지 등록
           </Button>
@@ -380,34 +380,34 @@ export default function LandingPagesPage() {
         ) : (
           <Table>
             <TableHeader>
-              <TableRow className="border-b border-white/5 hover:bg-transparent">
-                <TableHead className="text-xs text-slate-500 font-medium">ID</TableHead>
-                <TableHead className="text-xs text-slate-500 font-medium">이름</TableHead>
-                <TableHead className="text-xs text-slate-500 font-medium">파일명</TableHead>
-                <TableHead className="text-xs text-slate-500 font-medium">배정 병원</TableHead>
-                <TableHead className="text-xs text-slate-500 font-medium">URL</TableHead>
-                <TableHead className="text-xs text-slate-500 font-medium">리드</TableHead>
-                <TableHead className="text-xs text-slate-500 font-medium">예약</TableHead>
-                <TableHead className="text-xs text-slate-500 font-medium">결제</TableHead>
-                <TableHead className="text-xs text-slate-500 font-medium">매출</TableHead>
-                <TableHead className="text-xs text-slate-500 font-medium">상태</TableHead>
-                <TableHead className="text-xs text-slate-500 font-medium">작업</TableHead>
+              <TableRow className="border-b border-border dark:border-white/5 hover:bg-transparent">
+                <TableHead className="text-xs text-muted-foreground font-medium">ID</TableHead>
+                <TableHead className="text-xs text-muted-foreground font-medium">이름</TableHead>
+                <TableHead className="text-xs text-muted-foreground font-medium">파일명</TableHead>
+                <TableHead className="text-xs text-muted-foreground font-medium">배정 병원</TableHead>
+                <TableHead className="text-xs text-muted-foreground font-medium">URL</TableHead>
+                <TableHead className="text-xs text-muted-foreground font-medium">리드</TableHead>
+                <TableHead className="text-xs text-muted-foreground font-medium">예약</TableHead>
+                <TableHead className="text-xs text-muted-foreground font-medium">결제</TableHead>
+                <TableHead className="text-xs text-muted-foreground font-medium">매출</TableHead>
+                <TableHead className="text-xs text-muted-foreground font-medium">상태</TableHead>
+                <TableHead className="text-xs text-muted-foreground font-medium">작업</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
               {landingPages.map((lp) => (
-                <TableRow key={lp.id} className="border-b border-white/5">
-                  <TableCell className="text-slate-500 text-xs">#{lp.id}</TableCell>
-                  <TableCell className="text-white font-medium">{lp.name}</TableCell>
-                  <TableCell className="text-slate-400 font-mono text-xs">{lp.file_name}</TableCell>
-                  <TableCell className="text-slate-400 text-xs">{lp.clinic?.name || '미배정'}</TableCell>
+                <TableRow key={lp.id} className="border-b border-border dark:border-white/5">
+                  <TableCell className="text-muted-foreground text-xs">#{lp.id}</TableCell>
+                  <TableCell className="text-foreground font-medium">{lp.name}</TableCell>
+                  <TableCell className="text-muted-foreground font-mono text-xs">{lp.file_name}</TableCell>
+                  <TableCell className="text-muted-foreground text-xs">{lp.clinic?.name || '미배정'}</TableCell>
                   <TableCell>
                     <div className="flex items-center gap-1">
-                      <code className="text-xs text-brand-400 bg-white/5 px-2 py-1 rounded">/lp?id={lp.id}</code>
-                      <button onClick={() => copyUrl(lp.id)} className="text-slate-500 hover:text-white transition-colors" aria-label="URL 복사">
+                      <code className="text-xs text-brand-400 bg-muted dark:bg-white/5 px-2 py-1 rounded">/lp?id={lp.id}</code>
+                      <button onClick={() => copyUrl(lp.id)} className="text-muted-foreground hover:text-foreground transition-colors" aria-label="URL 복사">
                         <Copy size={12} />
                       </button>
-                      <a href={`/lp?id=${lp.id}`} target="_blank" rel="noopener noreferrer" className="text-slate-500 hover:text-white transition-colors" aria-label="새 탭에서 열기">
+                      <a href={`/lp?id=${lp.id}`} target="_blank" rel="noopener noreferrer" className="text-muted-foreground hover:text-foreground transition-colors" aria-label="새 탭에서 열기">
                         <ExternalLink size={12} />
                       </a>
                     </div>
@@ -421,28 +421,28 @@ export default function LandingPagesPage() {
                         {stats[lp.id].lead_count}건
                       </Link>
                     ) : (
-                      <span className="text-slate-600 text-xs">-</span>
+                      <span className="text-muted-foreground/60 text-xs">-</span>
                     )}
                   </TableCell>
                   <TableCell>
                     {stats[lp.id]?.booking_count ? (
-                      <span className="text-blue-400 text-sm">{stats[lp.id].booking_count}<span className="text-slate-600 text-xs ml-1">({stats[lp.id].booking_rate}%)</span></span>
+                      <span className="text-blue-400 text-sm">{stats[lp.id].booking_count}<span className="text-muted-foreground/60 text-xs ml-1">({stats[lp.id].booking_rate}%)</span></span>
                     ) : (
-                      <span className="text-slate-600 text-xs">-</span>
+                      <span className="text-muted-foreground/60 text-xs">-</span>
                     )}
                   </TableCell>
                   <TableCell>
                     {stats[lp.id]?.paying_customers ? (
-                      <span className="text-emerald-400 text-sm">{stats[lp.id].paying_customers}<span className="text-slate-600 text-xs ml-1">({stats[lp.id].conversion_rate}%)</span></span>
+                      <span className="text-emerald-400 text-sm">{stats[lp.id].paying_customers}<span className="text-muted-foreground/60 text-xs ml-1">({stats[lp.id].conversion_rate}%)</span></span>
                     ) : (
-                      <span className="text-slate-600 text-xs">-</span>
+                      <span className="text-muted-foreground/60 text-xs">-</span>
                     )}
                   </TableCell>
                   <TableCell>
                     {stats[lp.id]?.revenue ? (
                       <span className="text-emerald-400 font-semibold text-sm">₩{stats[lp.id].revenue.toLocaleString()}</span>
                     ) : (
-                      <span className="text-slate-600 text-xs">-</span>
+                      <span className="text-muted-foreground/60 text-xs">-</span>
                     )}
                   </TableCell>
                   <TableCell>
@@ -452,10 +452,10 @@ export default function LandingPagesPage() {
                   </TableCell>
                   <TableCell>
                     <div className="flex items-center gap-2">
-                      <button onClick={() => handleEdit(lp)} className="text-slate-400 hover:text-white transition-colors" aria-label="수정">
+                      <button onClick={() => handleEdit(lp)} className="text-muted-foreground hover:text-foreground transition-colors" aria-label="수정">
                         <Pencil size={14} />
                       </button>
-                      <button onClick={() => handleDelete(lp.id)} className="text-slate-400 hover:text-red-400 transition-colors" aria-label="삭제">
+                      <button onClick={() => handleDelete(lp.id)} className="text-muted-foreground hover:text-red-400 transition-colors" aria-label="삭제">
                         <Trash2 size={14} />
                       </button>
                     </div>

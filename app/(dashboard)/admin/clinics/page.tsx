@@ -175,7 +175,7 @@ export default function ClinicsPage() {
           </DialogHeader>
           <div className="space-y-4 py-4">
             <div className="space-y-2">
-              <Label className="text-xs text-slate-400">병원명 *</Label>
+              <Label className="text-xs text-muted-foreground">병원명 *</Label>
               <Input
                 type="text"
                 value={form.name}
@@ -184,14 +184,14 @@ export default function ClinicsPage() {
               />
             </div>
             <div className="space-y-2">
-              <Label className="text-xs text-slate-400">슬러그 (영문소문자) *</Label>
+              <Label className="text-xs text-muted-foreground">슬러그 (영문소문자) *</Label>
               <Input
                 type="text"
                 value={form.slug}
                 onChange={e => setForm(f => ({ ...f, slug: e.target.value.toLowerCase().replace(/[^a-z0-9-]/g, '') }))}
                 placeholder="예: mirae"
               />
-              <p className="text-xs text-slate-500">URL에 사용됩니다. 영문 소문자, 숫자, 하이픈만 허용</p>
+              <p className="text-xs text-muted-foreground">URL에 사용됩니다. 영문 소문자, 숫자, 하이픈만 허용</p>
             </div>
           </div>
           <DialogFooter>
@@ -210,11 +210,11 @@ export default function ClinicsPage() {
             <DialogTitle>리드 알림 설정 - {notifyTarget?.name}</DialogTitle>
           </DialogHeader>
           <div className="space-y-4 py-4">
-            <p className="text-xs text-slate-400">
+            <p className="text-xs text-muted-foreground">
               새 리드가 유입되면 등록된 연락처로 알림 문자를 발송합니다. (최대 3개)
             </p>
             <div className="space-y-2">
-              <Label className="text-xs text-slate-400">담당자 연락처</Label>
+              <Label className="text-xs text-muted-foreground">담당자 연락처</Label>
               {notifyPhones.map((phone, i) => (
                 <div key={i} className="flex items-center gap-2">
                   <Input
@@ -227,7 +227,7 @@ export default function ClinicsPage() {
                     <button
                       type="button"
                       onClick={() => removePhone(i)}
-                      className="text-slate-400 hover:text-red-400 transition-colors shrink-0"
+                      className="text-muted-foreground hover:text-red-400 transition-colors shrink-0"
                     >
                       <X size={16} />
                     </button>
@@ -240,14 +240,14 @@ export default function ClinicsPage() {
                   variant="ghost"
                   size="sm"
                   onClick={addPhone}
-                  className="text-xs text-slate-400 hover:text-white"
+                  className="text-xs text-muted-foreground hover:text-foreground"
                 >
                   <Plus size={12} /> 연락처 추가
                 </Button>
               )}
             </div>
             <div className="flex items-center justify-between">
-              <Label className="text-xs text-slate-400">알림 활성화</Label>
+              <Label className="text-xs text-muted-foreground">알림 활성화</Label>
               <Switch
                 checked={notifyEnabled}
                 onCheckedChange={setNotifyEnabled}
@@ -265,7 +265,7 @@ export default function ClinicsPage() {
 
       <Card variant="glass" className="p-6">
         <div className="flex items-center justify-between mb-4">
-          <h2 className="font-semibold text-white">병원 목록 ({clinics.length})</h2>
+          <h2 className="font-semibold text-foreground">병원 목록 ({clinics.length})</h2>
           <Button onClick={() => setDialogOpen(true)} size="sm" className="bg-brand-600 hover:bg-brand-700">
             <Plus size={14} /> 병원 등록
           </Button>
@@ -277,25 +277,25 @@ export default function ClinicsPage() {
         ) : (
           <Table>
             <TableHeader>
-              <TableRow className="border-b border-white/5 hover:bg-transparent">
-                <TableHead className="text-xs text-slate-500 font-medium">ID</TableHead>
-                <TableHead className="text-xs text-slate-500 font-medium">병원명</TableHead>
-                <TableHead className="text-xs text-slate-500 font-medium">슬러그</TableHead>
-                <TableHead className="text-xs text-slate-500 font-medium">등록일</TableHead>
-                <TableHead className="text-xs text-slate-500 font-medium">리드 알림</TableHead>
-                <TableHead className="text-xs text-slate-500 font-medium">상태</TableHead>
-                <TableHead className="text-xs text-slate-500 font-medium">설정</TableHead>
+              <TableRow className="border-b border-border dark:border-white/5 hover:bg-transparent">
+                <TableHead className="text-xs text-muted-foreground font-medium">ID</TableHead>
+                <TableHead className="text-xs text-muted-foreground font-medium">병원명</TableHead>
+                <TableHead className="text-xs text-muted-foreground font-medium">슬러그</TableHead>
+                <TableHead className="text-xs text-muted-foreground font-medium">등록일</TableHead>
+                <TableHead className="text-xs text-muted-foreground font-medium">리드 알림</TableHead>
+                <TableHead className="text-xs text-muted-foreground font-medium">상태</TableHead>
+                <TableHead className="text-xs text-muted-foreground font-medium">설정</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
               {clinics.map((c: any) => {
                 const phones = getNotifyDisplay(c)
                 return (
-                  <TableRow key={c.id} className="border-b border-white/5">
-                    <TableCell className="text-slate-500 text-xs">#{c.id}</TableCell>
-                    <TableCell className="text-white font-medium">{c.name}</TableCell>
-                    <TableCell className="text-slate-400 font-mono text-xs">{c.slug}</TableCell>
-                    <TableCell className="text-slate-400 text-xs">{formatDate(c.created_at)}</TableCell>
+                  <TableRow key={c.id} className="border-b border-border dark:border-white/5">
+                    <TableCell className="text-muted-foreground text-xs">#{c.id}</TableCell>
+                    <TableCell className="text-foreground font-medium">{c.name}</TableCell>
+                    <TableCell className="text-muted-foreground font-mono text-xs">{c.slug}</TableCell>
+                    <TableCell className="text-muted-foreground text-xs">{formatDate(c.created_at)}</TableCell>
                     <TableCell>
                       {c.notify_enabled && phones.length > 0 ? (
                         <div className="flex flex-col gap-0.5">
@@ -307,7 +307,7 @@ export default function ClinicsPage() {
                           ))}
                         </div>
                       ) : (
-                        <span className="text-xs text-slate-600">미설정</span>
+                        <span className="text-xs text-muted-foreground/60">미설정</span>
                       )}
                     </TableCell>
                     <TableCell>
@@ -316,7 +316,7 @@ export default function ClinicsPage() {
                       </Badge>
                     </TableCell>
                     <TableCell>
-                      <button onClick={() => openNotifyDialog(c)} className="text-slate-400 hover:text-white transition-colors" aria-label="알림 설정">
+                      <button onClick={() => openNotifyDialog(c)} className="text-muted-foreground hover:text-foreground transition-colors" aria-label="알림 설정">
                         <Pencil size={14} />
                       </button>
                     </TableCell>

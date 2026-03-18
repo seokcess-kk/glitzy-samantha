@@ -86,7 +86,7 @@ export default function DashboardPage() {
         actions={
           <div className="flex items-center gap-2">
             <DateRangePicker dateRange={dateRange} onDateRangeChange={setDateRange} />
-            <Button variant="ghost" size="icon" onClick={handleRefresh} disabled={anyLoading} className="text-slate-400 hover:text-white">
+            <Button variant="ghost" size="icon" onClick={handleRefresh} disabled={anyLoading} className="text-muted-foreground hover:text-foreground">
               <RefreshCw size={16} className={anyLoading ? 'animate-spin' : ''} />
             </Button>
           </div>

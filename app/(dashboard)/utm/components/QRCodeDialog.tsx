@@ -32,7 +32,7 @@ export function QRCodeDialog({ open, onOpenChange, url, label }: QRCodeDialogPro
           <DialogHeader>
             <DialogTitle>QR 코드</DialogTitle>
           </DialogHeader>
-          <div className="py-8 text-center text-slate-500">
+          <div className="py-8 text-center text-muted-foreground">
             URL을 먼저 생성해주세요.
           </div>
         </DialogContent>
@@ -102,19 +102,19 @@ export function QRCodeDialog({ open, onOpenChange, url, label }: QRCodeDialogPro
           </div>
 
           {/* URL 표시 */}
-          <div className="bg-slate-800/50 rounded-lg p-3">
-            <p className="text-xs text-slate-500 mb-1">URL</p>
-            <p className="text-xs text-slate-300 break-all font-mono">{url}</p>
+          <div className="bg-muted rounded-lg p-3">
+            <p className="text-xs text-muted-foreground mb-1">URL</p>
+            <p className="text-xs text-foreground/80 break-all font-mono">{url}</p>
           </div>
 
           {/* 옵션 */}
           <div className="grid grid-cols-3 gap-3">
             <div>
-              <label className="text-xs text-slate-500 mb-1 block">크기</label>
+              <label className="text-xs text-muted-foreground mb-1 block">크기</label>
               <select
                 value={size}
                 onChange={e => setSize(Number(e.target.value))}
-                className="w-full bg-slate-800 border border-slate-700 rounded px-2 py-1.5 text-sm"
+                className="w-full bg-card dark:bg-card border border-border rounded px-2 py-1.5 text-sm"
               >
                 <option value={150}>작게 (150px)</option>
                 <option value={200}>보통 (200px)</option>
@@ -122,7 +122,7 @@ export function QRCodeDialog({ open, onOpenChange, url, label }: QRCodeDialogPro
               </select>
             </div>
             <div>
-              <label className="text-xs text-slate-500 mb-1 block">배경색</label>
+              <label className="text-xs text-muted-foreground mb-1 block">배경색</label>
               <input
                 type="color"
                 value={bgColor}
@@ -131,7 +131,7 @@ export function QRCodeDialog({ open, onOpenChange, url, label }: QRCodeDialogPro
               />
             </div>
             <div>
-              <label className="text-xs text-slate-500 mb-1 block">코드색</label>
+              <label className="text-xs text-muted-foreground mb-1 block">코드색</label>
               <input
                 type="color"
                 value={fgColor}

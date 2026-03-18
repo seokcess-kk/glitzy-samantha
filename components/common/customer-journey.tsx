@@ -62,9 +62,9 @@ function getEventColor(event: JourneyEvent): string {
     case 'inflow':
       return 'bg-brand-500'
     case 'chatbot':
-      return event.data.chatbot_sent ? 'bg-emerald-500' : 'bg-slate-600'
+      return event.data.chatbot_sent ? 'bg-emerald-500' : 'bg-slate-400 dark:bg-slate-600'
     case 'booking':
-      if (event.status === 'cancelled') return 'bg-slate-600'
+      if (event.status === 'cancelled') return 'bg-slate-400 dark:bg-slate-600'
       if (event.status === 'confirmed') return 'bg-blue-500'
       if (event.status === 'visited' || event.status === 'treatment_confirmed') return 'bg-purple-500'
       if (event.status === 'noshow') return 'bg-red-500'
@@ -74,7 +74,7 @@ function getEventColor(event: JourneyEvent): string {
     case 'payment':
       return 'bg-emerald-400'
     default:
-      return 'bg-slate-500'
+      return 'bg-slate-400 dark:bg-slate-500'
   }
 }
 
@@ -124,19 +124,19 @@ function EventDetail({ event }: { event: JourneyEvent }) {
           <div className="flex items-center gap-2 flex-wrap">
             <ChannelBadge channel={event.data.utm_source || 'unknown'} className="text-[10px] px-1.5 py-0.5" />
             {event.data.utm_medium && (
-              <span className="text-xs text-slate-400">
+              <span className="text-xs text-muted-foreground">
                 {getUtmMediumLabel(event.data.utm_medium)}
               </span>
             )}
           </div>
           {event.data.utm_campaign && (
-            <p className="text-xs text-slate-500 flex items-center gap-1">
+            <p className="text-xs text-muted-foreground flex items-center gap-1">
               <Tag size={10} className="text-brand-400" />
               <span className="text-brand-400">{event.data.utm_campaign}</span>
             </p>
           )}
           {event.data.utm_content && (
-            <p className="text-xs text-slate-600">
+            <p className="text-xs text-muted-foreground/60">
               {event.data.utm_content}
             </p>
           )}
@@ -146,7 +146,7 @@ function EventDetail({ event }: { event: JourneyEvent }) {
     case 'chatbot':
       return (
         <div className="mt-1">
-          <p className={`text-xs ${event.data.chatbot_sent ? 'text-emerald-400' : 'text-slate-500'}`}>
+          <p className={`text-xs ${event.data.chatbot_sent ? 'text-emerald-600 dark:text-emerald-400' : 'text-muted-foreground'}`}>
             {event.data.chatbot_sent
               ? `발송 완료${event.data.chatbot_sent_at ? ` (${formatTime(event.data.chatbot_sent_at)})` : ''}`
               : '발송 대기 중'}
@@ -159,13 +159,13 @@ function EventDetail({ event }: { event: JourneyEvent }) {
       return (
         <div className="mt-1 space-y-1">
           {event.data.booking_datetime && (
-            <p className="text-xs text-slate-400">
+            <p className="text-xs text-muted-foreground">
               {formatDateTime(event.data.booking_datetime)} 예약
             </p>
           )}
           <StatusBadge status={statusText} className="text-[10px]" />
           {event.data.notes && (
-            <p className="text-xs text-slate-600 mt-1">{event.data.notes}</p>
+            <p className="text-xs text-muted-foreground/60 mt-1">{event.data.notes}</p>
           )}
         </div>
       )
@@ -174,11 +174,11 @@ function EventDetail({ event }: { event: JourneyEvent }) {
     case 'consultation':
       return (
         <div className="mt-1">
-          <p className="text-xs text-slate-400">
+          <p className="text-xs text-muted-foreground">
             {event.status || '상담 진행'}
           </p>
           {event.data.consultant_notes && (
-            <p className="text-xs text-slate-500 mt-0.5">{event.data.consultant_notes}</p>
+            <p className="text-xs text-muted-foreground mt-0.5">{event.data.consultant_notes}</p>
           )}
         </div>
       )
@@ -187,10 +187,10 @@ function EventDetail({ event }: { event: JourneyEvent }) {
       return (
         <div className="mt-1">
           {event.data.treatment_name && (
-            <p className="text-xs text-slate-400">{event.data.treatment_name}</p>
+            <p className="text-xs text-muted-foreground">{event.data.treatment_name}</p>
           )}
           {event.data.payment_amount != null && (
-            <p className="text-sm font-semibold text-emerald-400">
+            <p className="text-sm font-semibold text-emerald-600 dark:text-emerald-400">
               ₩{event.data.payment_amount.toLocaleString()}
             </p>
           )}
@@ -223,7 +223,7 @@ function JourneyEventItem({ event, isLast }: { event: JourneyEvent; isLast: bool
     >
       {/* 연결선 (마지막 제외) */}
       {!isLast && (
-        <div className="absolute left-[7px] top-5 bottom-0 w-0.5 bg-white/10" aria-hidden="true" />
+        <div className="absolute left-[7px] top-5 bottom-0 w-0.5 bg-border dark:bg-white/10" aria-hidden="true" />
       )}
 
       {/* 도트 + 아이콘 */}
@@ -237,8 +237,8 @@ function JourneyEventItem({ event, isLast }: { event: JourneyEvent; isLast: bool
       {/* 내용 */}
       <div className="flex-1 pb-5">
         <div className="flex items-center justify-between gap-2">
-          <p className="text-xs font-semibold text-slate-300">{label}</p>
-          <span className="text-xs text-slate-600 shrink-0">
+          <p className="text-xs font-semibold text-foreground/80">{label}</p>
+          <span className="text-xs text-muted-foreground/60 shrink-0">
             {formatDate(event.date)}
           </span>
         </div>
@@ -368,7 +368,7 @@ export function CustomerJourney({
 
   if (events.length === 0) {
     return (
-      <div className={`text-center py-6 text-slate-500 text-sm ${className}`}>
+      <div className={`text-center py-6 text-muted-foreground text-sm ${className}`}>
         여정 이벤트가 없습니다.
       </div>
     )
@@ -376,7 +376,7 @@ export function CustomerJourney({
 
   return (
     <div className={className}>
-      <p className="text-xs font-semibold text-slate-400 mb-4 flex items-center gap-2">
+      <p className="text-xs font-semibold text-muted-foreground mb-4 flex items-center gap-2">
         <MousePointerClick size={12} aria-hidden="true" /> 여정 타임라인
       </p>
       <div className="pl-1" role="list" aria-label="고객 여정 타임라인">

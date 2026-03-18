@@ -4,6 +4,39 @@
 
 @layer base {
   :root {
+    --background: 0 0% 100%;
+    --foreground: 224 12% 15%;
+
+    --card: 0 0% 100%;
+    --card-foreground: 224 12% 15%;
+
+    --popover: 0 0% 100%;
+    --popover-foreground: 224 12% 15%;
+
+    --primary: 239 84% 67%;
+    --primary-foreground: 0 0% 100%;
+
+    --secondary: 220 14% 96%;
+    --secondary-foreground: 220 9% 46%;
+
+    --muted: 220 14% 96%;
+    --muted-foreground: 220 9% 46%;
+
+    --accent: 220 14% 96%;
+    --accent-foreground: 224 12% 15%;
+
+    --destructive: 0 72% 51%;
+    --destructive-foreground: 0 0% 100%;
+
+    --border: 220 13% 91%;
+    --input: 220 13% 91%;
+    --ring: 239 84% 67%;
+    --ring-offset-background: var(--background);
+
+    --radius: 0.625rem;
+  }
+
+  .dark {
     --background: 228 12% 8%;
     --foreground: 210 20% 92%;
 
@@ -31,8 +64,7 @@
     --border: 225 8% 16%;
     --input: 225 8% 16%;
     --ring: 239 84% 67%;
-
-    --radius: 0.625rem;
+    --ring-offset-background: var(--background);
   }
 }
 
@@ -49,14 +81,19 @@
 /* 스크롤바 커스텀 */
 ::-webkit-scrollbar { width: 5px; }
 ::-webkit-scrollbar-track { background: transparent; }
-::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.08); border-radius: 3px; }
-::-webkit-scrollbar-thumb:hover { background: rgba(255,255,255,0.15); }
+::-webkit-scrollbar-thumb { background: rgba(0,0,0,0.12); border-radius: 3px; }
+::-webkit-scrollbar-thumb:hover { background: rgba(0,0,0,0.2); }
+.dark ::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.08); }
+.dark ::-webkit-scrollbar-thumb:hover { background: rgba(255,255,255,0.15); }
 
 /* 카드 — 미니멀 */
 .glass-card {
   background: hsl(var(--card));
-  border: 1px solid rgba(255, 255, 255, 0.06);
+  border: 1px solid hsl(var(--border));
   border-radius: var(--radius);
+}
+.dark .glass-card {
+  border-color: rgba(255, 255, 255, 0.06);
 }
 
 /* 카운트업 애니메이션 */

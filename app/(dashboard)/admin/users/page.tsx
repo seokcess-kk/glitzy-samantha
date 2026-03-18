@@ -218,7 +218,7 @@ export default function UsersPage() {
           <div className="space-y-4 py-4">
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
-                <Label className="text-xs text-slate-400">아이디 *</Label>
+                <Label className="text-xs text-muted-foreground">아이디 *</Label>
                 <Input
                   type="text"
                   value={form.username}
@@ -227,7 +227,7 @@ export default function UsersPage() {
                 />
               </div>
               <div className="space-y-2">
-                <Label className="text-xs text-slate-400">비밀번호 *</Label>
+                <Label className="text-xs text-muted-foreground">비밀번호 *</Label>
                 <Input
                   type="password"
                   value={form.password}
@@ -237,7 +237,7 @@ export default function UsersPage() {
               </div>
             </div>
             <div className="space-y-2">
-              <Label className="text-xs text-slate-400">역할 *</Label>
+              <Label className="text-xs text-muted-foreground">역할 *</Label>
               <Select value={form.role} onValueChange={v => setForm(f => ({ ...f, role: v, clinic_id: '', assigned_clinic_ids: [], menu_permissions: [] }))}>
                 <SelectTrigger>
                   <SelectValue />
@@ -254,7 +254,7 @@ export default function UsersPage() {
             {/* clinic_admin / clinic_staff: 단일 병원 선택 */}
             {(form.role === 'clinic_admin' || form.role === 'clinic_staff') && (
               <div className="space-y-2">
-                <Label className="text-xs text-slate-400">담당 병원 *</Label>
+                <Label className="text-xs text-muted-foreground">담당 병원 *</Label>
                 <Select value={form.clinic_id} onValueChange={v => setForm(f => ({ ...f, clinic_id: v }))}>
                   <SelectTrigger>
                     <SelectValue placeholder="선택" />
@@ -272,10 +272,10 @@ export default function UsersPage() {
             {form.role === 'agency_staff' && (
               <>
                 <div className="space-y-2">
-                  <Label className="text-xs text-slate-400">배정 병원 * (복수 선택)</Label>
-                  <div className="grid grid-cols-2 gap-2 max-h-[160px] overflow-y-auto border border-white/10 rounded-lg p-3">
+                  <Label className="text-xs text-muted-foreground">배정 병원 * (복수 선택)</Label>
+                  <div className="grid grid-cols-2 gap-2 max-h-[160px] overflow-y-auto border border-border dark:border-white/10 rounded-lg p-3">
                     {clinics.map((c: any) => (
-                      <label key={c.id} className="flex items-center gap-2 text-sm text-slate-300 cursor-pointer hover:text-white">
+                      <label key={c.id} className="flex items-center gap-2 text-sm text-foreground/80 cursor-pointer hover:text-foreground">
                         <Checkbox
                           checked={form.assigned_clinic_ids.includes(c.id)}
                           onCheckedChange={() => toggleClinicId(c.id, form.assigned_clinic_ids, (v) => setForm(f => ({ ...f, assigned_clinic_ids: v })))}
@@ -286,10 +286,10 @@ export default function UsersPage() {
                   </div>
                 </div>
                 <div className="space-y-2">
-                  <Label className="text-xs text-slate-400">메뉴 권한 (미선택 시 전체 허용)</Label>
-                  <div className="grid grid-cols-2 gap-2 max-h-[160px] overflow-y-auto border border-white/10 rounded-lg p-3">
+                  <Label className="text-xs text-muted-foreground">메뉴 권한 (미선택 시 전체 허용)</Label>
+                  <div className="grid grid-cols-2 gap-2 max-h-[160px] overflow-y-auto border border-border dark:border-white/10 rounded-lg p-3">
                     {MENU_OPTIONS.map(m => (
-                      <label key={m.key} className="flex items-center gap-2 text-sm text-slate-300 cursor-pointer hover:text-white">
+                      <label key={m.key} className="flex items-center gap-2 text-sm text-foreground/80 cursor-pointer hover:text-foreground">
                         <Checkbox
                           checked={form.menu_permissions.includes(m.key)}
                           onCheckedChange={() => toggleMenuKey(m.key, form.menu_permissions, (v) => setForm(f => ({ ...f, menu_permissions: v })))}
@@ -319,10 +319,10 @@ export default function UsersPage() {
           </DialogHeader>
           <div className="space-y-4 py-4">
             <div className="space-y-2">
-              <Label className="text-xs text-slate-400">배정 병원</Label>
-              <div className="grid grid-cols-2 gap-2 max-h-[160px] overflow-y-auto border border-white/10 rounded-lg p-3">
+              <Label className="text-xs text-muted-foreground">배정 병원</Label>
+              <div className="grid grid-cols-2 gap-2 max-h-[160px] overflow-y-auto border border-border dark:border-white/10 rounded-lg p-3">
                 {clinics.map((c: any) => (
-                  <label key={c.id} className="flex items-center gap-2 text-sm text-slate-300 cursor-pointer hover:text-white">
+                  <label key={c.id} className="flex items-center gap-2 text-sm text-foreground/80 cursor-pointer hover:text-foreground">
                     <Checkbox
                       checked={permClinicIds.includes(c.id)}
                       onCheckedChange={() => toggleClinicId(c.id, permClinicIds, setPermClinicIds)}
@@ -333,10 +333,10 @@ export default function UsersPage() {
               </div>
             </div>
             <div className="space-y-2">
-              <Label className="text-xs text-slate-400">메뉴 권한 (미선택 시 전체 허용)</Label>
-              <div className="grid grid-cols-2 gap-2 max-h-[160px] overflow-y-auto border border-white/10 rounded-lg p-3">
+              <Label className="text-xs text-muted-foreground">메뉴 권한 (미선택 시 전체 허용)</Label>
+              <div className="grid grid-cols-2 gap-2 max-h-[160px] overflow-y-auto border border-border dark:border-white/10 rounded-lg p-3">
                 {MENU_OPTIONS.map(m => (
-                  <label key={m.key} className="flex items-center gap-2 text-sm text-slate-300 cursor-pointer hover:text-white">
+                  <label key={m.key} className="flex items-center gap-2 text-sm text-foreground/80 cursor-pointer hover:text-foreground">
                     <Checkbox
                       checked={permMenuKeys.includes(m.key)}
                       onCheckedChange={() => toggleMenuKey(m.key, permMenuKeys, setPermMenuKeys)}
@@ -358,7 +358,7 @@ export default function UsersPage() {
 
       <Card variant="glass" className="p-6">
         <div className="flex items-center justify-between mb-4">
-          <h2 className="font-semibold text-white">계정 목록 ({users.length})</h2>
+          <h2 className="font-semibold text-foreground">계정 목록 ({users.length})</h2>
           <Button onClick={() => setDialogOpen(true)} size="sm" className="bg-brand-600 hover:bg-brand-700">
             <Plus size={14} /> 계정 생성
           </Button>
@@ -370,30 +370,30 @@ export default function UsersPage() {
         ) : (
           <Table>
             <TableHeader>
-              <TableRow className="border-b border-white/5 hover:bg-transparent">
+              <TableRow className="border-b border-border dark:border-white/5 hover:bg-transparent">
                 {['아이디', '역할', '담당 병원', '생성일', '상태', '활성화', '관리'].map(h => (
-                  <TableHead key={h} className="text-xs text-slate-500 font-medium">{h === '관리' ? '' : h}</TableHead>
+                  <TableHead key={h} className="text-xs text-muted-foreground font-medium">{h === '관리' ? '' : h}</TableHead>
                 ))}
               </TableRow>
             </TableHeader>
             <TableBody>
               {users.map((u: any) => (
-              <TableRow key={u.id} className="border-b border-white/5">
-                <TableCell className="text-white font-medium">{u.username}</TableCell>
+              <TableRow key={u.id} className="border-b border-border dark:border-white/5">
+                <TableCell className="text-foreground font-medium">{u.username}</TableCell>
                 <TableCell>
                   <Badge
                     variant={u.role === 'superadmin' ? 'default' : u.role === 'agency_staff' ? 'warning' : 'info'}
                     className={
                       u.role === 'superadmin' ? 'bg-purple-500/20 text-purple-400 border-0' :
                       u.role === 'agency_staff' ? 'bg-orange-500/20 text-orange-400 border-0' :
-                      u.role === 'clinic_staff' ? 'bg-slate-500/20 text-slate-400 border-0' : ''
+                      u.role === 'clinic_staff' ? 'bg-muted text-muted-foreground border-0' : ''
                     }
                   >
                     {ROLE_LABELS[u.role] || u.role}
                   </Badge>
                 </TableCell>
-                <TableCell className="text-slate-400 text-xs">{u.clinic?.name || (u.role === 'agency_staff' ? '다중 배정' : '-')}</TableCell>
-                <TableCell className="text-slate-400 text-xs">{formatDate(u.created_at)}</TableCell>
+                <TableCell className="text-muted-foreground text-xs">{u.clinic?.name || (u.role === 'agency_staff' ? '다중 배정' : '-')}</TableCell>
+                <TableCell className="text-muted-foreground text-xs">{formatDate(u.created_at)}</TableCell>
                 <TableCell>
                   <Badge variant={u.is_active ? 'success' : 'secondary'}>
                     {u.is_active ? '활성' : '비활성'}
@@ -402,7 +402,7 @@ export default function UsersPage() {
                 <TableCell>
                   <button
                     onClick={() => toggleUser(u.id, u.is_active)}
-                    className="text-slate-400 hover:text-white transition-colors"
+                    className="text-muted-foreground hover:text-foreground transition-colors"
                     aria-label={u.is_active ? '계정 비활성화' : '계정 활성화'}
                   >
                     {u.is_active ? <ToggleRight size={20} className="text-emerald-400" /> : <ToggleLeft size={20} />}
@@ -412,7 +412,7 @@ export default function UsersPage() {
                   {u.role === 'agency_staff' && (
                     <button
                       onClick={() => openPermDialog(u.id)}
-                      className="text-slate-400 hover:text-white transition-colors"
+                      className="text-muted-foreground hover:text-foreground transition-colors"
                       aria-label="권한 설정"
                     >
                       <Settings size={16} />

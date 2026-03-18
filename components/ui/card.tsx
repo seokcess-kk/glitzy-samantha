@@ -12,7 +12,7 @@ const Card = React.forwardRef<HTMLDivElement, CardProps>(
       ref={ref}
       className={cn(
         variant === "glass"
-          ? "glass-card rounded-xl text-card-foreground transition-colors hover:border-white/15"
+          ? "glass-card rounded-xl text-card-foreground transition-colors hover:border-border dark:hover:border-white/15"
           : "rounded-lg border bg-card text-card-foreground shadow-sm",
         className
       )}

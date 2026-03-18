@@ -91,7 +91,7 @@ export default function LoginLogsPage() {
       <Card variant="glass" className="p-4">
         <div className="flex flex-wrap gap-3 items-center">
           <div className="relative flex-1 min-w-[200px] max-w-xs">
-            <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-500" />
+            <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
             <Input
               placeholder="아이디 검색"
               value={search}
@@ -122,7 +122,7 @@ export default function LoginLogsPage() {
               실패
             </Button>
           </div>
-          <p className="text-xs text-slate-500 ml-auto">총 {total}건</p>
+          <p className="text-xs text-muted-foreground ml-auto">총 {total}건</p>
         </div>
       </Card>
 
@@ -131,18 +131,18 @@ export default function LoginLogsPage() {
         <div className="overflow-x-auto">
           <table className="w-full text-sm">
             <thead>
-              <tr className="border-b border-white/5">
-                <th className="text-left px-4 py-3 text-slate-400 font-medium">시간</th>
-                <th className="text-left px-4 py-3 text-slate-400 font-medium">아이디</th>
-                <th className="text-left px-4 py-3 text-slate-400 font-medium">결과</th>
-                <th className="text-left px-4 py-3 text-slate-400 font-medium">사유</th>
-                <th className="text-left px-4 py-3 text-slate-400 font-medium">IP</th>
+              <tr className="border-b border-border dark:border-white/5 hover:bg-transparent">
+                <th className="text-left px-4 py-3 text-muted-foreground font-medium">시간</th>
+                <th className="text-left px-4 py-3 text-muted-foreground font-medium">아이디</th>
+                <th className="text-left px-4 py-3 text-muted-foreground font-medium">결과</th>
+                <th className="text-left px-4 py-3 text-muted-foreground font-medium">사유</th>
+                <th className="text-left px-4 py-3 text-muted-foreground font-medium">IP</th>
               </tr>
             </thead>
             <tbody>
               {loading ? (
                 Array.from({ length: 10 }).map((_, i) => (
-                  <tr key={i} className="border-b border-white/5">
+                  <tr key={i} className="border-b border-border dark:border-white/5 hover:bg-muted/30 dark:hover:bg-white/[0.02]">
                     {Array.from({ length: 5 }).map((_, j) => (
                       <td key={j} className="px-4 py-3"><Skeleton className="h-4 w-20" /></td>
                     ))}
@@ -150,22 +150,22 @@ export default function LoginLogsPage() {
                 ))
               ) : logs.length === 0 ? (
                 <tr>
-                  <td colSpan={5} className="text-center py-8 text-slate-500">로그인 기록이 없습니다.</td>
+                  <td colSpan={5} className="text-center py-8 text-muted-foreground">로그인 기록이 없습니다.</td>
                 </tr>
               ) : (
                 logs.map(log => (
-                  <tr key={log.id} className="border-b border-white/5 hover:bg-white/[0.02]">
-                    <td className="px-4 py-3 text-slate-300 whitespace-nowrap">{formatDate(log.created_at)}</td>
-                    <td className="px-4 py-3 text-white font-medium">{log.username}</td>
+                  <tr key={log.id} className="border-b border-border dark:border-white/5 hover:bg-muted/30 dark:hover:bg-white/[0.02]">
+                    <td className="px-4 py-3 text-foreground/80 whitespace-nowrap">{formatDate(log.created_at)}</td>
+                    <td className="px-4 py-3 text-foreground font-medium">{log.username}</td>
                     <td className="px-4 py-3">
                       <Badge variant={log.success ? 'success' : 'destructive'}>
                         {log.success ? '성공' : '실패'}
                       </Badge>
                     </td>
-                    <td className="px-4 py-3 text-slate-400">
+                    <td className="px-4 py-3 text-muted-foreground">
                       {log.success ? '-' : failureLabel(log.failure_reason)}
                     </td>
-                    <td className="px-4 py-3 text-slate-500 font-mono text-xs">{log.ip_address || '-'}</td>
+                    <td className="px-4 py-3 text-muted-foreground font-mono text-xs">{log.ip_address || '-'}</td>
                   </tr>
                 ))
               )}
@@ -175,8 +175,8 @@ export default function LoginLogsPage() {
 
         {/* 페이지네이션 */}
         {totalPages > 1 && (
-          <div className="flex items-center justify-between px-4 py-3 border-t border-white/5">
-            <p className="text-xs text-slate-500">{page} / {totalPages} 페이지</p>
+          <div className="flex items-center justify-between px-4 py-3 border-t border-border dark:border-white/5">
+            <p className="text-xs text-muted-foreground">{page} / {totalPages} 페이지</p>
             <div className="flex gap-1">
               <Button
                 variant="ghost"
