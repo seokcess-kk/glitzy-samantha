@@ -1251,34 +1251,20 @@ export default function PatientsPage() {
         </DialogContent>
       </Dialog>
 
-      {/* 통계 요약 */}
-      <Card variant="glass" className="flex items-center gap-6 px-5 py-3 mb-5 flex-wrap">
-        {loading ? (
-          <Skeleton className="h-5 w-full" />
-        ) : (
-          <>
-            <div className="flex items-center gap-2">
-              <span className="text-xs text-muted-foreground">전체</span>
-              <span className="text-lg font-bold text-foreground">{stats.total}</span>
-            </div>
-            <div className="w-px h-5 bg-border dark:bg-white/10 hidden sm:block" />
-            <div className="flex items-center gap-2">
-              <span className="text-xs text-muted-foreground">시술확정</span>
-              <span className="text-lg font-bold text-foreground">{stats.treatmentConfirmed}</span>
-            </div>
-            <div className="w-px h-5 bg-border dark:bg-white/10 hidden sm:block" />
-            <div className="flex items-center gap-2">
-              <span className="text-xs text-muted-foreground">노쇼</span>
-              <span className="text-lg font-bold text-red-500">{stats.noshow}</span>
-            </div>
-            <div className="flex-1" />
-            <div className="flex items-center gap-2">
-              <span className="text-xs text-muted-foreground">총 결제</span>
-              <span className="text-lg font-bold text-emerald-600 dark:text-emerald-400">₩{stats.revenue.toLocaleString()}</span>
-            </div>
-          </>
-        )}
-      </Card>
+      {/* 통계 카드 */}
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-3 md:gap-4 mb-6">
+        {[
+          { label: '전체 예약', value: stats.total },
+          { label: '시술확정', value: stats.treatmentConfirmed },
+          { label: '노쇼', value: stats.noshow },
+          { label: '총 결제액', value: `₩${stats.revenue.toLocaleString()}` },
+        ].map(({ label, value }) => (
+          <Card key={label} variant="glass" className="p-4">
+            <p className="text-xs text-muted-foreground uppercase tracking-widest mb-1">{label}</p>
+            {loading ? <Skeleton className="h-6 mt-1" /> : <p className="text-xl font-bold text-foreground">{value}</p>}
+          </Card>
+        ))}
+      </div>
 
       {view === 'list' ? (
         <>
