@@ -85,7 +85,7 @@ function BookingEditForm({ booking, onSave }: { booking: any; onSave: () => void
     }
     setSaving(true)
     try {
-      const booking_datetime = `${form.booking_date}T${form.booking_time}:00+09:00`
+      const booking_datetime = new Date(`${form.booking_date}T${form.booking_time}:00+09:00`).toISOString()
       const res = await fetch('/api/bookings', {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
@@ -562,7 +562,7 @@ export default function PatientsPage() {
     }
     setCreating(true)
     try {
-      const booking_datetime = `${createForm.booking_date}T${createForm.booking_time}:00+09:00`
+      const booking_datetime = new Date(`${createForm.booking_date}T${createForm.booking_time}:00+09:00`).toISOString()
       const qs = selectedClinicId ? `?clinic_id=${selectedClinicId}` : ''
       const res = await fetch(`/api/bookings${qs}`, {
         method: 'POST',
