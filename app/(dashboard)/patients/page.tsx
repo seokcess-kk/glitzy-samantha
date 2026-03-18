@@ -483,7 +483,7 @@ function TreatmentManageDialog({ clinicId, open, onOpenChange }: { clinicId: num
 function PaymentSection({ customerId, payments, onSave, isSuperAdmin, clinicId, treatmentRefreshKey }: {
   customerId: number; payments: any[]; onSave: () => void; isSuperAdmin?: boolean; clinicId?: number | null; treatmentRefreshKey?: number
 }) {
-  const [form, setForm] = useState({ treatmentName: '', paymentAmount: '', paymentDate: '' })
+  const [form, setForm] = useState({ treatmentName: '', paymentAmount: '' })
   const [saving, setSaving] = useState(false)
   const [errors, setErrors] = useState<Record<string, string>>({})
   const [showForm, setShowForm] = useState(false)
@@ -533,10 +533,10 @@ function PaymentSection({ customerId, payments, onSave, isSuperAdmin, clinicId, 
       const res = await fetch(`/api/patients/${customerId}/payment`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ ...form, paymentAmount: Number(form.paymentAmount) }),
+        body: JSON.stringify({ ...form, paymentAmount: Number(form.paymentAmount), paymentDate: new Date().toLocaleDateString('en-CA', { timeZone: 'Asia/Seoul' }) }),
       })
       if (!res.ok) throw new Error()
-      setForm({ treatmentName: '', paymentAmount: '', paymentDate: '' })
+      setForm({ treatmentName: '', paymentAmount: '' })
       setCustomInput(false)
       setShowForm(false)
       toast.success('결제 내역이 등록되었습니다.')
@@ -610,7 +610,7 @@ function PaymentSection({ customerId, payments, onSave, isSuperAdmin, clinicId, 
       {/* C: 결제 추가 폼 (접기/펼치기) */}
       {showForm ? (
         <div className="p-3 rounded-lg border border-border dark:border-white/5 bg-muted/20 dark:bg-white/[0.02]">
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <div className="space-y-2">
               <Label className="text-xs text-muted-foreground">시술 항목 *</Label>
               {treatments.length > 0 && !customInput ? (
@@ -675,17 +675,9 @@ function PaymentSection({ customerId, payments, onSave, isSuperAdmin, clinicId, 
               )}
               {errors.paymentAmount && <p className="text-red-400 text-xs">{errors.paymentAmount}</p>}
             </div>
-            <div className="space-y-2">
-              <Label className="text-xs text-muted-foreground">결제일</Label>
-              <Input
-                type="date"
-                value={form.paymentDate}
-                onChange={e => setForm(f => ({ ...f, paymentDate: e.target.value }))}
-              />
-            </div>
           </div>
           <div className="flex justify-end gap-2 mt-3">
-            <Button variant="ghost" size="sm" onClick={() => { setShowForm(false); setCustomInput(false); setForm({ treatmentName: '', paymentAmount: '', paymentDate: '' }) }}>취소</Button>
+            <Button variant="ghost" size="sm" onClick={() => { setShowForm(false); setCustomInput(false); setForm({ treatmentName: '', paymentAmount: '' }) }}>취소</Button>
             <Button onClick={handleSave} disabled={saving} size="sm" className="bg-emerald-600 hover:bg-emerald-700">
               <Plus size={14} /> {saving ? '저장 중...' : '결제 등록'}
             </Button>
