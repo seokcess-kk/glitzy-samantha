@@ -745,6 +745,7 @@ function PaymentSection({ customerId, payments, onSave, isSuperAdmin, clinicId, 
 // G: 목록에 상담 횟수 + 상태 표시
 function BookingRow({ booking, onRefresh, isSuperAdmin, clinicId }: { booking: any; onRefresh: () => void; isSuperAdmin?: boolean; clinicId?: number | null }) {
   const [open, setOpen] = useState(false)
+  const [expandedSection, setExpandedSection] = useState<'booking' | 'consult' | 'payment' | null>(null)
   const [changingStatus, setChangingStatus] = useState(false)
   const [treatmentDialogOpen, setTreatmentDialogOpen] = useState(false)
   const [treatmentRefreshKey, setTreatmentRefreshKey] = useState(0)
@@ -834,49 +835,80 @@ function BookingRow({ booking, onRefresh, isSuperAdmin, clinicId }: { booking: a
         {open ? <ChevronUp size={16} className="text-muted-foreground shrink-0" /> : <ChevronDown size={16} className="text-muted-foreground shrink-0" />}
       </button>
 
-      {/* F: 세로 섹션 레이아웃 (탭 제거) */}
+      {/* 아코디언 섹션 레이아웃 */}
       {open && (
-        <div className="border-t border-border dark:border-white/5 px-5 py-4 space-y-5">
-          {/* 섹션 1: 예약 정보 */}
-          <div>
-            <h4 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-2 flex items-center gap-1.5">
-              <Edit2 size={12} /> 예약 정보
-            </h4>
-            <BookingEditForm booking={booking} onSave={onRefresh} />
-          </div>
-
-          {/* 섹션 2: 상담 기록 */}
-          <div className="pt-4 border-t border-border dark:border-white/5">
-            <h4 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-2 flex items-center gap-1.5">
-              <List size={12} /> 상담 기록 {consultCount > 0 && <span className="text-brand-400">({consultCount})</span>}
-            </h4>
-            <ConsultationSection customerId={customer?.id} consultations={consultations} onSave={onRefresh} />
-          </div>
-
-          {/* 섹션 3: 결제 내역 */}
-          <div className="pt-4 border-t border-border dark:border-white/5">
-            <h4 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-2 flex items-center justify-between">
-              <span className="flex items-center gap-1.5">
-                <Plus size={12} /> 결제 내역 {(customer?.payments || []).length > 0 && <span className="text-emerald-500">({(customer?.payments || []).length})</span>}
+        <div className="border-t border-border dark:border-white/5 px-5 py-3 space-y-1">
+          {/* 섹션 1: 예약 정보 (아코디언) */}
+          <div className="rounded-lg border border-border dark:border-white/5 overflow-hidden">
+            <button
+              onClick={() => setExpandedSection(s => s === 'booking' ? null : 'booking')}
+              className="w-full flex items-center justify-between px-3 py-2 hover:bg-muted/50 dark:hover:bg-white/[0.02] transition-colors"
+            >
+              <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wider flex items-center gap-1.5">
+                <Edit2 size={11} /> 예약 정보
               </span>
-              {canManageTreatments && clinicId && (
-                <button
-                  onClick={() => setTreatmentDialogOpen(true)}
-                  className="text-muted-foreground hover:text-foreground transition-colors p-1 rounded hover:bg-muted"
-                  title="시술 메뉴 관리"
-                >
-                  <Settings size={13} />
-                </button>
-              )}
-            </h4>
-            <PaymentSection customerId={customer?.id} payments={customer?.payments || []} onSave={onRefresh} isSuperAdmin={isSuperAdmin} clinicId={clinicId} treatmentRefreshKey={treatmentRefreshKey} />
+              <ChevronDown size={13} className={`text-muted-foreground transition-transform ${expandedSection === 'booking' ? 'rotate-180' : ''}`} />
+            </button>
+            {expandedSection === 'booking' && (
+              <div className="px-3 pb-3">
+                <BookingEditForm booking={booking} onSave={onRefresh} />
+              </div>
+            )}
+          </div>
+
+          {/* 섹션 2: 상담 기록 (아코디언) */}
+          <div className="rounded-lg border border-border dark:border-white/5 overflow-hidden">
+            <button
+              onClick={() => setExpandedSection(s => s === 'consult' ? null : 'consult')}
+              className="w-full flex items-center justify-between px-3 py-2 hover:bg-muted/50 dark:hover:bg-white/[0.02] transition-colors"
+            >
+              <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wider flex items-center gap-1.5">
+                <List size={11} /> 상담 기록 {consultCount > 0 && <span className="text-brand-400">({consultCount})</span>}
+              </span>
+              <ChevronDown size={13} className={`text-muted-foreground transition-transform ${expandedSection === 'consult' ? 'rotate-180' : ''}`} />
+            </button>
+            {expandedSection === 'consult' && (
+              <div className="px-3 pb-3">
+                <ConsultationSection customerId={customer?.id} consultations={consultations} onSave={onRefresh} />
+              </div>
+            )}
+          </div>
+
+          {/* 섹션 3: 결제 내역 (아코디언) */}
+          <div className="rounded-lg border border-border dark:border-white/5 overflow-hidden">
+            <button
+              onClick={() => setExpandedSection(s => s === 'payment' ? null : 'payment')}
+              className="w-full flex items-center justify-between px-3 py-2 hover:bg-muted/50 dark:hover:bg-white/[0.02] transition-colors"
+            >
+              <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wider flex items-center gap-1.5">
+                <Plus size={11} /> 결제 내역 {(customer?.payments || []).length > 0 && <span className="text-emerald-500">({(customer?.payments || []).length})</span>}
+              </span>
+              <div className="flex items-center gap-1">
+                {canManageTreatments && clinicId && (
+                  <span
+                    role="button"
+                    onClick={(e) => { e.stopPropagation(); setTreatmentDialogOpen(true) }}
+                    className="text-muted-foreground hover:text-foreground transition-colors p-1 rounded hover:bg-muted"
+                    title="시술 메뉴 관리"
+                  >
+                    <Settings size={12} />
+                  </span>
+                )}
+                <ChevronDown size={13} className={`text-muted-foreground transition-transform ${expandedSection === 'payment' ? 'rotate-180' : ''}`} />
+              </div>
+            </button>
+            {expandedSection === 'payment' && (
+              <div className="px-3 pb-3">
+                <PaymentSection customerId={customer?.id} payments={customer?.payments || []} onSave={onRefresh} isSuperAdmin={isSuperAdmin} clinicId={clinicId} treatmentRefreshKey={treatmentRefreshKey} />
+              </div>
+            )}
             {canManageTreatments && clinicId && (
               <TreatmentManageDialog clinicId={clinicId} open={treatmentDialogOpen} onOpenChange={(v) => { setTreatmentDialogOpen(v); if (!v) setTreatmentRefreshKey(k => k + 1) }} />
             )}
           </div>
 
           {isSuperAdmin && (
-            <div className="pt-4 border-t border-border dark:border-white/5 flex gap-2 justify-end">
+            <div className="pt-2 flex gap-2 justify-end">
               <Button
                 variant="ghost"
                 size="sm"
