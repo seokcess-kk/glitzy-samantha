@@ -1,7 +1,7 @@
 'use client'
 import { useState, useEffect, useMemo, Suspense } from 'react'
 import { useSearchParams } from 'next/navigation'
-import { Search, User, Phone, Calendar, TrendingUp, Users, Filter, FileText, Info, X, Trash2, ArrowUpDown, Clock } from 'lucide-react'
+import { Search, User, Phone, Calendar, TrendingUp, Users, Filter, FileText, Info, X, Trash2, ArrowUpDown, Clock, Download } from 'lucide-react'
 import { useSession } from 'next-auth/react'
 import { useClinic } from '@/components/ClinicContext'
 import { toast } from 'sonner'
@@ -305,6 +305,40 @@ function LeadsContent() {
 
   useEffect(() => { fetchLeads() }, [selectedClinicId, landingPageFilter, campaignFilter])
 
+  const [exporting, setExporting] = useState(false)
+  const canExport = session?.user?.role === 'superadmin' || session?.user?.role === 'clinic_admin'
+  const handleExportCsv = async () => {
+    setExporting(true)
+    try {
+      const params = new URLSearchParams()
+      if (selectedClinicId) params.set('clinic_id', String(selectedClinicId))
+      if (channelFilter !== 'all') params.set('channel', channelFilter)
+      if (stageFilter !== 'all') {
+        const label = FUNNEL_STAGES[stageFilter as FunnelStage]?.label
+        if (label) params.set('stage', label)
+      }
+      if (landingPageFilter !== 'all') params.set('landing_page_id', landingPageFilter)
+      if (campaignFilter !== 'all') params.set('utm_campaign', campaignFilter)
+      const qs = params.toString() ? `?${params.toString()}` : ''
+      const res = await fetch(`/api/leads/export${qs}`)
+      if (!res.ok) throw new Error('내보내기에 실패했습니다.')
+      const blob = await res.blob()
+      const url = URL.createObjectURL(blob)
+      const a = document.createElement('a')
+      a.href = url
+      a.download = res.headers.get('Content-Disposition')?.match(/filename="(.+)"/)?.[1] || 'leads_export.csv'
+      document.body.appendChild(a)
+      a.click()
+      document.body.removeChild(a)
+      URL.revokeObjectURL(url)
+      toast.success('CSV 내보내기 완료')
+    } catch (e: any) {
+      toast.error(e.message || '내보내기에 실패했습니다.')
+    } finally {
+      setExporting(false)
+    }
+  }
+
   const handleDeleteLead = async (leadId: number) => {
     if (!confirm('이 리드를 삭제하시겠습니까? 이 작업은 되돌릴 수 없습니다.')) return
     try {
@@ -411,16 +445,30 @@ function LeadsContent() {
         title="고객관리"
         description="광고 인입 → 챗봇 → 상담 → 결제 전체 여정을 추적합니다."
         actions={
-          <Card variant="glass" className="flex items-center px-3 py-2">
-            <Search size={14} className="text-muted-foreground mr-2" />
-            <Input
-              type="text"
-              value={search}
-              onChange={e => setSearch(e.target.value)}
-              placeholder="이름 또는 전화번호 검색"
-              className="bg-transparent border-0 text-sm text-foreground placeholder:text-muted-foreground/60 focus-visible:ring-0 w-52 p-0 h-auto"
-            />
-          </Card>
+          <div className="flex items-center gap-2">
+            {canExport && (
+              <Button
+                variant="glass"
+                size="sm"
+                onClick={handleExportCsv}
+                disabled={exporting || loading}
+                className="text-xs"
+              >
+                <Download size={13} />
+                {exporting ? '내보내는 중...' : 'CSV 내보내기'}
+              </Button>
+            )}
+            <Card variant="glass" className="flex items-center px-3 py-2">
+              <Search size={14} className="text-muted-foreground mr-2" />
+              <Input
+                type="text"
+                value={search}
+                onChange={e => setSearch(e.target.value)}
+                placeholder="이름 또는 전화번호 검색"
+                className="bg-transparent border-0 text-sm text-foreground placeholder:text-muted-foreground/60 focus-visible:ring-0 w-52 p-0 h-auto"
+              />
+            </Card>
+          </div>
         }
       />
 

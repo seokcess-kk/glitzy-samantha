@@ -23,6 +23,7 @@ import {
   TableRow,
 } from '@/components/ui/table'
 import CustomerJourneySheet from './CustomerJourneySheet'
+import { getKstDayStartISO } from '@/lib/date'
 
 const fmtKrw = (v: number) => v >= 10000 ? `₩${(v / 10000).toFixed(0)}만` : `₩${v.toLocaleString()}`
 
@@ -37,9 +38,22 @@ interface CustomerRow {
   firstLeadDate: string; totalRevenue: number; payments: any[]; journey: any
 }
 
+const MODEL_OPTIONS = [
+  { value: 'first', label: '퍼스트 터치' },
+  { value: 'linear', label: '균등 배분' },
+  { value: 'time-decay', label: '시간 가중' },
+] as const
+
+const MODEL_DESCRIPTIONS: Record<string, string> = {
+  first: '퍼스트터치 귀속 (첫 유입 채널 기준)',
+  linear: '균등 배분 귀속 (모든 터치포인트에 동일 비율)',
+  'time-decay': '시간 가중 귀속 (최근 터치에 높은 가중치)',
+}
+
 export default function AttributionView() {
   const { selectedClinicId } = useClinic()
   const [days, setDays] = useState('30')
+  const [model, setModel] = useState('first')
   const [loading, setLoading] = useState(true)
   const [byChannel, setByChannel] = useState<ChannelRow[]>([])
   const [byCampaign, setByCampaign] = useState<CampaignRow[]>([])
@@ -55,9 +69,10 @@ export default function AttributionView() {
   const fetchSummary = useCallback(async () => {
     setLoading(true)
     try {
-      const startDate = new Date(Date.now() - Number(days) * 86400000).toISOString()
+      const startDate = getKstDayStartISO(new Date(Date.now() - Number(days) * 86400000))
       const qs = new URLSearchParams({ startDate })
       if (selectedClinicId) qs.set('clinic_id', String(selectedClinicId))
+      if (model !== 'first') qs.set('model', model)
 
       const res = await fetch(`/api/attribution/summary?${qs}`)
       const data = await res.json()
@@ -69,13 +84,13 @@ export default function AttributionView() {
     } finally {
       setLoading(false)
     }
-  }, [days, selectedClinicId])
+  }, [days, selectedClinicId, model])
 
   // customers는 필터 변경 시에도 재요청
   const fetchCustomers = useCallback(async () => {
     setCustomersLoading(true)
     try {
-      const startDate = new Date(Date.now() - Number(days) * 86400000).toISOString()
+      const startDate = getKstDayStartISO(new Date(Date.now() - Number(days) * 86400000))
       const qs = new URLSearchParams({ startDate })
       if (selectedClinicId) qs.set('clinic_id', String(selectedClinicId))
       if (channelFilter) qs.set('channel', channelFilter)
@@ -131,13 +146,23 @@ export default function AttributionView() {
               ))}
             </SelectContent>
           </Select>
+          <Select value={model} onValueChange={v => { setModel(v); setChannelFilter(null); setCampaignFilter(null) }}>
+            <SelectTrigger className="w-[140px]">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              {MODEL_OPTIONS.map(opt => (
+                <SelectItem key={opt.value} value={opt.value}>{opt.label}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
           {(channelFilter || campaignFilter) && (
             <Button variant="ghost" size="sm" onClick={() => { setChannelFilter(null); setCampaignFilter(null) }} className="text-xs text-muted-foreground">
               필터 해제
             </Button>
           )}
         </div>
-        <p className="text-xs text-muted-foreground">퍼스트터치 귀속 (첫 유입 채널 기준)</p>
+        <p className="text-xs text-muted-foreground">{MODEL_DESCRIPTIONS[model]}</p>
       </div>
 
       {/* 요약 카드 */}

@@ -9,6 +9,7 @@ import { useClinic } from '@/components/ClinicContext'
 import { Card } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import AttributionView from '@/components/attribution/AttributionView'
+import CreativePerformance from '@/components/ads/CreativePerformance'
 import { Badge } from '@/components/ui/badge'
 import { Skeleton } from '@/components/ui/skeleton'
 import { Input } from '@/components/ui/input'
@@ -46,12 +47,13 @@ export default function AdsPage() {
   }, [user, router])
 
   const { selectedClinicId } = useClinic()
-  const [activeTab, setActiveTab] = useState(() => {
-    if (typeof window !== 'undefined') {
-      return new URLSearchParams(window.location.search).get('tab') === 'attribution' ? 'attribution' : 'ads'
-    }
-    return 'ads'
-  })
+  const [activeTab, setActiveTab] = useState('ads')
+
+  // 클라이언트에서 URL 쿼리로 탭 복원 (hydration 불일치 방지)
+  useEffect(() => {
+    const tab = new URLSearchParams(window.location.search).get('tab')
+    if (tab === 'attribution') setActiveTab('attribution')
+  }, [])
   const [stats, setStats] = useState<any[]>([])
   const [channelData, setChannelData] = useState<any[]>([])
   const [kpi, setKpi] = useState<any>(null)
@@ -60,6 +62,8 @@ export default function AdsPage() {
   const [days, setDays] = useState('30')
   const [platformFilter, setPlatformFilter] = useState('all')
   const [searchQuery, setSearchQuery] = useState('')
+  const [showAllCampaigns, setShowAllCampaigns] = useState(false)
+  const CAMPAIGN_PREVIEW_COUNT = 10
 
   // 탭 변경 시 URL 업데이트
   const handleTabChange = (tab: string) => {
@@ -241,29 +245,40 @@ export default function AdsPage() {
             </div>
           </div>
 
-          {/* 매체별 수치 요약 */}
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 mt-5 pt-5 border-t border-border dark:border-white/5">
-            {(platformFilter === 'all' ? channelData : filteredChannel).map(c => (
-              <div key={c.channel} className="flex sm:flex-col sm:text-center items-center sm:items-center gap-3 sm:gap-1">
-                <p className="text-xs text-muted-foreground w-16 sm:w-auto">{c.channel}</p>
-                <div className="flex gap-4 text-sm flex-wrap">
-                  <span className="whitespace-nowrap">
-                    <span className="text-muted-foreground text-xs">CPL </span>
-                    <span className="font-semibold text-foreground">₩{c.cpl.toLocaleString()}</span>
-                  </span>
-                  <span className="whitespace-nowrap">
-                    <span className="text-muted-foreground text-xs">ROAS </span>
-                    <span className={`font-semibold ${c.roas >= 1 ? 'text-emerald-400' : 'text-red-400'}`}>
+          {/* 매체별 수치 요약 테이블 */}
+          <div className="mt-5 pt-5 border-t border-border dark:border-white/5 overflow-x-auto">
+            <table className="w-full text-sm table-fixed">
+              <thead>
+                <tr>
+                  <th className="text-left text-[11px] text-muted-foreground font-medium pb-2 w-[60px]"></th>
+                  {(platformFilter === 'all' ? channelData : filteredChannel).map(c => (
+                    <th key={c.channel} className="text-center text-[11px] text-muted-foreground font-medium pb-2 px-3">{c.channel}</th>
+                  ))}
+                </tr>
+              </thead>
+              <tbody>
+                <tr className="border-t border-border/50 dark:border-white/[0.03]">
+                  <td className="text-xs text-muted-foreground py-2 pr-3">CPL</td>
+                  {(platformFilter === 'all' ? channelData : filteredChannel).map(c => (
+                    <td key={c.channel} className="text-center font-semibold text-foreground tabular-nums py-2 px-3">₩{c.cpl.toLocaleString()}</td>
+                  ))}
+                </tr>
+                <tr className="border-t border-border/50 dark:border-white/[0.03]">
+                  <td className="text-xs text-muted-foreground py-2 pr-3">ROAS</td>
+                  {(platformFilter === 'all' ? channelData : filteredChannel).map(c => (
+                    <td key={c.channel} className={`text-center font-semibold tabular-nums py-2 px-3 ${c.roas >= 1 ? 'text-emerald-600 dark:text-emerald-400' : 'text-rose-600 dark:text-rose-400'}`}>
                       {(c.roas * 100).toFixed(0)}%
-                    </span>
-                  </span>
-                  <span className="whitespace-nowrap">
-                    <span className="text-muted-foreground text-xs">DB </span>
-                    <span className="font-semibold text-foreground/80">{c.leads}</span>
-                  </span>
-                </div>
-              </div>
-            ))}
+                    </td>
+                  ))}
+                </tr>
+                <tr className="border-t border-border/50 dark:border-white/[0.03]">
+                  <td className="text-xs text-muted-foreground py-2 pr-3">DB</td>
+                  {(platformFilter === 'all' ? channelData : filteredChannel).map(c => (
+                    <td key={c.channel} className="text-center font-semibold text-foreground/80 tabular-nums py-2 px-3">{c.leads}</td>
+                  ))}
+                </tr>
+              </tbody>
+            </table>
           </div>
         </Card>
       )}
@@ -291,6 +306,7 @@ export default function AdsPage() {
             {Array(5).fill(0).map((_, i) => <Skeleton key={i} className="h-12 rounded-xl" />)}
           </div>
         ) : filteredStats.length > 0 ? (
+          <>
           <div className="overflow-x-auto">
             <Table className="min-w-[560px]">
               <TableHeader>
@@ -301,7 +317,7 @@ export default function AdsPage() {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {filteredStats.map((row: any) => (
+                {(showAllCampaigns ? filteredStats : filteredStats.slice(0, CAMPAIGN_PREVIEW_COUNT)).map((row: any) => (
                   <TableRow key={row.id} className="border-b border-border dark:border-white/5 hover:bg-muted dark:hover:bg-white/[0.03]">
                     <TableCell>
                       <ChannelBadge channel={row.platform} />
@@ -312,14 +328,22 @@ export default function AdsPage() {
                         <Calendar size={11} />{formatDate(row.stat_date)}
                       </span>
                     </TableCell>
-                    <TableCell className="font-semibold text-foreground">₩{Number(row.spend_amount).toLocaleString()}</TableCell>
-                    <TableCell className="text-muted-foreground">{(row.clicks || 0).toLocaleString()}</TableCell>
-                    <TableCell className="text-muted-foreground">{(row.impressions || 0).toLocaleString()}</TableCell>
+                    <TableCell className="font-semibold text-foreground tabular-nums">₩{Number(row.spend_amount).toLocaleString()}</TableCell>
+                    <TableCell className="text-muted-foreground tabular-nums">{(row.clicks || 0).toLocaleString()}</TableCell>
+                    <TableCell className="text-muted-foreground tabular-nums">{(row.impressions || 0).toLocaleString()}</TableCell>
                   </TableRow>
                 ))}
               </TableBody>
             </Table>
           </div>
+          {filteredStats.length > CAMPAIGN_PREVIEW_COUNT && (
+            <div className="text-center mt-4">
+              <Button variant="ghost" size="sm" onClick={() => setShowAllCampaigns(!showAllCampaigns)} className="text-xs text-muted-foreground">
+                {showAllCampaigns ? '접기' : `전체 ${filteredStats.length}건 보기`}
+              </Button>
+            </div>
+          )}
+          </>
         ) : (
           <div className="py-12 text-center text-muted-foreground">
             <p className="text-sm mb-2">광고 데이터가 없습니다.</p>
@@ -327,6 +351,9 @@ export default function AdsPage() {
           </div>
         )}
       </Card>
+
+      {/* 소재별 성과 */}
+      <CreativePerformance parentDays={days} />
       </>}
     </>
   )
