@@ -46,11 +46,17 @@ export function useTrendData(clinicId: number | null, startDate: string, endDate
   const fetch_ = useCallback(async () => {
     setLoading(true)
     try {
-      const qs = buildQs({ startDate, endDate, clinic_id: clinicId })
+      // 선택 기간과 최소 4주(28일) 중 긴 쪽 사용 (YYYY-MM-DD 형식 통일)
+      const MIN_TREND_DAYS = 28
+      const selectedStartDate = new Date(startDate)
+      const minStartDate = new Date(Date.now() - MIN_TREND_DAYS * 86400000)
+      const effectiveStart = selectedStartDate < minStartDate ? selectedStartDate : minStartDate
+      const trendStart = effectiveStart.toLocaleDateString('en-CA', { timeZone: 'Asia/Seoul' })
+      const trendQs = buildQs({ startDate: trendStart, clinic_id: clinicId })
       const contentQs = buildQs({ groupBy: 'platform', startDate, endDate, clinic_id: clinicId })
 
       const [trendRes, contentRes] = await Promise.allSettled([
-        fetch(`/api/dashboard/trend${qs}`).then(r => r.json()),
+        fetch(`/api/dashboard/trend${trendQs}`).then(r => r.json()),
         fetch(`/api/content/analytics${contentQs}`).then(r => r.json()),
       ])
 

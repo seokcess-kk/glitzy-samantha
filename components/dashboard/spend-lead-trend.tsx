@@ -23,6 +23,7 @@ interface TrendDataItem {
 interface SpendLeadTrendProps {
   data?: TrendDataItem[]
   loading?: boolean
+  periodLabel?: string
 }
 
 function DualTooltip({ active, payload, label }: any) {
@@ -90,12 +91,13 @@ function DualChart({ data, height, fontSize, dotRadius, gradientId, showLegend }
   )
 }
 
-export function SpendLeadTrend({ data, loading }: SpendLeadTrendProps) {
+export function SpendLeadTrend({ data, loading, periodLabel }: SpendLeadTrendProps) {
+  const label = periodLabel || (data ? `${data.length}일` : '')
   return (
     <Card variant="glass" className="p-5 w-full">
       <div className="flex items-center justify-between mb-4">
         <h2 className="text-sm font-semibold text-foreground">광고비 · 리드 추이</h2>
-        <span className="text-xs text-muted-foreground">최근 4주 (일별)</span>
+        <span className="text-xs text-muted-foreground">{label} (일별)</span>
       </div>
       {loading ? (
         <Skeleton className="h-[240px] md:h-[300px] rounded-lg" />

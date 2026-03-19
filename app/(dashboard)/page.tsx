@@ -67,6 +67,14 @@ export default function DashboardPage() {
     : 1
   const daysLabel = daysDiff === 1 ? '당일' : `${daysDiff}일`
 
+  // 추이 그래프 기간 라벨 (최소 4주 보장)
+  const trendDays = Math.max(daysDiff, 28)
+  const trendPeriodLabel = trendDays === daysDiff
+    ? `최근 ${daysDiff}일`
+    : daysDiff <= 1
+      ? '최근 4주'
+      : `최근 4주 (선택: ${daysLabel})`
+
   // CPL / ROAS 비교 데이터
   const cplData = [
     ...funnelChannel.channel.filter((c: any) => c.cpl > 0).map((c: any) => ({ name: c.channel, cpl: c.cpl })),
@@ -102,7 +110,7 @@ export default function DashboardPage() {
       {/* 광고비 · 리드 추이 + 시술별 매출 비중 */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-3 mb-6 md:mb-8">
         <div className="lg:col-span-2">
-          <SpendLeadTrend data={trendData.trend} loading={trendData.loading} />
+          <SpendLeadTrend data={trendData.trend} loading={trendData.loading} periodLabel={trendPeriodLabel} />
         </div>
         <TreatmentPie data={funnelChannel.treatmentData} loading={funnelChannel.loading} />
       </div>
