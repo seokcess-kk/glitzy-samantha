@@ -6,19 +6,28 @@ import { getKstDateString } from '@/lib/date'
 const SERVICE_NAME = 'GoogleAds'
 const logger = createLogger(SERVICE_NAME)
 
-export async function fetchGoogleAds(date = new Date()) {
+export interface GoogleAdsOptions {
+  clinicId?: number
+  clientId?: string
+  clientSecret?: string
+  developerToken?: string
+  customerId?: string
+  refreshToken?: string
+}
+
+export async function fetchGoogleAds(date = new Date(), options?: GoogleAdsOptions) {
   const dateStr = getKstDateString(date)
   const startTime = Date.now()
 
-  // 환경변수 검증
-  const clientId = process.env.GOOGLE_ADS_CLIENT_ID
-  const clientSecret = process.env.GOOGLE_ADS_CLIENT_SECRET
-  const developerToken = process.env.GOOGLE_ADS_DEVELOPER_TOKEN
-  const customerId = process.env.GOOGLE_ADS_CUSTOMER_ID
-  const refreshToken = process.env.GOOGLE_ADS_REFRESH_TOKEN
+  // options 제공 시 options 사용, 아닐 시 환경변수 폴백
+  const clientId = options?.clientId || process.env.GOOGLE_ADS_CLIENT_ID
+  const clientSecret = options?.clientSecret || process.env.GOOGLE_ADS_CLIENT_SECRET
+  const developerToken = options?.developerToken || process.env.GOOGLE_ADS_DEVELOPER_TOKEN
+  const customerId = options?.customerId || process.env.GOOGLE_ADS_CUSTOMER_ID
+  const refreshToken = options?.refreshToken || process.env.GOOGLE_ADS_REFRESH_TOKEN
 
   if (!clientId || !clientSecret || !developerToken || !customerId || !refreshToken) {
-    logger.warn('Missing Google Ads credentials')
+    logger.warn('Missing Google Ads credentials', { clinicId: options?.clinicId })
     return { platform: 'Google', count: 0, error: 'Missing credentials' }
   }
 
@@ -52,24 +61,28 @@ export async function fetchGoogleAds(date = new Date()) {
         clicks: row.metrics?.clicks || 0,
         impressions: row.metrics?.impressions || 0,
         stat_date: dateStr,
+        clinic_id: options?.clinicId || null,
       }))
 
+      const onConflict = options?.clinicId
+        ? 'clinic_id,platform,campaign_id,stat_date'
+        : 'platform,campaign_id,stat_date'
       const { error } = await supabase
         .from('ad_campaign_stats')
-        .upsert(rows, { onConflict: 'platform,campaign_id,stat_date' })
+        .upsert(rows, { onConflict })
 
       if (error) {
-        logger.error('DB upsert error', error)
+        logger.error('DB upsert error', error, { clinicId: options?.clinicId })
       }
     }
 
     const duration = Date.now() - startTime
-    logger.info('Sync completed', { action: 'sync', count: campaigns.length, duration })
+    logger.info('Sync completed', { action: 'sync', count: campaigns.length, duration, clinicId: options?.clinicId })
 
     return { platform: 'Google', count: campaigns.length }
   } catch (error) {
     const message = error instanceof Error ? error.message : String(error)
-    logger.error('Sync failed', error, { action: 'sync', duration: Date.now() - startTime })
+    logger.error('Sync failed', error, { action: 'sync', duration: Date.now() - startTime, clinicId: options?.clinicId })
     return { platform: 'Google', count: 0, error: message }
   }
 }

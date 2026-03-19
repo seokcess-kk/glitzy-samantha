@@ -32,6 +32,8 @@ npm run analyze      # 번들 크기 분석
 | 디렉토리 | 용도 | 하위 규칙 |
 |---------|------|----------|
 | `app/(dashboard)/` | 인증된 대시보드 페이지 (그룹 라우트) | |
+| `app/privacy/`, `app/terms/` | 공개 페이지 (개인정보처리방침, 서비스약관) | |
+| `app/icon.tsx`, `app/apple-icon.tsx` | 앱 아이콘 (Next.js ImageResponse, Edge Runtime) | |
 | `app/api/` | REST API 라우트 | `app/api/CLAUDE.md` |
 | `lib/` | 핵심 유틸리티 (auth, security, logger 등) | `lib/CLAUDE.md` |
 | `lib/services/` | 외부 API 동기화 서비스 | |
@@ -195,3 +197,4 @@ npm run analyze      # 번들 크기 분석
 | 2026-03-19 | CLAUDE.md 재설계: 모듈 분리, 검증 루프, 도메인 용어, 네이밍 컨벤션, 팀 가이드 추가 |
 | 2026-03-19 | 원격 변경 병합: ClinicContext, archive, error-alert, channel, date 유틸, deleted_records, E2E 상세 |
 | 2026-03-19 | 검증 규칙에 '전체 맥락 코드 리뷰' 단계 추가 — 구현부만 단독 검토하지 않고 호출자/데이터 흐름/역할별/기존 패턴과의 정합성까지 확인 |
+| 2026-03-19 | 디렉토리 구조에 공개 페이지(privacy, terms), 앱 아이콘(icon.tsx, apple-icon.tsx) 추가 |

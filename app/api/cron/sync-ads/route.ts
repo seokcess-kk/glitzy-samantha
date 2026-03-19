@@ -1,6 +1,4 @@
-import { fetchMetaAds } from '@/lib/services/metaAds'
-import { fetchGoogleAds } from '@/lib/services/googleAds'
-import { fetchTikTokAds } from '@/lib/services/tiktokAds'
+import { syncAllClinics } from '@/lib/services/adSyncManager'
 import { apiError, apiSuccess } from '@/lib/api-middleware'
 import { sendErrorAlert } from '@/lib/error-alert'
 import { detectAllClinicAnomalies } from '@/lib/ads-anomaly'
@@ -9,7 +7,7 @@ import { createLogger } from '@/lib/logger'
 
 const logger = createLogger('CronSyncAds')
 
-export const maxDuration = 60
+export const maxDuration = 300
 
 // Vercel Cron이 매일 새벽 3시에 호출 (vercel.json 참고)
 export async function GET(req: Request) {
@@ -21,24 +19,27 @@ export async function GET(req: Request) {
   const yesterday = new Date()
   yesterday.setDate(yesterday.getDate() - 1)
 
-  const [metaResult, googleResult, tiktokResult] = await Promise.allSettled([
-    fetchMetaAds(yesterday),
-    fetchGoogleAds(yesterday),
-    fetchTikTokAds(yesterday),
-  ])
+  let results
+  try {
+    results = await syncAllClinics(yesterday)
+  } catch (err) {
+    logger.error('syncAllClinics 치명적 오류', err)
+    sendErrorAlert('ad_sync_fail', `광고 동기화 치명적 오류: ${err instanceof Error ? err.message : String(err)}`).catch(() => {})
+    return apiError('동기화 실패', 500)
+  }
 
-  const failures = [
-    metaResult.status === 'rejected' && 'Meta',
-    googleResult.status === 'rejected' && 'Google',
-    tiktokResult.status === 'rejected' && 'TikTok',
-  ].filter(Boolean)
+  // 실패 건 집계
+  const failures = results.filter(r => r.error)
   if (failures.length > 0) {
-    sendErrorAlert('ad_sync_fail', `광고 동기화 실패: ${failures.join(', ')}`).catch(() => {})
+    const failSummary = failures
+      .map(f => `${f.clinicName}/${f.platform}: ${f.error}`)
+      .join(', ')
+    sendErrorAlert('ad_sync_fail', `광고 동기화 실패 ${failures.length}건: ${failSummary}`).catch(() => {})
   }
 
   // 동기화 성공 건이 있을 때만 이상치 감지 실행
   let anomalyCount = 0
-  const hasAnySuccess = [metaResult, googleResult, tiktokResult].some(r => r.status === 'fulfilled')
+  const hasAnySuccess = results.some(r => !r.error && r.count > 0)
   if (hasAnySuccess) {
     try {
       const supabase = serverSupabase()
@@ -52,14 +53,22 @@ export async function GET(req: Request) {
     }
   }
 
-  logger.info('광고 데이터 자동 수집 완료', { anomalyCount })
+  logger.info('광고 데이터 자동 수집 완료', {
+    totalResults: results.length,
+    successCount: results.filter(r => !r.error).length,
+    failCount: failures.length,
+    anomalyCount,
+  })
+
   return apiSuccess({
     success: true,
-    results: {
-      meta: metaResult.status === 'fulfilled' ? metaResult.value.count : 'failed',
-      google: googleResult.status === 'fulfilled' ? googleResult.value.count : 'failed',
-      tiktok: tiktokResult.status === 'fulfilled' ? tiktokResult.value.count : 'failed',
-    },
+    results: results.map(r => ({
+      clinicId: r.clinicId,
+      clinicName: r.clinicName,
+      platform: r.platform,
+      count: r.count,
+      error: r.error || null,
+    })),
     anomalyCount,
   })
 }

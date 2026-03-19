@@ -2,6 +2,7 @@
 import { useState, useEffect } from 'react'
 import { signIn, useSession } from 'next-auth/react'
 import { useRouter } from 'next/navigation'
+import Link from 'next/link'
 import { Eye, EyeOff, Activity, AlertCircle, Loader2 } from 'lucide-react'
 import { Card } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
@@ -127,9 +128,20 @@ export default function LoginPage() {
         </Card>
 
         {/* 푸터 */}
-        <p className="text-center text-xs text-muted-foreground/60 mt-6">
-          &copy; 2024 Glitzy. All rights reserved.
-        </p>
+        <div className="text-center mt-6 space-y-2">
+          <div className="flex items-center justify-center gap-3 text-xs text-muted-foreground/60">
+            <Link href="/privacy" className="hover:text-muted-foreground transition-colors">
+              개인정보처리방침
+            </Link>
+            <span>·</span>
+            <Link href="/terms" className="hover:text-muted-foreground transition-colors">
+              서비스 이용약관
+            </Link>
+          </div>
+          <p className="text-xs text-muted-foreground/60">
+            &copy; 2024 Glitzy. All rights reserved.
+          </p>
+        </div>
       </div>
     </div>
   )

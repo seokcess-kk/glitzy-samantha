@@ -1,12 +1,16 @@
 import { serverSupabase } from '@/lib/supabase'
 import { withClinicFilter, ClinicContext, applyClinicFilter, apiError, apiSuccess } from '@/lib/api-middleware'
+import { getKstDayStartISO } from '@/lib/date'
 
 export const GET = withClinicFilter(async (req: Request, { clinicId, assignedClinicIds }: ClinicContext) => {
   const supabase = serverSupabase()
   const url = new URL(req.url)
-  const days = Number(url.searchParams.get('days') || 30)
+  const daysParam = Number(url.searchParams.get('days') || 30)
+  const days = Number.isFinite(daysParam) && daysParam > 0 ? daysParam : 30
   const platform = url.searchParams.get('platform')
-  const since = new Date(Date.now() - days * 24 * 60 * 60 * 1000).toISOString()
+
+  const sinceDate = new Date(Date.now() - days * 24 * 60 * 60 * 1000)
+  const since = getKstDayStartISO(sinceDate)
 
   let query = supabase
     .from('ad_campaign_stats')

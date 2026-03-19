@@ -41,6 +41,9 @@ components/
 │   ├── kpi-section.tsx    # KPI 카드 6개 (비즈니스 흐름순)
 │   └── spend-lead-trend.tsx # 광고비+리드 듀얼 축 차트
 │
+├── admin/               # 관리자 전용 컴포넌트
+│   └── ClinicApiConfigDialog.tsx  # 매체별 API 키 관리 다이얼로그
+│
 ├── Sidebar.tsx            # 사이드바 네비게이션
 ├── ClinicContext.tsx      # 병원 선택 Context
 └── Providers.tsx          # 전역 Provider

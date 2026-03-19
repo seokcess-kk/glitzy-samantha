@@ -18,15 +18,21 @@ interface TikTokCampaign {
   }
 }
 
-export async function fetchTikTokAds(date = new Date()) {
+export interface TikTokAdsOptions {
+  clinicId?: number
+  advertiserId?: string
+  accessToken?: string
+}
+
+export async function fetchTikTokAds(date = new Date(), options?: TikTokAdsOptions) {
   const dateStr = getKstDateString(date)
   const startTime = Date.now()
 
-  // 환경변수 검증
-  const advertiserId = process.env.TIKTOK_ADVERTISER_ID
-  const accessToken = process.env.TIKTOK_ACCESS_TOKEN
+  // options 제공 시 options 사용, 아닐 시 환경변수 폴백
+  const advertiserId = options?.advertiserId || process.env.TIKTOK_ADVERTISER_ID
+  const accessToken = options?.accessToken || process.env.TIKTOK_ACCESS_TOKEN
   if (!advertiserId || !accessToken) {
-    logger.warn('Missing TIKTOK_ADVERTISER_ID or TIKTOK_ACCESS_TOKEN')
+    logger.warn('Missing TIKTOK_ADVERTISER_ID or TIKTOK_ACCESS_TOKEN', { clinicId: options?.clinicId })
     return { platform: 'TikTok', count: 0, error: 'Missing credentials' }
   }
 
@@ -65,24 +71,28 @@ export async function fetchTikTokAds(date = new Date()) {
         clicks: parseInt(c.metrics.clicks || '0'),
         impressions: parseInt(c.metrics.impressions || '0'),
         stat_date: dateStr,
+        clinic_id: options?.clinicId || null,
       }))
 
+      const onConflict = options?.clinicId
+        ? 'clinic_id,platform,campaign_id,stat_date'
+        : 'platform,campaign_id,stat_date'
       const { error } = await supabase
         .from('ad_campaign_stats')
-        .upsert(rows, { onConflict: 'platform,campaign_id,stat_date' })
+        .upsert(rows, { onConflict })
 
       if (error) {
-        logger.error('DB upsert error', error)
+        logger.error('DB upsert error', error, { clinicId: options?.clinicId })
       }
     }
 
     const duration = Date.now() - startTime
-    logger.info('Sync completed', { action: 'sync', count: campaigns.length, duration })
+    logger.info('Sync completed', { action: 'sync', count: campaigns.length, duration, clinicId: options?.clinicId })
 
     return { platform: 'TikTok', count: campaigns.length }
   } catch (error) {
     const message = error instanceof Error ? error.message : String(error)
-    logger.error('Sync failed', error, { action: 'sync', duration: Date.now() - startTime })
+    logger.error('Sync failed', error, { action: 'sync', duration: Date.now() - startTime, clinicId: options?.clinicId })
     return { platform: 'TikTok', count: 0, error: message }
   }
 }

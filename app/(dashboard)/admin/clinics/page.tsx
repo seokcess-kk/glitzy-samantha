@@ -1,6 +1,6 @@
 'use client'
-import { useState, useEffect } from 'react'
-import { Plus, Building2, Bell, Pencil, X } from 'lucide-react'
+import { useState, useEffect, useCallback } from 'react'
+import { Plus, Building2, Bell, Pencil, X, Settings2 } from 'lucide-react'
 import { useSession } from 'next-auth/react'
 import { useRouter } from 'next/navigation'
 import { toast } from 'sonner'
@@ -27,6 +27,22 @@ import {
 } from '@/components/ui/dialog'
 import { formatDate } from '@/lib/date'
 import { EmptyState, PageHeader } from '@/components/common'
+import ClinicApiConfigDialog from '@/components/admin/ClinicApiConfigDialog'
+
+type Platform = 'meta_ads' | 'google_ads' | 'tiktok_ads'
+
+interface ApiConfigSummary {
+  platform: Platform
+  last_test_result: string | null
+}
+
+const PLATFORM_SHORT: Record<Platform, string> = {
+  meta_ads: 'M',
+  google_ads: 'G',
+  tiktok_ads: 'T',
+}
+
+const PLATFORMS: Platform[] = ['meta_ads', 'google_ads', 'tiktok_ads']
 
 export default function ClinicsPage() {
   const { data: session } = useSession()
@@ -44,6 +60,9 @@ export default function ClinicsPage() {
   const [notifyPhones, setNotifyPhones] = useState<string[]>([''])
   const [notifyEnabled, setNotifyEnabled] = useState(false)
   const [notifySaving, setNotifySaving] = useState(false)
+  // API 설정
+  const [apiConfigTarget, setApiConfigTarget] = useState<{ id: number; name: string } | null>(null)
+  const [apiConfigSummaries, setApiConfigSummaries] = useState<Record<number, ApiConfigSummary[]>>({})
 
   useEffect(() => {
     if (user && user.role !== 'superadmin') router.replace('/')
@@ -62,7 +81,34 @@ export default function ClinicsPage() {
     }
   }
 
+  const fetchApiConfigSummaries = useCallback(async (clinicIds: number[]) => {
+    const summaries: Record<number, ApiConfigSummary[]> = {}
+    await Promise.all(
+      clinicIds.map(async (id) => {
+        try {
+          const res = await fetch(`/api/admin/clinics/${id}/api-configs`)
+          if (!res.ok) return
+          const data = await res.json()
+          const items = Array.isArray(data) ? data : (data.data || [])
+          summaries[id] = items.map((item: any) => ({
+            platform: item.platform,
+            last_test_result: item.last_test_result,
+          }))
+        } catch {
+          // silently ignore
+        }
+      })
+    )
+    setApiConfigSummaries(prev => ({ ...prev, ...summaries }))
+  }, [])
+
   useEffect(() => { fetchClinics() }, [])
+
+  useEffect(() => {
+    if (clinics.length > 0) {
+      fetchApiConfigSummaries(clinics.map((c: any) => c.id))
+    }
+  }, [clinics, fetchApiConfigSummaries])
 
   const handleSave = async () => {
     if (!form.name || !form.slug) {
@@ -176,6 +222,22 @@ export default function ClinicsPage() {
     return phones
   }
 
+  const getApiStatusColor = (clinicId: number, platform: Platform): string => {
+    const summaries = apiConfigSummaries[clinicId]
+    if (!summaries) return 'bg-muted-foreground/30'
+    const item = summaries.find(s => s.platform === platform)
+    if (!item) return 'bg-muted-foreground/30'
+    if (item.last_test_result === 'success') return 'bg-emerald-500'
+    if (item.last_test_result === 'failed') return 'bg-red-500'
+    return 'bg-muted-foreground/30'
+  }
+
+  const handleApiConfigUpdated = () => {
+    if (apiConfigTarget) {
+      fetchApiConfigSummaries([apiConfigTarget.id])
+    }
+  }
+
   if (user?.role !== 'superadmin') return null
 
   return (
@@ -277,6 +339,17 @@ export default function ClinicsPage() {
         </DialogContent>
       </Dialog>
 
+      {/* API 설정 다이얼로그 */}
+      {apiConfigTarget && (
+        <ClinicApiConfigDialog
+          clinicId={apiConfigTarget.id}
+          clinicName={apiConfigTarget.name}
+          open={!!apiConfigTarget}
+          onClose={() => setApiConfigTarget(null)}
+          onUpdated={handleApiConfigUpdated}
+        />
+      )}
+
       <Card variant="glass" className="p-6">
         <div className="flex items-center justify-between mb-4">
           <h2 className="font-semibold text-foreground">병원 목록 ({clinics.length})</h2>
@@ -296,6 +369,7 @@ export default function ClinicsPage() {
                 <TableHead className="text-xs text-muted-foreground font-medium">병원명</TableHead>
                 <TableHead className="text-xs text-muted-foreground font-medium">슬러그</TableHead>
                 <TableHead className="text-xs text-muted-foreground font-medium">등록일</TableHead>
+                <TableHead className="text-xs text-muted-foreground font-medium">API 설정</TableHead>
                 <TableHead className="text-xs text-muted-foreground font-medium">리드 알림</TableHead>
                 <TableHead className="text-xs text-muted-foreground font-medium">상태</TableHead>
                 <TableHead className="text-xs text-muted-foreground font-medium">설정</TableHead>
@@ -310,6 +384,28 @@ export default function ClinicsPage() {
                     <TableCell className="text-foreground font-medium">{c.name}</TableCell>
                     <TableCell className="text-muted-foreground font-mono text-xs">{c.slug}</TableCell>
                     <TableCell className="text-muted-foreground text-xs">{formatDate(c.created_at)}</TableCell>
+                    <TableCell>
+                      <button
+                        onClick={() => setApiConfigTarget({ id: c.id, name: c.name })}
+                        className="flex items-center gap-1.5 group cursor-pointer"
+                        aria-label="API 설정"
+                      >
+                        {PLATFORMS.map(p => (
+                          <span
+                            key={p}
+                            className="flex items-center gap-1"
+                            title={`${PLATFORM_SHORT[p]}: ${
+                              getApiStatusColor(c.id, p).includes('emerald') ? '연결됨' :
+                              getApiStatusColor(c.id, p).includes('red') ? '실패' : '미설정'
+                            }`}
+                          >
+                            <span className={`inline-block w-2 h-2 rounded-full ${getApiStatusColor(c.id, p)}`} />
+                            <span className="text-[10px] text-muted-foreground">{PLATFORM_SHORT[p]}</span>
+                          </span>
+                        ))}
+                        <Settings2 size={12} className="ml-1 text-muted-foreground/60 group-hover:text-foreground transition-colors" />
+                      </button>
+                    </TableCell>
                     <TableCell>
                       {c.notify_enabled && phones.length > 0 ? (
                         <div className="flex flex-col gap-0.5">

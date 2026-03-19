@@ -18,10 +18,40 @@ shadcn/ui 기반 UI/UX 개선 및 기능 개발 작업 기록.
 | E2E 테스트 | 2026-03-16 | Playwright 106개 테스트 | 완료 | [상세](work-log/e2e-tests.md) |
 | Phase 5: 대시보드 고도화 | 2026-03-17~18 | KPI 재구성, 오늘 요약, 듀얼 차트, 채널 바차트, 퍼널 분리 | 완료 | [상세](work-log/phase5-dashboard-overhaul.md) |
 | Phase 6: 광고 성과 고도화 | 2026-03-19 | 소재 분석, 이상치 알림, CSV 내보내기, 주간 리포트, 멀티터치 어트리뷰션 | 완료 | [상세](work-log/phase6-ads-enhancement.md) |
+| Phase 7: 병원별 API 키 관리 | 2026-03-19 | 매체별 API 키 CRUD, 연결 테스트, 암호화 저장, 동기화 리팩토링 | 완료 | [상세](plans/PLAN_clinic-api-configs.md) |
+| Phase 8: 법적 페이지 + 앱 아이콘 | 2026-03-19 | 개인정보처리방침, 서비스약관 페이지, 앱 아이콘 생성, 로그인 푸터 링크 | 완료 | - |
 
 ---
 
-## 최신 작업 (Phase 6: 광고 성과 고도화)
+## 최신 작업 (Phase 8: 법적 페이지 + 앱 아이콘)
+
+| # | 작업 | 핵심 내용 | 날짜 |
+|---|------|----------|------|
+| P23-1 | 개인정보처리방침 | `/privacy` 공개 페이지 (9개 조항: 처리 목적, 수집 항목, 보유 기간, 안전성 확보 등) | 03-19 |
+| P23-2 | 서비스 이용약관 | `/terms` 공개 페이지 (11개 조항 + 부칙: 정의, 서비스 제공, 계정 관리, 데이터 관리 등) | 03-19 |
+| P23-3 | 앱 아이콘 | `app/icon.tsx` (1024x1024) + `app/apple-icon.tsx` (180x180), Edge Runtime, 브랜드 그라데이션 + Activity 아이콘 | 03-19 |
+| P23-4 | 로그인 푸터 링크 | 로그인 페이지 하단에 개인정보처리방침·서비스약관 링크 추가 | 03-19 |
+
+---
+
+## Phase 7 작업 (병원별 API 키 관리)
+
+| # | 작업 | 핵심 내용 | 날짜 |
+|---|------|----------|------|
+| P22-0 | 사전 확인 | Supabase 스키마 확인: clinic_api_configs 존재(ALTER TABLE), ad_campaign_stats UNIQUE 변경 안전 | 03-19 |
+| P22-1 | DB + 암호화 | 마이그레이션 2개(컬럼 추가 + UNIQUE 변경) + AES-256-GCM 암호화 유틸 | 03-19 |
+| P22-2 | 관리 API | 매체별 API 키 CRUD + Meta/Google/TikTok 연결 테스트 API | 03-19 |
+| P22-3 | 관리 UI | ClinicApiConfigDialog (매체 탭, 토큰 마스킹, 연결 테스트, 활성화 토글) | 03-19 |
+| P22-4 | 동기화 리팩토링 | adSyncManager 오케스트레이터, 서비스 options 패턴, Cron maxDuration 300, stats clinic_id 필터 | 03-19 |
+| P22-5 | 연동 테스트 | 마이그레이션 실행, JSONB 이중 인코딩 버그 수정, Meta 토큰 저장/복호화 정상 확인 | 03-19 |
+
+> 상세 구현 계획: [PLAN_clinic-api-configs.md](plans/PLAN_clinic-api-configs.md)
+> 잔여: Meta 토큰 발급 이슈 (앱 연결/권한 재확인 필요, MMI 시스템 문제 아님)
+
+---
+
+## Phase 6 작업 (광고 성과 고도화)
+
 
 | # | 작업 | 핵심 내용 | 날짜 |
 |---|------|----------|------|

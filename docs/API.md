@@ -625,6 +625,31 @@ Authorization: Bearer $CRON_SECRET
 
 ---
 
+## 병원 API 키 관리 API (superadmin 전용)
+
+### GET /api/admin/clinics/{id}/api-configs
+
+병원의 매체별 API 키 설정을 조회합니다.
+
+### PUT /api/admin/clinics/{id}/api-configs
+
+병원의 매체별 API 키 설정을 저장/수정합니다.
+
+### POST /api/admin/clinics/{id}/api-configs/test
+
+매체별 API 키 연결 테스트를 실행합니다.
+
+---
+
+## 공개 페이지 (인증 불필요)
+
+| 경로 | 설명 |
+|------|------|
+| `/privacy` | 개인정보처리방침 |
+| `/terms` | 서비스 이용약관 |
+
+---
+
 ## 에러 응답
 
 ### 공통 에러 형식

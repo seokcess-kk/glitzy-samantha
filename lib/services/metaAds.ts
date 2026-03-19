@@ -6,15 +6,21 @@ import { getKstDateString } from '@/lib/date'
 const SERVICE_NAME = 'MetaAds'
 const logger = createLogger(SERVICE_NAME)
 
-export async function fetchMetaAds(date = new Date()) {
+export interface MetaAdsOptions {
+  clinicId?: number
+  accountId?: string
+  accessToken?: string
+}
+
+export async function fetchMetaAds(date = new Date(), options?: MetaAdsOptions) {
   const dateStr = getKstDateString(date)
   const startTime = Date.now()
 
-  // 환경변수 검증
-  const accountId = process.env.META_AD_ACCOUNT_ID
-  const accessToken = process.env.META_ACCESS_TOKEN
+  // options 제공 시 options 사용, 아닐 시 환경변수 폴백
+  const accountId = options?.accountId || process.env.META_AD_ACCOUNT_ID
+  const accessToken = options?.accessToken || process.env.META_ACCESS_TOKEN
   if (!accountId || !accessToken) {
-    logger.warn('Missing META_AD_ACCOUNT_ID or META_ACCESS_TOKEN')
+    logger.warn('Missing META_AD_ACCOUNT_ID or META_ACCESS_TOKEN', { clinicId: options?.clinicId })
     return { platform: 'Meta', count: 0, error: 'Missing credentials' }
   }
 
@@ -57,24 +63,29 @@ export async function fetchMetaAds(date = new Date()) {
         clicks: parseInt(c.clicks || '0'),
         impressions: parseInt(c.impressions || '0'),
         stat_date: dateStr,
+        clinic_id: options?.clinicId || null,
       }))
 
+      // clinic_id가 NULL이면 partial unique index 사용 (폴백 모드)
+      const onConflict = options?.clinicId
+        ? 'clinic_id,platform,campaign_id,stat_date'
+        : 'platform,campaign_id,stat_date'
       const { error } = await supabase
         .from('ad_campaign_stats')
-        .upsert(rows, { onConflict: 'platform,campaign_id,stat_date' })
+        .upsert(rows, { onConflict })
 
       if (error) {
-        logger.error('DB upsert error', error)
+        logger.error('DB upsert error', error, { clinicId: options?.clinicId })
       }
     }
 
     const duration = Date.now() - startTime
-    logger.info('Sync completed', { action: 'sync', count: campaigns.length, duration })
+    logger.info('Sync completed', { action: 'sync', count: campaigns.length, duration, clinicId: options?.clinicId })
 
     return { platform: 'Meta', count: campaigns.length }
   } catch (error) {
     const message = error instanceof Error ? error.message : String(error)
-    logger.error('Sync failed', error, { action: 'sync', duration: Date.now() - startTime })
+    logger.error('Sync failed', error, { action: 'sync', duration: Date.now() - startTime, clinicId: options?.clinicId })
     return { platform: 'Meta', count: 0, error: message }
   }
 }
