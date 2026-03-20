@@ -59,7 +59,6 @@ const menuGroups: MenuGroup[] = [
       { href: '/campaigns', label: '캠페인 리드', icon: Megaphone, menuKey: 'campaigns' },
       { href: '/leads', label: '고객', icon: Users, menuKey: 'leads' },
       { href: '/patients', label: '예약/결제', icon: Calendar, menuKey: 'patients' },
-      { href: '/lead-form', label: '리드 수집', icon: ClipboardList, minRole: 3, menuKey: 'lead-form' },
     ]
   },
   {
@@ -297,6 +296,17 @@ export default function Sidebar({ onClose }: { onClose?: () => void }) {
               >
                 <Link2 size={17} />
                 UTM 생성
+              </Link>
+              <Link
+                href="/lead-form"
+                onClick={onClose}
+                className={`flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-all ${pathname === '/lead-form'
+                  ? 'bg-brand-600/20 text-brand-400'
+                  : 'text-muted-foreground hover:text-foreground hover:bg-muted'
+                  }`}
+              >
+                <ClipboardList size={17} />
+                리드 수집
               </Link>
               <Link
                 href="/admin/login-logs"
