@@ -21,10 +21,21 @@ shadcn/ui 기반 UI/UX 개선 및 기능 개발 작업 기록.
 | Phase 7: 병원별 API 키 관리 | 2026-03-19 | 매체별 API 키 CRUD, 연결 테스트, 암호화 저장, 동기화 리팩토링 | 완료 | [상세](plans/PLAN_clinic-api-configs.md) |
 | Phase 8: 법적 페이지 + 앱 아이콘 | 2026-03-19 | 개인정보처리방침, 서비스약관 페이지, 앱 아이콘 생성, 로그인 푸터 링크 | 완료 | - |
 | Phase 9: 광고 성과 재구성 | 2026-03-20 | /ads 페이지 3탭 구조, 4개 신규 API, 9개 신규 컴포넌트, 효율 기반 인사이트 | 완료 | - |
+| Phase 10: 언론보도 + 버그 수정 | 2026-03-20 | 언론보도 기간 필터, 뉴스 기간 제한, 광고 성과 날짜 포맷 버그 수정 | 완료 | - |
 
 ---
 
-## 최신 작업 (Phase 9: 광고 성과 페이지 전면 재구성)
+## 최신 작업 (Phase 10: 언론보도 개선 + 광고 성과 버그 수정)
+
+| # | 작업 | 핵심 내용 | 날짜 |
+|---|------|----------|------|
+| P25-1 | 언론보도 기간 필터 | DateRangePicker 추가 (기본 90일), API에 from/to 날짜 파라미터 지원 (KST 기준) | 03-20 |
+| P25-2 | 뉴스 검색 기간 제한 | Google News RSS에 `when:6m` 추가, 6개월 이상 오래된 기사 수집 차단 | 03-20 |
+| P25-3 | 광고 성과 날짜 포맷 수정 | `stat_date`(YYYY-MM-DD)와 ISO 형식 비교로 모든 광고 데이터가 필터링되던 **치명적 버그** 수정. 페이지→API 날짜를 YYYY-MM-DD로 통일, timestamptz 비교 시 KST 타임존 명시. 영향 범위: ads/page, stats, efficiency-trend, platform-summary, day-analysis, landing-page-performance, dashboard/kpi, dashboard/funnel (8개 파일) | 03-20 |
+
+---
+
+## Phase 9 작업 (광고 성과 페이지 전면 재구성)
 
 | # | 작업 | 핵심 내용 | 날짜 |
 |---|------|----------|------|
