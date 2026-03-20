@@ -14,8 +14,14 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table'
-import { ImageOff } from 'lucide-react'
+import { ImageOff, Film, Image } from 'lucide-react'
 import { getKstDateString } from '@/lib/date'
+
+const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL || ''
+
+function getCreativeUrl(fileName: string): string {
+  return `${SUPABASE_URL}/storage/v1/object/public/creatives/${fileName}`
+}
 
 interface CreativeData {
   utm_content: string
@@ -26,6 +32,8 @@ interface CreativeData {
   revenue: number
   conversionRate: number
   registered: boolean
+  file_name: string | null
+  file_type: string | null
 }
 
 interface CreativePerformanceResponse {
@@ -89,10 +97,11 @@ export default function CreativePerformance({ parentDays }: Props) {
         />
       ) : (
         <div className="overflow-x-auto">
-          <Table className="min-w-[700px]">
+          <Table className="min-w-[750px]">
             <TableHeader>
               <TableRow className="border-b border-border dark:border-white/5 hover:bg-transparent">
-                <TableHead className="text-[11px] text-muted-foreground font-medium w-[200px]">소재명</TableHead>
+                <TableHead className="text-[11px] text-muted-foreground font-medium w-[52px]">소재</TableHead>
+                <TableHead className="text-[11px] text-muted-foreground font-medium w-[180px]">소재명</TableHead>
                 <TableHead className="text-[11px] text-muted-foreground font-medium w-[70px]">플랫폼</TableHead>
                 <TableHead className="text-[11px] text-muted-foreground font-medium">리드</TableHead>
                 <TableHead className="text-[11px] text-muted-foreground font-medium text-right w-[60px]">결제</TableHead>
@@ -110,7 +119,25 @@ export default function CreativePerformance({ parentDays }: Props) {
                     key={row.utm_content}
                     className={`border-b border-border/50 dark:border-white/[0.03] ${idx % 2 === 1 ? 'bg-muted/30 dark:bg-white/[0.01]' : ''}`}
                   >
-                    <TableCell className="py-3 max-w-[200px]" title={row.utm_content}>
+                    <TableCell className="py-2">
+                      {row.file_name ? (
+                        row.file_type?.startsWith('video/') ? (
+                          <div className="w-10 h-10 rounded-md bg-muted dark:bg-white/5 overflow-hidden relative shrink-0">
+                            <video src={getCreativeUrl(row.file_name)} className="w-full h-full object-cover" muted preload="metadata" />
+                            <div className="absolute inset-0 flex items-center justify-center bg-black/30">
+                              <Film size={12} className="text-white/80" />
+                            </div>
+                          </div>
+                        ) : (
+                          <img src={getCreativeUrl(row.file_name)} alt={row.name} className="w-10 h-10 rounded-md object-cover bg-muted dark:bg-white/5 shrink-0" />
+                        )
+                      ) : (
+                        <div className="w-10 h-10 rounded-md bg-muted dark:bg-white/5 flex items-center justify-center text-muted-foreground/40 shrink-0">
+                          <Image size={14} />
+                        </div>
+                      )}
+                    </TableCell>
+                    <TableCell className="py-3 max-w-[180px]" title={row.utm_content}>
                       <span className={`text-sm truncate block ${row.registered ? 'text-foreground/90' : 'text-muted-foreground italic'}`}>
                         {row.name}
                       </span>

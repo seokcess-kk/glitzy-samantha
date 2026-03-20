@@ -36,7 +36,7 @@ export const GET = withClinicFilter(async (req: Request, { clinicId, assignedCli
     // 2) ad_creatives 테이블에서 소재 메타데이터 조회
     let creativesQuery = supabase
       .from('ad_creatives')
-      .select('id, name, utm_content, platform, landing_page_id')
+      .select('id, name, utm_content, platform, landing_page_id, file_name, file_type')
 
     const filteredCreatives = applyClinicFilter(creativesQuery, { clinicId, assignedClinicIds })
     if (filteredCreatives) creativesQuery = filteredCreatives
@@ -74,12 +74,14 @@ export const GET = withClinicFilter(async (req: Request, { clinicId, assignedCli
     const payments = paymentsRes.data || []
 
     // utm_content로만 매칭 (대소문자 무시)
-    const creativeMap = new Map<string, { name: string; platform: string | null; landing_page_id: number | null }>()
+    const creativeMap = new Map<string, { name: string; platform: string | null; landing_page_id: number | null; file_name: string | null; file_type: string | null }>()
     for (const c of creatives) {
       creativeMap.set(c.utm_content.toLowerCase(), {
         name: c.name,
         platform: c.platform,
         landing_page_id: c.landing_page_id,
+        file_name: c.file_name || null,
+        file_type: c.file_type || null,
       })
     }
 
@@ -133,7 +135,7 @@ export const GET = withClinicFilter(async (req: Request, { clinicId, assignedCli
     const allCreatives: {
       utm_content: string; name: string; platform: string | null
       leads: number; customers: number; revenue: number; conversionRate: number
-      registered: boolean
+      registered: boolean; file_name: string | null; file_type: string | null
     }[] = []
 
     for (const utmContent of allUtmContents) {
@@ -155,6 +157,8 @@ export const GET = withClinicFilter(async (req: Request, { clinicId, assignedCli
         revenue,
         conversionRate,
         registered: !!creative,
+        file_name: creative?.file_name || null,
+        file_type: creative?.file_type || null,
       })
     }
 
