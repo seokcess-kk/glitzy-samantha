@@ -43,6 +43,25 @@ function parseGoogleNewsRSS(xml: string): PressItem[] {
   return items
 }
 
+async function fetchRSS(query: string): Promise<PressItem[]> {
+  const q = encodeURIComponent(query)
+  const rssUrl = `https://news.google.com/rss/search?q=${q}&hl=ko&gl=KR&ceid=KR:ko`
+
+  const { response: res } = await fetchWithRetry(rssUrl, {
+    headers: { 'User-Agent': 'Mozilla/5.0 (compatible; MMI-Bot/1.0)' },
+    service: SERVICE_NAME,
+    timeout: 15000,
+    retries: 2,
+  })
+
+  if (!res.ok) {
+    throw new Error(`HTTP ${res.status}`)
+  }
+
+  const xml = await res.text()
+  return parseGoogleNewsRSS(xml)
+}
+
 export async function syncPressForClinic(clinicId: number | null): Promise<number> {
   const supabase = serverSupabase()
   const startTime = Date.now()
@@ -57,42 +76,58 @@ export async function syncPressForClinic(clinicId: number | null): Promise<numbe
 
   for (const clinic of clinics) {
     try {
-      const q = encodeURIComponent(clinic.name)
-      const rssUrl = `https://news.google.com/rss/search?q=${q}&hl=ko&gl=KR&ceid=KR:ko`
+      // press_keywords에서 활성 키워드 조회
+      const { data: keywords } = await supabase
+        .from('press_keywords')
+        .select('id, keyword')
+        .eq('clinic_id', clinic.id)
+        .eq('is_active', true)
 
-      const { response: res } = await fetchWithRetry(rssUrl, {
-        headers: { 'User-Agent': 'Mozilla/5.0 (compatible; MMI-Bot/1.0)' },
-        service: SERVICE_NAME,
-        timeout: 15000,
-        retries: 2,
-      })
+      // 키워드가 없으면 병원명으로 폴백
+      const searchTargets: { keywordId: number | null; query: string }[] =
+        keywords && keywords.length > 0
+          ? keywords.map(k => ({ keywordId: k.id, query: k.keyword }))
+          : [{ keywordId: null, query: clinic.name }]
 
-      if (!res.ok) {
-        errors.push(`Clinic ${clinic.id}: HTTP ${res.status}`)
-        continue
-      }
+      // URL 중복 제거를 위한 Set
+      const seenUrls = new Set<string>()
 
-      const xml = await res.text()
-      const items = parseGoogleNewsRSS(xml)
-      if (!items.length) continue
+      for (const target of searchTargets) {
+        try {
+          const items = await fetchRSS(target.query)
+          if (!items.length) continue
 
-      const rows = items.map(item => ({
-        clinic_id: clinic.id,
-        title: item.title,
-        source: item.source,
-        url: item.url,
-        published_at: item.published_at,
-        collected_at: new Date().toISOString(),
-      }))
+          const rows = items
+            .filter(item => {
+              if (seenUrls.has(item.url)) return false
+              seenUrls.add(item.url)
+              return true
+            })
+            .map(item => ({
+              clinic_id: clinic.id,
+              keyword_id: target.keywordId,
+              title: item.title,
+              source: item.source,
+              url: item.url,
+              published_at: item.published_at,
+              collected_at: new Date().toISOString(),
+            }))
 
-      const { error } = await supabase
-        .from('press_coverage')
-        .upsert(rows, { onConflict: 'clinic_id,url', ignoreDuplicates: true })
+          if (!rows.length) continue
 
-      if (error) {
-        errors.push(`Clinic ${clinic.id}: DB error - ${error.message}`)
-      } else {
-        totalInserted += rows.length
+          const { error } = await supabase
+            .from('press_coverage')
+            .upsert(rows, { onConflict: 'clinic_id,url', ignoreDuplicates: true })
+
+          if (error) {
+            errors.push(`Clinic ${clinic.id} keyword "${target.query}": DB error - ${error.message}`)
+          } else {
+            totalInserted += rows.length
+          }
+        } catch (err) {
+          const message = err instanceof Error ? err.message : String(err)
+          errors.push(`Clinic ${clinic.id} keyword "${target.query}": ${message}`)
+        }
       }
     } catch (err) {
       const message = err instanceof Error ? err.message : String(err)

@@ -73,6 +73,10 @@ MMI 대시보드의 REST API 엔드포인트 문서입니다.
     "bookingsDiff": -1,
     "revenueDiff": 500000
   },
+  "totalClicks": 5000,
+  "totalImpressions": 100000,
+  "cpc": 1000,
+  "ctr": 5.0,
   "comparison": {
     "cpl": -12.5,
     "roas": 8.3,
@@ -82,7 +86,9 @@ MMI 대시보드의 REST API 엔드포인트 문서입니다.
     "totalConsultations": 7.5,
     "totalSpend": -3.2,
     "cac": -8.1,
-    "arpc": 12.0
+    "arpc": 12.0,
+    "cpc": -5.2,
+    "ctr": 3.1
   }
 }
 ```
@@ -240,6 +246,100 @@ MMI 대시보드의 REST API 엔드포인트 문서입니다.
     "google": 10,
     "tiktok": 5
   }
+}
+```
+
+### GET /api/ads/efficiency-trend
+
+일별 광고 효율 추이(CPL·CPC·CTR)를 조회합니다.
+
+**Query Parameters:**
+- `startDate`, `endDate` (기본: 최근 28일)
+- `clinic_id`
+
+**Response:**
+```json
+[
+  {
+    "date": "2026-03-15",
+    "spend": 500000,
+    "clicks": 250,
+    "impressions": 10000,
+    "leads": 12,
+    "cpl": 41667,
+    "cpc": 2000,
+    "ctr": 2.5
+  }
+]
+```
+
+### GET /api/ads/platform-summary
+
+매체별 종합 성과 비교를 조회합니다.
+
+**Query Parameters:**
+- `startDate`, `endDate`, `clinic_id`
+
+**Response:**
+```json
+[
+  {
+    "channel": "Meta",
+    "spend": 3000000,
+    "clicks": 1500,
+    "impressions": 50000,
+    "leads": 80,
+    "revenue": 30000000,
+    "payingCustomers": 12,
+    "cpl": 37500,
+    "cpc": 2000,
+    "ctr": 3.0,
+    "roas": 10.0,
+    "conversionRate": 15.0
+  }
+]
+```
+
+### GET /api/ads/day-analysis
+
+요일별 리드·광고비·CPL을 조회합니다.
+
+**Query Parameters:**
+- `startDate`, `endDate`, `clinic_id`
+
+**Response:**
+```json
+{
+  "byDay": [
+    { "day": 0, "dayLabel": "일", "leads": 5, "spend": 200000, "cpl": 40000 },
+    { "day": 1, "dayLabel": "월", "leads": 15, "spend": 500000, "cpl": 33333 }
+  ]
+}
+```
+
+> `day`: 0(일)~6(토). 리드는 KST 기준 요일 집계, 광고비는 stat_date 기준.
+
+### GET /api/ads/landing-page-performance
+
+랜딩페이지별 리드→결제 전환 성과를 조회합니다.
+
+**Query Parameters:**
+- `startDate`, `endDate`, `clinic_id`
+
+**Response:**
+```json
+{
+  "pages": [
+    {
+      "landingPageId": 1,
+      "name": "봄 프로모션 LP",
+      "isActive": true,
+      "leads": 50,
+      "customers": 8,
+      "revenue": 12000000,
+      "conversionRate": 16.0
+    }
+  ]
 }
 ```
 

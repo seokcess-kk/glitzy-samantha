@@ -7,13 +7,14 @@
 //   url text,
 //   published_at timestamptz,
 //   collected_at timestamptz default now(),
+//   keyword_id int references press_keywords(id) on delete set null,
 //   unique(clinic_id, url)
 // );
 
 import { serverSupabase } from '@/lib/supabase'
-import { withClinicFilter, ClinicContext, applyClinicFilter, apiError, apiSuccess } from '@/lib/api-middleware'
+import { withClinicFilter, applyClinicFilter, apiError, apiSuccess } from '@/lib/api-middleware'
 
-export const GET = withClinicFilter(async (req: Request, { clinicId, assignedClinicIds }: ClinicContext) => {
+export const GET = withClinicFilter(async (req, { clinicId, assignedClinicIds }) => {
   const supabase = serverSupabase()
 
   let query = supabase

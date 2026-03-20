@@ -38,6 +38,7 @@ npm run analyze      # 번들 크기 분석
 | `lib/` | 핵심 유틸리티 (auth, security, logger 등) | `lib/CLAUDE.md` |
 | `lib/services/` | 외부 API 동기화 서비스 | |
 | `components/` | UI 컴포넌트 | `components/CLAUDE.md` |
+| `components/ads/` | 광고 성과 UI (KPI카드, 효율추이, 매체비교, 퍼널, 캠페인, 요일, LP) | |
 | `components/attribution/` | 매출 기여 분석 UI (퍼널, CPL/ROAS, 고객 여정) | |
 | `supabase/migrations/` | DB 마이그레이션 (`YYYYMMDD_설명.sql`) | |
 | `e2e/` | Playwright E2E 테스트 | |
@@ -198,3 +199,4 @@ npm run analyze      # 번들 크기 분석
 | 2026-03-19 | 원격 변경 병합: ClinicContext, archive, error-alert, channel, date 유틸, deleted_records, E2E 상세 |
 | 2026-03-19 | 검증 규칙에 '전체 맥락 코드 리뷰' 단계 추가 — 구현부만 단독 검토하지 않고 호출자/데이터 흐름/역할별/기존 패턴과의 정합성까지 확인 |
 | 2026-03-19 | 디렉토리 구조에 공개 페이지(privacy, terms), 앱 아이콘(icon.tsx, apple-icon.tsx) 추가 |
+| 2026-03-20 | 디렉토리 구조에 `components/ads/` 추가 — 광고 성과 페이지 3탭 구조 재구성 (4개 신규 API, 9개 신규 컴포넌트) |

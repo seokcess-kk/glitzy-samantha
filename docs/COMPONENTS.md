@@ -41,6 +41,18 @@ components/
 │   ├── kpi-section.tsx    # KPI 카드 6개 (비즈니스 흐름순)
 │   └── spend-lead-trend.tsx # 광고비+리드 듀얼 축 차트
 │
+├── ads/                 # 광고 성과 페이지 컴포넌트
+│   ├── ads-kpi-cards.tsx           # 8종 KPI 카드 (전기 대비 변화율)
+│   ├── efficiency-trend-chart.tsx  # CPL·CPC·CTR 이중축 추이 차트
+│   ├── platform-comparison-table.tsx # 매체별 성과 비교 테이블
+│   ├── ads-funnel.tsx              # 노출→결제 5단계 퍼널
+│   ├── campaign-ranking-table.tsx  # 캠페인 정렬·검색·CPC 상태 테이블
+│   ├── day-of-week-analysis.tsx    # 요일별 리드 바 차트
+│   ├── landing-page-performance.tsx # LP별 전환율 테이블
+│   ├── ads-overview-tab.tsx        # 성과 개요 탭 레이아웃
+│   ├── ads-campaign-tab.tsx        # 캠페인 분석 탭 레이아웃
+│   └── CreativePerformance.tsx     # 소재별 성과 (기존)
+│
 ├── admin/               # 관리자 전용 컴포넌트
 │   └── ClinicApiConfigDialog.tsx  # 매체별 API 키 관리 다이얼로그
 │
@@ -400,6 +412,103 @@ import { SpendLeadTrend } from '@/components/dashboard/spend-lead-trend'
   loading={false}
 />
 ```
+
+---
+
+## 광고 성과 컴포넌트
+
+`/ads` 페이지는 3탭 구조로 구성되어 있으며, 각 탭 컴포넌트가 독립적으로 데이터를 fetch합니다.
+
+### 탭 구조
+
+```
+Tab 1: 성과 개요 (AdsOverviewTab)
+  ├─ AdsKpiCards        — 8종 KPI (trend 포함)
+  ├─ EfficiencyTrendChart — CPL·CPC·CTR 이중축 차트
+  ├─ PlatformComparisonTable — 매체별 성과 테이블
+  ├─ AdsFunnel          — 노출→결제 5단계 퍼널
+  └─ grid 2열
+     ├─ DayOfWeekAnalysis — 요일별 바 차트
+     └─ LandingPagePerformance — LP별 전환율
+
+Tab 2: 캠페인 분석 (AdsCampaignTab)
+  ├─ 매체 필터 버튼
+  ├─ CampaignRankingTable — 정렬·검색·CPC 상태
+  └─ CreativePerformance — 소재별 성과
+
+Tab 3: 매출 귀속 (AttributionView) — 변경 없음
+```
+
+### AdsKpiCards
+
+```tsx
+import AdsKpiCards from '@/components/ads/ads-kpi-cards'
+
+<AdsKpiCards days="30" />
+```
+
+8개 카드: 총 광고비, 총 리드, CPL, ROAS, CPC, CTR, 리드→결제 전환율, CAC.
+CPL/CPC/CAC는 역전 trend (감소=긍정).
+
+### EfficiencyTrendChart
+
+```tsx
+import EfficiencyTrendChart from '@/components/ads/efficiency-trend-chart'
+
+<EfficiencyTrendChart days="30" />
+```
+
+ComposedChart 이중 Y축: 좌축(₩) CPL Area + CPC Line, 우축(%) CTR Line.
+
+### PlatformComparisonTable
+
+```tsx
+import PlatformComparisonTable from '@/components/ads/platform-comparison-table'
+
+<PlatformComparisonTable days="30" />
+```
+
+매체별 8개 지표 테이블. 최저 CPL 하이라이트, ROAS 색상 분기, 하단 인사이트 텍스트.
+
+### AdsFunnel
+
+```tsx
+import AdsFunnel from '@/components/ads/ads-funnel'
+
+<AdsFunnel days="30" />
+```
+
+노출→클릭→리드→예약→결제 5단계 수평 바 퍼널. 최대 이탈 구간 자동 감지.
+
+### CampaignRankingTable
+
+```tsx
+import CampaignRankingTable from '@/components/ads/campaign-ranking-table'
+
+<CampaignRankingTable days="30" platformFilter="Meta" />
+```
+
+캠페인별 지출/클릭/노출/CPC/CTR. 헤더 클릭 정렬, CPC 상태 표시(🟢🟡🔴), 검색, 10건 단위 펼치기.
+
+### DayOfWeekAnalysis
+
+```tsx
+import DayOfWeekAnalysis from '@/components/ads/day-of-week-analysis'
+
+<DayOfWeekAnalysis days="30" />
+```
+
+7칼럼 BarChart. 최다 리드 요일 강조 색상, 바 위 CPL 라벨.
+
+### LandingPagePerformance
+
+```tsx
+import LandingPagePerformance from '@/components/ads/landing-page-performance'
+
+<LandingPagePerformance days="30" />
+```
+
+LP별 리드·결제 고객·전환율·매출. 활성/비활성 상태 표시.
 
 ---
 

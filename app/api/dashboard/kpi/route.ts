@@ -19,7 +19,7 @@ async function fetchMetrics(
   }
 
   const [adStatsRes, leadsRes, paymentsRes, bookingsRes, consultRes, contentBudgetRes] = await Promise.all([
-    applyFilter(supabase.from('ad_campaign_stats').select('spend_amount').gte('stat_date', start).lte('stat_date', end)),
+    applyFilter(supabase.from('ad_campaign_stats').select('spend_amount, clicks, impressions').gte('stat_date', start).lte('stat_date', end)),
     applyFilter(supabase.from('leads').select('*', { count: 'exact', head: true }).gte('created_at', start).lte('created_at', end)),
     applyFilter(supabase.from('payments').select('customer_id, payment_amount').gte('payment_date', start).lte('payment_date', end)),
     applyFilter(supabase.from('bookings').select('*', { count: 'exact', head: true })
@@ -30,6 +30,8 @@ async function fetchMetrics(
   ])
 
   const totalSpend = adStatsRes.data?.reduce((s, r) => s + Number(r.spend_amount), 0) || 0
+  const totalClicks = adStatsRes.data?.reduce((s, r) => s + Number(r.clicks || 0), 0) || 0
+  const totalImpressions = adStatsRes.data?.reduce((s, r) => s + Number(r.impressions || 0), 0) || 0
   const totalLeads = leadsRes.count || 0
   const totalRevenue = paymentsRes.data?.reduce((s, r) => s + Number(r.payment_amount), 0) || 0
   const bookedCount = bookingsRes.count || 0
@@ -57,6 +59,10 @@ async function fetchMetrics(
     cac,
     arpc,
     payingCustomerCount,
+    totalClicks,
+    totalImpressions,
+    cpc: totalClicks > 0 ? Math.round(totalSpend / totalClicks) : 0,
+    ctr: totalImpressions > 0 ? Number(((totalClicks / totalImpressions) * 100).toFixed(2)) : 0,
   }
 }
 
@@ -117,6 +123,7 @@ export const GET = withClinicFilter(async (req: Request, { clinicId, assignedCli
   if (assignedClinicIds !== null && assignedClinicIds.length === 0) {
     return NextResponse.json({
       cpl: 0, roas: 0, bookingRate: 0, totalRevenue: 0, totalLeads: 0, totalSpend: 0, totalConsultations: 0, cac: 0, arpc: 0, payingCustomerCount: 0,
+      totalClicks: 0, totalImpressions: 0, cpc: 0, ctr: 0,
       today: { leads: 0, bookings: 0, revenue: 0, leadsDiff: 0, bookingsDiff: 0, revenueDiff: 0 },
     })
   }
@@ -154,6 +161,8 @@ export const GET = withClinicFilter(async (req: Request, { clinicId, assignedCli
         totalSpend: calcChange(previous.totalSpend, current.totalSpend),
         cac: calcChange(previous.cac, current.cac),
         arpc: calcChange(previous.arpc, current.arpc),
+        cpc: calcChange(previous.cpc, current.cpc),
+        ctr: calcChange(previous.ctr, current.ctr),
       },
     })
   }

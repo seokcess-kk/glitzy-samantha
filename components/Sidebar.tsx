@@ -70,6 +70,10 @@ const menuGroups: MenuGroup[] = [
       { href: '/ads', label: '광고 성과', icon: BarChart2, menuKey: 'ads' },
       { href: '/content', label: '콘텐츠 분석', icon: Film, menuKey: 'content' },
       { href: '/monitor', label: '콘텐츠 모니터링', icon: Scan, menuKey: 'monitor' },
+    ]
+  },
+  {
+    items: [
       { href: '/press', label: '언론보도', icon: Newspaper, menuKey: 'press' },
     ]
   },
