@@ -14,6 +14,10 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table'
+import {
+  Dialog,
+  DialogContent,
+} from '@/components/ui/dialog'
 import { ImageOff, Film, Image } from 'lucide-react'
 import { getKstDateString } from '@/lib/date'
 
@@ -48,6 +52,9 @@ export default function CreativePerformance({ parentDays }: Props) {
   const { selectedClinicId } = useClinic()
   const [data, setData] = useState<CreativePerformanceResponse | null>(null)
   const [loading, setLoading] = useState(true)
+  const [viewerOpen, setViewerOpen] = useState(false)
+  const [viewerSrc, setViewerSrc] = useState<string | null>(null)
+  const [viewerType, setViewerType] = useState<string | null>(null)
 
   const days = parentDays || '30'
 
@@ -79,6 +86,7 @@ export default function CreativePerformance({ parentDays }: Props) {
   const maxLeads = useMemo(() => Math.max(...creatives.map(c => c.leads), 1), [creatives])
 
   return (
+    <>
     <Card variant="glass" className="p-5 md:p-6 mt-6">
       <div className="flex items-center justify-between mb-5 gap-4">
         <h2 className="font-semibold text-foreground shrink-0">소재별 성과</h2>
@@ -120,17 +128,26 @@ export default function CreativePerformance({ parentDays }: Props) {
                     className={`border-b border-border/50 dark:border-white/[0.03] ${idx % 2 === 1 ? 'bg-muted/30 dark:bg-white/[0.01]' : ''}`}
                   >
                     <TableCell className="py-2 px-2">
-                      <div className="w-9 h-9 shrink-0">
+                      <div
+                        className={`w-9 h-9 shrink-0 ${row.file_name ? 'cursor-pointer' : ''}`}
+                        onClick={() => {
+                          if (row.file_name) {
+                            setViewerSrc(getCreativeUrl(row.file_name))
+                            setViewerType(row.file_type)
+                            setViewerOpen(true)
+                          }
+                        }}
+                      >
                         {row.file_name ? (
                           row.file_type?.startsWith('video/') ? (
                             <div className="w-9 h-9 rounded-md bg-muted dark:bg-white/5 overflow-hidden relative">
                               <video src={getCreativeUrl(row.file_name)} className="w-full h-full object-cover" muted preload="metadata" />
-                              <div className="absolute inset-0 flex items-center justify-center bg-black/30">
+                              <div className="absolute inset-0 flex items-center justify-center bg-black/30 hover:bg-black/10 transition-colors">
                                 <Film size={11} className="text-white/80" />
                               </div>
                             </div>
                           ) : (
-                            <img src={getCreativeUrl(row.file_name)} alt={row.name} className="w-9 h-9 rounded-md object-cover bg-muted dark:bg-white/5" />
+                            <img src={getCreativeUrl(row.file_name)} alt={row.name} className="w-9 h-9 rounded-md object-cover bg-muted dark:bg-white/5 hover:opacity-80 transition-opacity" />
                           )
                         ) : (
                           <div className="w-9 h-9 rounded-md bg-muted dark:bg-white/5 flex items-center justify-center text-muted-foreground/40">
@@ -178,5 +195,19 @@ export default function CreativePerformance({ parentDays }: Props) {
         </div>
       )}
     </Card>
+
+    {/* 소재 원본 보기 모달 */}
+    <Dialog open={viewerOpen} onOpenChange={setViewerOpen}>
+      <DialogContent className="max-w-4xl p-2 bg-black/90 border-border dark:border-white/10">
+        {viewerSrc && (
+          viewerType?.startsWith('video/') ? (
+            <video src={viewerSrc} className="w-full max-h-[80vh] object-contain rounded-lg" controls autoPlay muted />
+          ) : (
+            <img src={viewerSrc} alt="소재 원본" className="w-full max-h-[80vh] object-contain rounded-lg" />
+          )
+        )}
+      </DialogContent>
+    </Dialog>
+    </>
   )
 }
