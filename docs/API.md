@@ -509,9 +509,76 @@ MMI 대시보드의 REST API 엔드포인트 문서입니다.
 
 언론보도 목록을 조회합니다.
 
+**Query Parameters:**
+- `clinic_id` (optional)
+
+**Response:**
+```json
+[
+  {
+    "id": 1,
+    "clinic_id": 1,
+    "title": "신사세레아의원, 리뉴얼 오픈",
+    "source": "조선일보",
+    "url": "https://...",
+    "published_at": "2026-03-20T03:00:00Z",
+    "collected_at": "2026-03-20T09:00:00Z",
+    "keyword_id": 1
+  }
+]
+```
+
 ### POST /api/press/sync
 
-Google 뉴스에서 언론보도를 수집합니다.
+Google 뉴스에서 키워드별 언론보도를 수집합니다.
+`press_keywords`에 등록된 활성 키워드별로 RSS 검색. 키워드 미등록 시 병원명으로 폴백.
+
+**Query Parameters:**
+- `clinic_id` (optional): 특정 병원만 수집
+
+### GET /api/press/keywords
+
+언론보도 검색 키워드 목록을 조회합니다.
+
+**Query Parameters:**
+- `clinic_id` (optional)
+
+**Response:**
+```json
+[
+  {
+    "id": 1,
+    "clinic_id": 1,
+    "keyword": "신사세레아의원",
+    "is_active": true,
+    "created_by": 1,
+    "created_at": "2026-03-20T00:00:00Z"
+  }
+]
+```
+
+### POST /api/press/keywords
+
+언론보도 검색 키워드를 등록합니다. 병원당 최대 5개.
+
+**Request Body:**
+```json
+{
+  "clinic_id": 1,
+  "keyword": "신사세레아의원"
+}
+```
+
+### DELETE /api/press/keywords
+
+언론보도 검색 키워드를 삭제합니다. 삭제 전 `deleted_records`에 스냅샷 보관.
+
+**Request Body:**
+```json
+{
+  "id": 1
+}
+```
 
 ---
 
@@ -634,7 +701,7 @@ agency_staff 계정의 병원 배정 및 메뉴 권한을 수정합니다.
 ]
 ```
 
-### POST /api/monitoring/keywords (superadmin)
+### POST /api/monitoring/keywords (superadmin/agency_staff)
 
 키워드를 등록합니다.
 
@@ -647,7 +714,7 @@ agency_staff 계정의 병원 배정 및 메뉴 권한을 수정합니다.
 }
 ```
 
-### PATCH /api/monitoring/keywords (superadmin)
+### PATCH /api/monitoring/keywords (superadmin/agency_staff)
 
 키워드를 수정합니다.
 
@@ -656,6 +723,17 @@ agency_staff 계정의 병원 배정 및 메뉴 권한을 수정합니다.
 {
   "id": 1,
   "is_active": false
+}
+```
+
+### DELETE /api/monitoring/keywords (superadmin/agency_staff)
+
+키워드를 삭제합니다. 관련 순위 데이터도 CASCADE 삭제. 삭제 전 `deleted_records`에 스냅샷 보관.
+
+**Request Body:**
+```json
+{
+  "id": 1
 }
 ```
 

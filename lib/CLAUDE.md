@@ -54,6 +54,8 @@
 | `deleted_records` | 삭제 데이터 스냅샷 보관 | 감사/복구용 |
 | `capi_events` | Meta CAPI 전송 로그 | status: pending/success/fail, event_id로 중복 제거 |
 | `clinic_treatments` | 병원별 시술 메뉴 카탈로그 | POS형 결제 입력용, UNIQUE(clinic_id, name) |
+| `press_coverage` | 언론보도 기사 | Google News RSS 수집, UNIQUE(clinic_id, url) |
+| `press_keywords` | 언론보도 검색 키워드 | 병원당 최대 5개, UNIQUE(clinic_id, keyword) |
 
 ## SMS 발송 (lib/solapi.ts)
 
@@ -79,3 +81,4 @@
 | `channel-colors.ts` | `getChannelColor` | 채널별 Recharts 색상 코드 |
 | `date.ts` | `formatDate`, `getKstDateString`, `getKstDayStartISO` | KST 기준 날짜 포맷/생성 |
 | `services/metaCapi.ts` | Meta CAPI 전송 | 리드 유입 시 서버사이드 전환 이벤트 전송 |
+| `services/pressSync.ts` | `syncPressForClinic` | 언론보도 수집 (다중 키워드 → Google News RSS → upsert) |

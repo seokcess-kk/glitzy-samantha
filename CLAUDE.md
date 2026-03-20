@@ -63,7 +63,7 @@ npm run analyze      # 번들 크기 분석
 | `superadmin` | 전체 병원 접근. `?clinic_id=X`로 조회 | |
 | `agency_staff` | 다중 병원 배정. 메뉴 권한 제한 | superadmin과 달리 배정된 병원만 |
 | `clinic_admin` | 자기 병원 전체 데이터 + 담당자 관리 | |
-| `clinic_staff` | 예약/결제/고객/리드만. 광고/KPI 차단 | |
+| `clinic_staff` | 예약/결제/고객/리드/언론보도만. 광고/KPI 차단 | |
 
 ## 코딩 규칙
 
@@ -200,3 +200,5 @@ npm run analyze      # 번들 크기 분석
 | 2026-03-19 | 검증 규칙에 '전체 맥락 코드 리뷰' 단계 추가 — 구현부만 단독 검토하지 않고 호출자/데이터 흐름/역할별/기존 패턴과의 정합성까지 확인 |
 | 2026-03-19 | 디렉토리 구조에 공개 페이지(privacy, terms), 앱 아이콘(icon.tsx, apple-icon.tsx) 추가 |
 | 2026-03-20 | 디렉토리 구조에 `components/ads/` 추가 — 광고 성과 페이지 3탭 구조 재구성 (4개 신규 API, 9개 신규 컴포넌트) |
+| 2026-03-20 | 언론보도 다중 키워드 지원: `press_keywords` 테이블, 키워드 CRUD API, pressSync 다중 키워드 검색, clinic_staff 언론보도 접근 허용 |
+| 2026-03-20 | 순위 모니터링 키워드 삭제 기능 추가 (DELETE API + AlertDialog UI) |
