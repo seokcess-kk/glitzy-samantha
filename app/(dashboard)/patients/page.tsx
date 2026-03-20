@@ -756,10 +756,11 @@ function BookingRow({ booking, onRefresh, isSuperAdmin, clinicId }: { booking: a
   const cfg = STATUS_CONFIG[booking.status] || { label: booking.status, variant: 'secondary' as const }
   const totalPayment = (customer?.payments || []).reduce((s: number, p: any) => s + Number(p.payment_amount), 0)
   const consultations: any[] = customer?.consultations || []
-  // 유입 경로: 리드의 utm_source (최초 리드 기준) 또는 first_source 폴백
+  // 유입 경로: utm_source가 있는 첫 번째 리드 기준, 없으면 first_source 폴백
   const leads: any[] = customer?.leads || []
-  const channelSource = leads[0]?.utm_source || customer?.first_source || null
-  const campaignName = leads[0]?.utm_campaign || null
+  const leadWithSource = leads.find((l: any) => l.utm_source) || leads[0]
+  const channelSource = leadWithSource?.utm_source || customer?.first_source || null
+  const campaignName = leadWithSource?.utm_campaign || null
   const latestConsult = consultations[0]
   const consultCount = consultations.length
 
