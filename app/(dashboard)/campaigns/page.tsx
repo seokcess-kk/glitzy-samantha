@@ -622,18 +622,23 @@ function CampaignDetail({ campaign, onBack }: { campaign: string; onBack: () => 
 
       {/* 상태 배지 요약 */}
       {!loading && leads.length > 0 && (
-        <div className="grid grid-cols-3 sm:grid-cols-6 gap-2 mb-5">
+        <div className="grid grid-cols-3 sm:grid-cols-6 gap-3 mb-5">
           {Object.entries(LEAD_STATUS_CONFIG).map(([key, cfg]) => {
             const count = filteredForStatus.filter(l => (l.lead_status || 'new') === key).length
             return (
               <Card
                 key={key}
                 variant="glass"
-                className={`p-2.5 text-center cursor-pointer transition-all hover:ring-1 hover:ring-brand-500/30 ${statusFilter === key ? 'ring-2 ring-brand-500/50 bg-brand-500/5' : ''}`}
+                className={`p-2.5 text-center cursor-pointer transition-all duration-200 hover:ring-1 hover:ring-brand-500/30 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 ${statusFilter === key ? 'ring-2 ring-brand-500/50 bg-brand-500/5' : ''}`}
                 onClick={() => setStatusFilter(statusFilter === key ? 'all' : key)}
+                role="button"
+                tabIndex={0}
+                onKeyDown={(e: React.KeyboardEvent) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); setStatusFilter(statusFilter === key ? 'all' : key) } }}
+                aria-label={`${cfg.label}: ${count}건`}
+                aria-pressed={statusFilter === key}
               >
                 <p className={`text-lg font-bold ${statusFilter === key ? 'text-brand-400' : cfg.color.split(' ')[1]}`}>{count}</p>
-                <p className="text-[10px] text-muted-foreground">{cfg.label}</p>
+                <p className="text-xs text-muted-foreground">{cfg.label}</p>
               </Card>
             )
           })}

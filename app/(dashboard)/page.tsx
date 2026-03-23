@@ -25,7 +25,7 @@ import { DateRangePicker } from '@/components/dashboard/date-range-picker'
 export default function DashboardPage() {
   const { data: session } = useSession()
   const router = useRouter()
-  const sessionUser = session?.user as any
+  const sessionUser = session?.user
   const { selectedClinicId } = useClinic()
 
   useEffect(() => {
@@ -76,13 +76,15 @@ export default function DashboardPage() {
       : `최근 4주 (선택: ${daysLabel})`
 
   // CPL / ROAS 비교 데이터
+  interface ChannelMetric { channel: string; cpl: number; roas: number }
+  interface PlatformMetric { label: string; cpl: number; roas: number }
   const cplData = [
-    ...funnelChannel.channel.filter((c: any) => c.cpl > 0).map((c: any) => ({ name: c.channel, cpl: c.cpl })),
-    ...trendData.contentPlatform.filter((c: any) => c.cpl > 0).map((c: any) => ({ name: c.label, cpl: c.cpl })),
+    ...funnelChannel.channel.filter((c: ChannelMetric) => c.cpl > 0).map((c: ChannelMetric) => ({ name: c.channel, cpl: c.cpl })),
+    ...trendData.contentPlatform.filter((c: PlatformMetric) => c.cpl > 0).map((c: PlatformMetric) => ({ name: c.label, cpl: c.cpl })),
   ]
   const roasData = [
-    ...funnelChannel.channel.filter((c: any) => c.roas > 0).map((c: any) => ({ name: c.channel, roas: Math.round(c.roas * 100) })),
-    ...trendData.contentPlatform.filter((c: any) => c.roas > 0).map((c: any) => ({ name: c.label, roas: c.roas })),
+    ...funnelChannel.channel.filter((c: ChannelMetric) => c.roas > 0).map((c: ChannelMetric) => ({ name: c.channel, roas: Math.round(c.roas * 100) })),
+    ...trendData.contentPlatform.filter((c: PlatformMetric) => c.roas > 0).map((c: PlatformMetric) => ({ name: c.label, roas: c.roas })),
   ]
 
   return (

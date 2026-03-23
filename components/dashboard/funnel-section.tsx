@@ -239,7 +239,7 @@ function FunnelProgress({
               {/* 노드 행 */}
               <Link
                 href={STAGE_LINKS[stage.stage] || '#'}
-                className="flex items-center gap-3 py-1 rounded-lg hover:bg-muted dark:hover:bg-white/5 transition-colors px-1 -mx-1"
+                className="flex items-center gap-3 py-1 rounded-lg hover:bg-muted dark:hover:bg-white/5 transition-colors duration-200 px-1 -mx-1"
               >
                 <div
                   className="rounded-full flex items-center justify-center font-bold text-white dark:text-white shrink-0"

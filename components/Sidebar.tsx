@@ -91,7 +91,7 @@ import PasswordChangeDialog from '@/components/PasswordChangeDialog'
 import ThemeToggle from '@/components/ThemeToggle'
 
 function navLinkClass(isActive: boolean): string {
-  return `flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-all ${
+  return `flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-colors duration-200 ${
     isActive
       ? 'bg-brand-600/20 text-brand-400'
       : 'text-muted-foreground hover:text-foreground hover:bg-muted'
@@ -101,7 +101,7 @@ function navLinkClass(isActive: boolean): string {
 export default function Sidebar({ onClose }: { onClose?: () => void }) {
   const pathname = usePathname()
   const { data: session } = useSession()
-  const user = session?.user as any
+  const user = session?.user
   const userRole = user?.role || 'clinic_staff'
   const userLevel = ROLE_LEVEL[userRole] || 1
   const isSuperAdmin = userRole === 'superadmin'
@@ -302,7 +302,7 @@ export default function Sidebar({ onClose }: { onClose?: () => void }) {
       <div className="px-3 pb-4 border-t border-border pt-3">
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
-            <button className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl hover:bg-muted transition-colors text-left cursor-pointer" aria-label="사용자 메뉴">
+            <button className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl hover:bg-muted transition-colors duration-200 text-left cursor-pointer" aria-label="사용자 메뉴">
               <div className="w-8 h-8 rounded-full bg-brand-600/20 flex items-center justify-center text-brand-400 font-semibold text-sm shrink-0">
                 {(user?.name || user?.username)?.[0]?.toUpperCase() || <User size={14} />}
               </div>
