@@ -51,7 +51,10 @@ components/
 │   ├── ads-funnel.tsx              # 노출→결제 5단계 퍼널
 │   ├── campaign-ranking-table.tsx  # 캠페인 정렬·검색·CPC 상태 테이블
 │   ├── day-of-week-analysis.tsx    # 요일별 리드 바 차트
-│   ├── landing-page-performance.tsx # LP별 전환율 테이블
+│   ├── landing-page-performance.tsx # LP별 전환율 테이블 (레거시)
+│   ├── landing-page-analysis.tsx   # LP 분석 종합 (채널 분해 + 추이 차트)
+│   ├── landing-page-channel-breakdown.tsx # LP별 채널 분해 차트
+│   ├── landing-page-trend-chart.tsx      # LP별 일별 추이 차트
 │   ├── ads-overview-tab.tsx        # 성과 개요 탭 레이아웃
 │   ├── ads-campaign-tab.tsx        # 캠페인 분석 탭 레이아웃
 │   └── CreativePerformance.tsx     # 소재별 성과 (기존)

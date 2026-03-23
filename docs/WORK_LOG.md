@@ -23,10 +23,37 @@ shadcn/ui 기반 UI/UX 개선 및 기능 개발 작업 기록.
 | Phase 9: 광고 성과 재구성 | 2026-03-20 | /ads 페이지 3탭 구조, 4개 신규 API, 9개 신규 컴포넌트, 효율 기반 인사이트 | 완료 | - |
 | Phase 10: 개선 + 버그 수정 | 2026-03-20 | 언론보도 기간 필터, 광고 날짜 버그 수정, 예약 유입 경로 표시 | 완료 | - |
 | Phase 11: 예약/결제 필터·정렬 | 2026-03-23 | 기간·상태·유입경로·결제 필터, 정렬, SortSelect 공용 컴포넌트 | 완료 | - |
+| Phase 12: 캠페인 리드 필터·페이지네이션 | 2026-03-23 | 캠페인 목록/상세 검색·채널·정렬·DateRangePicker·50건 페이지네이션 | 완료 | - |
+| Phase 13: UI/UX 감사 + Polish | 2026-03-23 | 접근성(A11y), 색상 토큰화, 타이포 상향, 반응형, 코드품질, LP 분석 분리 | 완료 | - |
 
 ---
 
-## 최신 작업 (Phase 11: 예약/결제 관리 필터·정렬 개선)
+## 최신 작업 (Phase 13: UI/UX 감사 + Polish)
+
+| # | 작업 | 핵심 내용 | 날짜 |
+|---|------|----------|------|
+| P28-1 | 접근성 (P0) | `prefers-reduced-motion` 지원, StatsCard 키보드 접근성(`role/tabIndex/onKeyDown`), 퍼널 노드 클릭 토글 툴팁(모바일 접근), Sidebar `Image`→`ImageIcon` alias | 03-23 |
+| P28-2 | 색상/타이포 (P1) | 퍼널 하드코딩 hex→COLORS 상수 추출, `text-[10px]`/`text-[11px]`→`text-xs` 상향 (6개 컴포넌트), 차트 축 폰트 11px | 03-23 |
+| P28-3 | 반응형/UX (P2) | KPI 모바일 `gap-2`→`gap-3`, DateRangePicker 프리셋 `h-7`→`h-8`, 모바일 차트 인라인 범례 추가, 오버레이 transition 타이밍 통일 | 03-23 |
+| P28-4 | 코드품질 (P3) | `navLinkClass()` 추출(Sidebar 9곳 중복 제거), Firefox `scrollbar-width` 지원, Kakao 배지 대비 `text-yellow-800` | 03-23 |
+| P28-5 | Polish 최종 | 캠페인 상태 배지 키보드 접근성, `session?.user as any` 제거, CPL/ROAS `any`→인터페이스, transition `duration-200` 통일 | 03-23 |
+| P28-6 | LP 분석 분리 | 광고 성과 LP 분석 컴포넌트 분리(`landing-page-analysis.tsx`, `landing-page-channel-breakdown.tsx`, `landing-page-trend-chart.tsx`, API route) | 03-23 |
+
+---
+
+## Phase 12 (캠페인 리드 필터·정렬·페이지네이션)
+
+| # | 작업 | 핵심 내용 | 날짜 |
+|---|------|----------|------|
+| P27-1 | 캠페인 목록 필터 | 캠페인명 검색, 동적 채널 필터(normalizeChannel 재사용), 정렬(최신/리드/오늘유입/이름순), 요약 카드 필터 연동 | 03-23 |
+| P27-2 | 캠페인 상세 필터 | DateRangePicker, 이름/전화번호 검색, 동적 채널 필터, 정렬(최신/오래된/이름순) | 03-23 |
+| P27-3 | 클라이언트 페이지네이션 | 50건 단위 페이지네이션, ellipsis 페이지 번호, safePage 범위 초과 방지, 결과 건수 표시 | 03-23 |
+| P27-4 | 상태 배지 필터 연동 | filteredForStatus(상태 제외 카운트)와 filtered(전체 필터) 분리, 필터 변경 시 1페이지 리셋 | 03-23 |
+| P27-5 | 코드 리뷰 이슈 수정 | normalizeChannel 중복→lib/channel.ts 재사용, 정적→동적 채널 옵션, safePage 도입 | 03-23 |
+
+---
+
+## Phase 11 (예약/결제 관리 필터·정렬 개선)
 
 | # | 작업 | 핵심 내용 | 날짜 |
 |---|------|----------|------|
