@@ -40,8 +40,8 @@ const NODE_SIZE = 40
 
 // 디자인 토큰 — tailwind.config.ts brand 색상과 동기화
 const COLORS = {
-  brand: '#6366f1',      // brand-500
-  brandLight: '#818cf8', // brand-400
+  brand: '#3b82f6',      // brand-500
+  brandLight: '#60a5fa', // brand-400
   positive: '#22c55e',   // emerald-500
   warning: '#eab308',    // yellow-500
   negative: '#ef4444',   // red-500

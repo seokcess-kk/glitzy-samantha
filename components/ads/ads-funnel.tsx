@@ -48,7 +48,7 @@ interface Props {
   endDate: string
 }
 
-const STAGE_GRADIENT = 'linear-gradient(90deg, #6366f1 0%, #8b5cf6 50%, #a78bfa 100%)'
+const STAGE_GRADIENT = 'linear-gradient(90deg, #3b82f6 0%, #8b5cf6 50%, #a78bfa 100%)'
 
 export default function AdsFunnel({ startDate, endDate }: Props) {
   const { selectedClinicId } = useClinic()

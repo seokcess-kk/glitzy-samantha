@@ -27,8 +27,8 @@ import { FileText } from 'lucide-react'
 import LandingPageTrendChart from './landing-page-trend-chart'
 import LandingPageChannelBreakdown from './landing-page-channel-breakdown'
 
-const BAR_MAX_COLOR = '#6366f1'
-const BAR_DEFAULT_COLOR = '#a5b4fc'
+const BAR_MAX_COLOR = '#3b82f6'
+const BAR_DEFAULT_COLOR = '#93c5fd'
 
 interface LandingPageRow {
   landingPageId: number

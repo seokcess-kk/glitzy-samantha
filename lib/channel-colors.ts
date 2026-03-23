@@ -12,7 +12,7 @@ export const CHANNEL_COLORS: Record<string, string> = {
   YouTube: '#ef4444',    // red-500 (Google 계열)
   Instagram: '#3b82f6',  // blue-500 (Meta 계열)
   Phone: '#8b5cf6',      // violet-500
-  Direct: '#6366f1',     // indigo-500
+  Direct: '#3b82f6',     // blue-500
   Organic: '#14b8a6',    // teal-500
 }
 

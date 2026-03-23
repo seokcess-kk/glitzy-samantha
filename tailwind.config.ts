@@ -13,15 +13,15 @@ const config: Config = {
         sans: ['var(--font-inter)', 'Inter', 'sans-serif'],
       },
       colors: {
-        // 기존 brand 색상 유지
+        // Samantha brand — Blue 기반
         brand: {
-          50: '#eef2ff',
-          100: '#e0e7ff',
-          400: '#818cf8',
-          500: '#6366f1',
-          600: '#4f46e5',
-          700: '#4338ca',
-          900: '#1e1b4b',
+          50: '#eff6ff',
+          100: '#dbeafe',
+          400: '#60a5fa',
+          500: '#3b82f6',
+          600: '#2563eb',
+          700: '#1d4ed8',
+          900: '#1e3a8a',
         },
         // shadcn 색상 시스템
         border: "hsl(var(--border))",

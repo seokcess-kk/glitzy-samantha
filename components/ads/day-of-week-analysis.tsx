@@ -22,8 +22,8 @@ function fmtShort(iso: string) {
   return d.toLocaleDateString('ko', { timeZone: 'Asia/Seoul', month: 'numeric', day: 'numeric' }).replace(/\.$/, '')
 }
 
-const BAR_MAX_COLOR = '#6366f1'
-const BAR_DEFAULT_COLOR = '#a5b4fc'
+const BAR_MAX_COLOR = '#3b82f6'
+const BAR_DEFAULT_COLOR = '#93c5fd'
 
 interface DayData {
   day: number

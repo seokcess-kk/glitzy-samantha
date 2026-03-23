@@ -16,7 +16,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
         {/* 배경 다이나믹 글로우 — 다크 모드 전용 */}
         <div className="absolute inset-0 overflow-hidden pointer-events-none z-0 hidden dark:block">
           <div className="absolute top-[-20%] left-[-10%] w-[60%] h-[60%] bg-gradient-to-br from-brand-600/10 via-brand-600/5 to-transparent rounded-full blur-3xl mix-blend-screen" />
-          <div className="absolute bottom-[-20%] right-[-10%] w-[60%] h-[60%] bg-gradient-to-tl from-purple-600/5 via-brand-500/5 to-transparent rounded-full blur-3xl mix-blend-screen" />
+          <div className="absolute bottom-[-20%] right-[-10%] w-[60%] h-[60%] bg-gradient-to-tl from-violet-500/5 via-brand-500/5 to-transparent rounded-full blur-3xl mix-blend-screen" />
         </div>
 
         {/* 모바일 오버레이 */}

@@ -534,7 +534,7 @@ export default function ContentPage() {
                     formatter={(v: any) => [`₩${Number(v).toLocaleString()}`, 'CPL']} />
                   <Bar dataKey="cpl" radius={[4, 4, 0, 0]}>
                     {cplChartData.map((entry, i) => (
-                      <Cell key={i} fill={PLATFORM_CONFIG[entry.key]?.chartColor || '#6366f1'} />
+                      <Cell key={i} fill={PLATFORM_CONFIG[entry.key]?.chartColor || '#3b82f6'} />
                     ))}
                   </Bar>
                 </BarChart>

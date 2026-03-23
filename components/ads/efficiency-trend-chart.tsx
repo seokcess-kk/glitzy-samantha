@@ -18,7 +18,7 @@ import {
 } from '@/components/charts'
 import { TrendingUp } from 'lucide-react'
 
-const CPL_COLOR = '#6366f1'
+const CPL_COLOR = '#3b82f6'
 const CPC_COLOR = '#f59e0b'
 const CTR_COLOR = '#10b981'
 

@@ -12,7 +12,7 @@ import {
   ResponsiveContainer,
 } from '@/components/charts'
 
-const LINE_COLORS = ['#6366f1', '#f59e0b', '#10b981', '#ef4444', '#8b5cf6']
+const LINE_COLORS = ['#3b82f6', '#f59e0b', '#10b981', '#ef4444', '#8b5cf6']
 
 interface Props {
   trend: Array<Record<string, string | number>>

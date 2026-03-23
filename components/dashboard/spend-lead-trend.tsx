@@ -9,8 +9,8 @@ import {
 } from '@/components/charts'
 import { TrendingUp } from 'lucide-react'
 
-// 디자인 토큰 — tailwind.config.ts와 동기화
-const BRAND = '#6366f1'      // brand-500
+// 디자인 토큰 — tailwind.config.ts brand와 동기화
+const BRAND = '#3b82f6'      // brand-500
 const LEAD_COLOR = '#34d399' // emerald-400
 
 const fmtKrw = (v: number) => `₩${(v / 10000).toFixed(0)}만`

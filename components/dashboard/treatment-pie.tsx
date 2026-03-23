@@ -9,7 +9,7 @@ import { Skeleton } from '@/components/ui/skeleton'
 import { EmptyState } from '@/components/common'
 import { PieChart as PieChartIcon } from 'lucide-react'
 
-const PIE_SHADES = ['#6366f1', '#818cf8', '#a5b4fc', '#c7d2fe', '#e0e7ff', '#8b5cf6']
+const PIE_SHADES = ['#3b82f6', '#60a5fa', '#93c5fd', '#bfdbfe', '#dbeafe', '#8b5cf6']
 const MAX_ITEMS = 5
 
 interface TreatmentData {
