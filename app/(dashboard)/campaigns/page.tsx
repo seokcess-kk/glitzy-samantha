@@ -1,12 +1,13 @@
 'use client'
-import { useState, useEffect, Suspense } from 'react'
+import { useState, useEffect, useMemo, Suspense } from 'react'
 import { useSearchParams, useRouter } from 'next/navigation'
-import { Megaphone, ArrowLeft, Phone, Clock, ChevronRight, RefreshCw, MessageCircle, FileText, User, ShieldCheck, StickyNote } from 'lucide-react'
+import { Megaphone, ArrowLeft, Phone, Clock, ChevronRight, RefreshCw, FileText, User, ShieldCheck, StickyNote, Search, X } from 'lucide-react'
 import { useClinic } from '@/components/ClinicContext'
 import { Card } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { Skeleton } from '@/components/ui/skeleton'
+import { Input } from '@/components/ui/input'
 import {
   Select,
   SelectContent,
@@ -15,8 +16,14 @@ import {
   SelectValue,
 } from '@/components/ui/select'
 import { toast } from 'sonner'
-import { PageHeader, ChannelBadge } from '@/components/common'
+import { PageHeader, ChannelBadge, SortSelect } from '@/components/common'
+import { DateRangePicker } from '@/components/dashboard/date-range-picker'
+import { DateRange } from 'react-day-picker'
+import { startOfDay, endOfDay } from 'date-fns'
 import { formatDateTime } from '@/lib/date'
+import { normalizeChannel } from '@/lib/channel'
+
+const LEADS_PER_PAGE = 50
 
 const LEAD_STATUS_CONFIG: Record<string, { label: string; color: string }> = {
   new:        { label: '신규',     color: 'bg-blue-500/20 text-blue-400 border-blue-500/30' },
@@ -74,14 +81,65 @@ function timeAgo(dateStr: string): string {
 
 // ─── 캠페인 목록 ───
 
+const CAMPAIGN_SORT_OPTIONS = [
+  { value: 'latest', label: '최신순' },
+  { value: 'leads', label: '리드 많은순' },
+  { value: 'today', label: '오늘 유입순' },
+  { value: 'name', label: '이름순' },
+]
+
+
 function CampaignList({ campaigns, loading, onSelect, onRefresh }: {
   campaigns: CampaignSummary[]
   loading: boolean
   onSelect: (campaign: string) => void
   onRefresh: () => void
 }) {
-  const totalLeads = campaigns.reduce((s, c) => s + c.lead_count, 0)
-  const todayLeads = campaigns.reduce((s, c) => s + c.today_count, 0)
+  const [search, setSearch] = useState('')
+  const [channelFilter, setChannelFilter] = useState('all')
+  const [sortBy, setSortBy] = useState('latest')
+
+  // 캠페인 데이터에서 실제 존재하는 채널 동적 추출
+  const availableChannels = useMemo(() => {
+    const chSet = new Set<string>()
+    campaigns.forEach(c => {
+      const ch = normalizeChannel(c.channel)
+      if (ch !== 'Unknown') chSet.add(ch)
+    })
+    return Array.from(chSet).sort()
+  }, [campaigns])
+
+  const filtered = useMemo(() => {
+    let result = campaigns
+
+    // 검색
+    if (search.trim()) {
+      const q = search.trim().toLowerCase()
+      result = result.filter(c => c.campaign.toLowerCase().includes(q))
+    }
+
+    // 채널 필터
+    if (channelFilter !== 'all') {
+      result = result.filter(c => normalizeChannel(c.channel) === channelFilter)
+    }
+
+    // 정렬
+    result = [...result].sort((a, b) => {
+      switch (sortBy) {
+        case 'leads': return b.lead_count - a.lead_count
+        case 'today': return b.today_count - a.today_count
+        case 'name': return a.campaign.localeCompare(b.campaign, 'ko')
+        default: return new Date(b.latest_at).getTime() - new Date(a.latest_at).getTime()
+      }
+    })
+
+    return result
+  }, [campaigns, search, channelFilter, sortBy])
+
+  const totalLeads = filtered.reduce((s, c) => s + c.lead_count, 0)
+  const todayLeads = filtered.reduce((s, c) => s + c.today_count, 0)
+
+  const activeFilterCount = (search ? 1 : 0) + (channelFilter !== 'all' ? 1 : 0) + (sortBy !== 'latest' ? 1 : 0)
 
   return (
     <>
@@ -95,10 +153,60 @@ function CampaignList({ campaigns, loading, onSelect, onRefresh }: {
         }
       />
 
+      {/* 필터 바 */}
+      <div className="flex flex-wrap items-center gap-2 mb-4">
+        <Card variant="glass" className="flex items-center px-3 py-1.5 flex-1 max-w-xs min-w-[180px]">
+          <Search size={14} className="text-muted-foreground mr-2 shrink-0" />
+          <Input
+            type="text"
+            value={search}
+            onChange={e => setSearch(e.target.value)}
+            placeholder="캠페인명 검색"
+            className="bg-transparent border-0 text-sm text-foreground placeholder:text-muted-foreground/60 focus-visible:ring-0 p-0 h-auto"
+          />
+          {search && (
+            <button onClick={() => setSearch('')} className="text-muted-foreground hover:text-foreground shrink-0 ml-1 cursor-pointer">
+              <X size={13} />
+            </button>
+          )}
+        </Card>
+        {availableChannels.length > 1 && (
+          <Select value={channelFilter} onValueChange={setChannelFilter}>
+            <SelectTrigger className="w-auto min-w-[110px] h-9 bg-card border-border dark:border-white/10 text-xs">
+              <SelectValue>
+                {channelFilter === 'all' ? '채널 전체' : channelFilter}
+              </SelectValue>
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">채널 전체</SelectItem>
+              {availableChannels.map(ch => (
+                <SelectItem key={ch} value={ch}>{ch}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        )}
+        <SortSelect
+          value={sortBy}
+          onValueChange={setSortBy}
+          options={CAMPAIGN_SORT_OPTIONS}
+        />
+        {activeFilterCount > 0 && (
+          <Button
+            variant="ghost"
+            size="sm"
+            className="h-9 px-3 text-xs text-muted-foreground hover:text-foreground"
+            onClick={() => { setSearch(''); setChannelFilter('all'); setSortBy('latest') }}
+          >
+            <X size={12} className="mr-1" />
+            필터 초기화
+          </Button>
+        )}
+      </div>
+
       {/* 요약 카드 */}
       <div className="grid grid-cols-3 gap-3 mb-6">
         {[
-          { label: '활성 캠페인', value: campaigns.length, color: 'text-foreground' },
+          { label: '활성 캠페인', value: filtered.length, color: 'text-foreground' },
           { label: '전체 리드', value: totalLeads, color: 'text-brand-400' },
           { label: '오늘 유입', value: todayLeads, color: 'text-emerald-400' },
         ].map(({ label, value, color }) => (
@@ -115,14 +223,16 @@ function CampaignList({ campaigns, loading, onSelect, onRefresh }: {
       <div className="space-y-2">
         {loading
           ? Array(5).fill(0).map((_, i) => <Skeleton key={i} className="h-20 rounded-2xl" />)
-          : campaigns.length === 0
+          : filtered.length === 0
             ? (
               <Card variant="glass" className="p-12 text-center">
                 <Megaphone size={32} className="text-muted-foreground/60 mx-auto mb-3" />
-                <p className="text-muted-foreground text-sm">진행 중인 캠페인이 없습니다.</p>
+                <p className="text-muted-foreground text-sm">
+                  {campaigns.length === 0 ? '진행 중인 캠페인이 없습니다.' : '검색 결과가 없습니다.'}
+                </p>
               </Card>
             )
-            : campaigns.map(c => (
+            : filtered.map(c => (
               <button
                 key={c.campaign}
                 onClick={() => onSelect(c.campaign)}
@@ -142,10 +252,6 @@ function CampaignList({ campaigns, loading, onSelect, onRefresh }: {
                     </div>
                     <div className="flex items-center gap-3 text-xs text-muted-foreground">
                       <span className="text-brand-400 font-semibold">{c.lead_count}건</span>
-                      <span className="flex items-center gap-1">
-                        <MessageCircle size={10} />
-                        {c.chatbot_sent_count}/{c.lead_count}
-                      </span>
                       {c.landing_pages.length > 0 && (
                         <span className="flex items-center gap-1 truncate">
                           <FileText size={10} />
@@ -280,11 +386,22 @@ function LeadCard({ lead, onStatusChange, onNotesChange }: {
   )
 }
 
+const DETAIL_SORT_OPTIONS = [
+  { value: 'newest', label: '최신순' },
+  { value: 'oldest', label: '오래된순' },
+  { value: 'name', label: '이름순' },
+]
+
 function CampaignDetail({ campaign, onBack }: { campaign: string; onBack: () => void }) {
   const { selectedClinicId } = useClinic()
   const [leads, setLeads] = useState<CampaignLead[]>([])
   const [loading, setLoading] = useState(true)
   const [statusFilter, setStatusFilter] = useState<string>('all')
+  const [search, setSearch] = useState('')
+  const [dateRange, setDateRange] = useState<DateRange>({ from: undefined, to: undefined })
+  const [channelFilter, setChannelFilter] = useState('all')
+  const [sortBy, setSortBy] = useState('newest')
+  const [page, setPage] = useState(1)
 
   const fetchLeads = () => {
     setLoading(true)
@@ -298,6 +415,91 @@ function CampaignDetail({ campaign, onBack }: { campaign: string; onBack: () => 
   }
 
   useEffect(() => { fetchLeads() }, [campaign, selectedClinicId])
+
+  // 필터링 + 정렬
+  const filtered = useMemo(() => {
+    let result = leads
+
+    // 날짜 필터
+    if (dateRange.from) {
+      const from = startOfDay(dateRange.from).getTime()
+      const to = dateRange.to ? endOfDay(dateRange.to).getTime() : endOfDay(dateRange.from).getTime()
+      result = result.filter(l => {
+        const ts = l.created_at.endsWith('Z') || /[+-]\d{2}:\d{2}$/.test(l.created_at) ? l.created_at : l.created_at + 'Z'
+        const t = new Date(ts).getTime()
+        return t >= from && t <= to
+      })
+    }
+
+    // 이름/전화번호 검색
+    if (search.trim()) {
+      const q = search.trim().toLowerCase()
+      result = result.filter(l => {
+        const name = (l.custom_data?.name || l.customer?.name || '').toLowerCase()
+        const phone = l.customer?.phone_number || ''
+        return name.includes(q) || phone.includes(q)
+      })
+    }
+
+    // 채널 필터
+    if (channelFilter !== 'all') {
+      result = result.filter(l => normalizeChannel(l.utm_source || '') === channelFilter)
+    }
+
+    // 상태 필터
+    if (statusFilter !== 'all') {
+      result = result.filter(l => (l.lead_status || 'new') === statusFilter)
+    }
+
+    // 정렬
+    result = [...result].sort((a, b) => {
+      switch (sortBy) {
+        case 'oldest': return new Date(a.created_at).getTime() - new Date(b.created_at).getTime()
+        case 'name': {
+          const nameA = a.custom_data?.name || a.customer?.name || ''
+          const nameB = b.custom_data?.name || b.customer?.name || ''
+          return nameA.localeCompare(nameB, 'ko')
+        }
+        default: return new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
+      }
+    })
+
+    return result
+  }, [leads, dateRange, search, channelFilter, statusFilter, sortBy])
+
+  // 페이지네이션
+  const totalPages = Math.max(1, Math.ceil(filtered.length / LEADS_PER_PAGE))
+  const safePage = Math.min(page, totalPages)
+  const paged = filtered.slice((safePage - 1) * LEADS_PER_PAGE, safePage * LEADS_PER_PAGE)
+
+  // 필터 변경 시 1페이지로 리셋
+  useEffect(() => { setPage(1) }, [search, dateRange, channelFilter, statusFilter, sortBy])
+
+  // 상태 배지용 카운트 (상태 필터 제외, 나머지 필터 적용)
+  const filteredForStatus = useMemo(() => {
+    let result = leads
+    if (dateRange.from) {
+      const from = startOfDay(dateRange.from).getTime()
+      const to = dateRange.to ? endOfDay(dateRange.to).getTime() : endOfDay(dateRange.from).getTime()
+      result = result.filter(l => {
+        const ts = l.created_at.endsWith('Z') || /[+-]\d{2}:\d{2}$/.test(l.created_at) ? l.created_at : l.created_at + 'Z'
+        const t = new Date(ts).getTime()
+        return t >= from && t <= to
+      })
+    }
+    if (search.trim()) {
+      const q = search.trim().toLowerCase()
+      result = result.filter(l => {
+        const name = (l.custom_data?.name || l.customer?.name || '').toLowerCase()
+        const phone = l.customer?.phone_number || ''
+        return name.includes(q) || phone.includes(q)
+      })
+    }
+    if (channelFilter !== 'all') {
+      result = result.filter(l => normalizeChannel(l.utm_source || '') === channelFilter)
+    }
+    return result
+  }, [leads, dateRange, search, channelFilter])
 
   const handleStatusChange = async (leadId: number, newStatus: string) => {
     const params = new URLSearchParams()
@@ -314,7 +516,6 @@ function CampaignDetail({ campaign, onBack }: { campaign: string; onBack: () => 
       } else {
         toast.success(`상태가 '${statusLabel}'(으)로 변경되었습니다.`)
       }
-      // 로컬 상태 즉시 반영
       setLeads(prev => prev.map(l => l.id === leadId ? { ...l, lead_status: newStatus } : l))
     } else {
       toast.error('상태 변경 실패')
@@ -337,8 +538,17 @@ function CampaignDetail({ campaign, onBack }: { campaign: string; onBack: () => 
     }
   }
 
-  const sentCount = leads.filter(l => l.chatbot_sent).length
-  const consentCount = leads.filter(l => l.custom_data?.marketing_consent).length
+  const activeFilterCount = (search ? 1 : 0) + (dateRange.from ? 1 : 0) + (channelFilter !== 'all' ? 1 : 0) + (statusFilter !== 'all' ? 1 : 0) + (sortBy !== 'newest' ? 1 : 0)
+
+  // 캠페인 내 채널 목록 (동적)
+  const availableChannels = useMemo(() => {
+    const chSet = new Set<string>()
+    leads.forEach(l => {
+      const ch = normalizeChannel(l.utm_source || '')
+      if (ch !== 'Unknown') chSet.add(ch)
+    })
+    return Array.from(chSet).sort()
+  }, [leads])
 
   return (
     <>
@@ -359,11 +569,62 @@ function CampaignDetail({ campaign, onBack }: { campaign: string; onBack: () => 
         </div>
       </div>
 
-      {/* 요약 */}
+      {/* 필터 바 */}
+      <div className="flex flex-wrap items-center gap-2 mb-4">
+        <Card variant="glass" className="flex items-center px-3 py-1.5 flex-1 max-w-xs min-w-[180px]">
+          <Search size={14} className="text-muted-foreground mr-2 shrink-0" />
+          <Input
+            type="text"
+            value={search}
+            onChange={e => setSearch(e.target.value)}
+            placeholder="이름 또는 전화번호"
+            className="bg-transparent border-0 text-sm text-foreground placeholder:text-muted-foreground/60 focus-visible:ring-0 p-0 h-auto"
+          />
+          {search && (
+            <button onClick={() => setSearch('')} className="text-muted-foreground hover:text-foreground shrink-0 ml-1 cursor-pointer">
+              <X size={13} />
+            </button>
+          )}
+        </Card>
+        <DateRangePicker dateRange={dateRange} onDateRangeChange={setDateRange} />
+        {availableChannels.length > 1 && (
+          <Select value={channelFilter} onValueChange={setChannelFilter}>
+            <SelectTrigger className="w-auto min-w-[110px] h-9 bg-card border-border dark:border-white/10 text-xs">
+              <SelectValue>
+                {channelFilter === 'all' ? '채널 전체' : channelFilter}
+              </SelectValue>
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">채널 전체</SelectItem>
+              {availableChannels.map(ch => (
+                <SelectItem key={ch} value={ch}>{ch}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        )}
+        <SortSelect
+          value={sortBy}
+          onValueChange={setSortBy}
+          options={DETAIL_SORT_OPTIONS}
+        />
+        {activeFilterCount > 0 && (
+          <Button
+            variant="ghost"
+            size="sm"
+            className="h-9 px-3 text-xs text-muted-foreground hover:text-foreground"
+            onClick={() => { setSearch(''); setDateRange({ from: undefined, to: undefined }); setChannelFilter('all'); setStatusFilter('all'); setSortBy('newest') }}
+          >
+            <X size={12} className="mr-1" />
+            필터 초기화
+          </Button>
+        )}
+      </div>
+
+      {/* 상태 배지 요약 */}
       {!loading && leads.length > 0 && (
         <div className="grid grid-cols-3 sm:grid-cols-6 gap-2 mb-5">
           {Object.entries(LEAD_STATUS_CONFIG).map(([key, cfg]) => {
-            const count = leads.filter(l => (l.lead_status || 'new') === key).length
+            const count = filteredForStatus.filter(l => (l.lead_status || 'new') === key).length
             return (
               <Card
                 key={key}
@@ -379,6 +640,13 @@ function CampaignDetail({ campaign, onBack }: { campaign: string; onBack: () => 
         </div>
       )}
 
+      {/* 결과 건수 */}
+      {!loading && filtered.length > 0 && (
+        <p className="text-xs text-muted-foreground mb-3">
+          총 {filtered.length}건{filtered.length > LEADS_PER_PAGE && ` 중 ${(safePage - 1) * LEADS_PER_PAGE + 1}~${Math.min(safePage * LEADS_PER_PAGE, filtered.length)}건 표시`}
+        </p>
+      )}
+
       {/* 리드 목록 */}
       <div className="space-y-2">
         {loading
@@ -389,9 +657,62 @@ function CampaignDetail({ campaign, onBack }: { campaign: string; onBack: () => 
                 이 캠페인에서 유입된 리드가 없습니다.
               </Card>
             )
-            : (statusFilter === 'all' ? leads : leads.filter(l => (l.lead_status || 'new') === statusFilter)).map(lead => <LeadCard key={lead.id} lead={lead} onStatusChange={handleStatusChange} onNotesChange={handleNotesChange} />)
+            : filtered.length === 0
+              ? (
+                <Card variant="glass" className="p-8 text-center text-muted-foreground text-sm">
+                  검색 결과가 없습니다.
+                </Card>
+              )
+              : paged.map(lead => <LeadCard key={lead.id} lead={lead} onStatusChange={handleStatusChange} onNotesChange={handleNotesChange} />)
         }
       </div>
+
+      {/* 페이지네이션 */}
+      {totalPages > 1 && (
+        <div className="flex items-center justify-center gap-1 mt-4">
+          <Button
+            variant="ghost"
+            size="sm"
+            disabled={safePage <= 1}
+            onClick={() => setPage(p => p - 1)}
+            className="h-8 px-2 text-xs"
+          >
+            이전
+          </Button>
+          {Array.from({ length: totalPages }, (_, i) => i + 1)
+            .filter(p => p === 1 || p === totalPages || Math.abs(p - safePage) <= 2)
+            .reduce<(number | 'ellipsis')[]>((acc, p, i, arr) => {
+              if (i > 0 && p - (arr[i - 1] as number) > 1) acc.push('ellipsis')
+              acc.push(p)
+              return acc
+            }, [])
+            .map((item, i) =>
+              item === 'ellipsis'
+                ? <span key={`e${i}`} className="px-1 text-xs text-muted-foreground">...</span>
+                : (
+                  <Button
+                    key={item}
+                    variant={safePage === item ? 'default' : 'ghost'}
+                    size="sm"
+                    onClick={() => setPage(item as number)}
+                    className="h-8 w-8 p-0 text-xs"
+                  >
+                    {item}
+                  </Button>
+                )
+            )
+          }
+          <Button
+            variant="ghost"
+            size="sm"
+            disabled={safePage >= totalPages}
+            onClick={() => setPage(p => p + 1)}
+            className="h-8 px-2 text-xs"
+          >
+            다음
+          </Button>
+        </div>
+      )}
     </>
   )
 }

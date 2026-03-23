@@ -746,8 +746,7 @@ function PaymentSection({ customerId, payments, onSave, isSuperAdmin, clinicId, 
 
 // F: 탭→섹션 전환 (예약/상담/결제를 한 화면에 세로 배치)
 // G: 목록에 상담 횟수 + 상태 표시
-function BookingRow({ booking, onRefresh, isSuperAdmin, clinicId }: { booking: any; onRefresh: () => void; isSuperAdmin?: boolean; clinicId?: number | null }) {
-  const [open, setOpen] = useState(false)
+function BookingRow({ booking, onRefresh, isSuperAdmin, clinicId, isOpen, onToggle }: { booking: any; onRefresh: () => void; isSuperAdmin?: boolean; clinicId?: number | null; isOpen: boolean; onToggle: () => void }) {
   const [expandedSection, setExpandedSection] = useState<'booking' | 'consult' | 'payment' | null>(null)
   const [changingStatus, setChangingStatus] = useState(false)
   const [treatmentDialogOpen, setTreatmentDialogOpen] = useState(false)
@@ -792,13 +791,11 @@ function BookingRow({ booking, onRefresh, isSuperAdmin, clinicId }: { booking: a
       <button
         className="w-full flex items-center gap-4 px-5 py-4 hover:bg-muted dark:hover:bg-white/[0.03] transition-colors text-left"
         onClick={() => {
-          setOpen(v => {
-            if (!v) setExpandedSection('booking')
-            return !v
-          })
+          if (!isOpen) setExpandedSection('booking')
+          onToggle()
         }}
-        aria-expanded={open}
-        aria-label={`${customer?.name || '고객'} 상세정보 ${open ? '접기' : '펼치기'}`}
+        aria-expanded={isOpen}
+        aria-label={`${customer?.name || '고객'} 상세정보 ${isOpen ? '접기' : '펼치기'}`}
       >
         <div className="w-9 h-9 rounded-full bg-brand-600/20 flex items-center justify-center text-brand-400 font-bold text-sm shrink-0">
           {customer?.name?.[0] || '?'}
@@ -855,11 +852,11 @@ function BookingRow({ booking, onRefresh, isSuperAdmin, clinicId }: { booking: a
             ? <span className="text-sm font-semibold text-emerald-600 dark:text-emerald-400">₩{totalPayment.toLocaleString()}</span>
             : <span className="text-muted-foreground/60 text-sm">-</span>}
         </div>
-        {open ? <ChevronUp size={16} className="text-muted-foreground shrink-0" /> : <ChevronDown size={16} className="text-muted-foreground shrink-0" />}
+        {isOpen ? <ChevronUp size={16} className="text-muted-foreground shrink-0" /> : <ChevronDown size={16} className="text-muted-foreground shrink-0" />}
       </button>
 
       {/* 아코디언 섹션 레이아웃 */}
-      {open && (
+      {isOpen && (
         <div className="border-t border-border dark:border-white/5 px-5 py-3 space-y-1">
           {/* 섹션 1: 예약 정보 (아코디언) */}
           <div className="rounded-lg border border-border dark:border-white/5 overflow-hidden">
@@ -1046,6 +1043,7 @@ export default function PatientsPage() {
     source: 'walk-in', notes: '',
   })
   const [creating, setCreating] = useState(false)
+  const [openBookingId, setOpenBookingId] = useState<number | null>(null)
 
   const initCreateForm = () => {
     const now = new Date()
@@ -1496,7 +1494,7 @@ export default function PatientsPage() {
               </Card>
               <div className="space-y-2 min-w-[720px]">
                 {filtered.map(b => (
-                  <BookingRow key={b.id} booking={b} onRefresh={fetchBookings} isSuperAdmin={isSuperAdmin} clinicId={selectedClinicId} />
+                  <BookingRow key={b.id} booking={b} onRefresh={fetchBookings} isSuperAdmin={isSuperAdmin} clinicId={selectedClinicId} isOpen={openBookingId === b.id} onToggle={() => setOpenBookingId(prev => prev === b.id ? null : b.id)} />
                 ))}
               </div>
             </div>
