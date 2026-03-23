@@ -4,7 +4,7 @@ import { usePathname } from 'next/navigation'
 import { signOut } from 'next-auth/react'
 import { useSession } from 'next-auth/react'
 import { useState, useEffect } from 'react'
-import { LayoutDashboard, Users, BarChart2, LogOut, Activity, Calendar, Film, Link2, Scan, Newspaper, Settings, ChevronUp, User, FileEdit, ClipboardList, LucideIcon, Building2, UserCog, FileText, Image, Megaphone, TrendingUp, Shield, KeyRound } from 'lucide-react'
+import { LayoutDashboard, Users, BarChart2, LogOut, Activity, Calendar, Film, Link2, Scan, Newspaper, Settings, ChevronUp, User, FileEdit, ClipboardList, LucideIcon, Building2, UserCog, FileText, Image as ImageIcon, Megaphone, TrendingUp, Shield, KeyRound } from 'lucide-react'
 import { useClinic } from './ClinicContext'
 import { Button } from '@/components/ui/button'
 import {
@@ -89,6 +89,14 @@ const menuGroups: MenuGroup[] = [
 // 비밀번호 변경 다이얼로그 (lazy import 불필요 — 사이드바는 항상 마운트)
 import PasswordChangeDialog from '@/components/PasswordChangeDialog'
 import ThemeToggle from '@/components/ThemeToggle'
+
+function navLinkClass(isActive: boolean): string {
+  return `flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-all ${
+    isActive
+      ? 'bg-brand-600/20 text-brand-400'
+      : 'text-muted-foreground hover:text-foreground hover:bg-muted'
+  }`
+}
 
 export default function Sidebar({ onClose }: { onClose?: () => void }) {
   const pathname = usePathname()
@@ -200,10 +208,7 @@ export default function Sidebar({ onClose }: { onClose?: () => void }) {
                       key={href}
                       href={href}
                       onClick={onClose}
-                      className={`flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-all ${isActive
-                        ? 'bg-brand-600/20 text-brand-400'
-                        : 'text-muted-foreground hover:text-foreground hover:bg-muted'
-                        }`}
+                      className={navLinkClass(isActive)}
                     >
                       <Icon size={17} />
                       {label}
@@ -224,10 +229,7 @@ export default function Sidebar({ onClose }: { onClose?: () => void }) {
             <Link
               href="/staff"
               onClick={onClose}
-              className={`flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-all ${pathname === '/staff'
-                ? 'bg-brand-600/20 text-brand-400'
-                : 'text-muted-foreground hover:text-foreground hover:bg-muted'
-                }`}
+              className={navLinkClass(pathname === '/staff')}
             >
               <UserCog size={17} />
               담당자 관리
@@ -243,78 +245,50 @@ export default function Sidebar({ onClose }: { onClose?: () => void }) {
             </div>
             <div className="space-y-1">
               <Link
-                href="/admin/ad-creatives"
-                onClick={onClose}
-                className={`flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-all ${pathname === '/admin/ad-creatives'
-                  ? 'bg-brand-600/20 text-brand-400'
-                  : 'text-muted-foreground hover:text-foreground hover:bg-muted'
-                  }`}
+                href="/admin/ad-creatives" onClick={onClose}
+                className={navLinkClass(pathname === '/admin/ad-creatives')}
               >
-                <Image size={17} />
+                <ImageIcon size={17} />
                 광고 소재
               </Link>
               <Link
-                href="/admin/landing-pages"
-                onClick={onClose}
-                className={`flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-all ${pathname === '/admin/landing-pages'
-                  ? 'bg-brand-600/20 text-brand-400'
-                  : 'text-muted-foreground hover:text-foreground hover:bg-muted'
-                  }`}
+                href="/admin/landing-pages" onClick={onClose}
+                className={navLinkClass(pathname === '/admin/landing-pages')}
               >
                 <FileText size={17} />
                 랜딩 페이지
               </Link>
               <Link
-                href="/admin/clinics"
-                onClick={onClose}
-                className={`flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-all ${pathname === '/admin/clinics'
-                  ? 'bg-brand-600/20 text-brand-400'
-                  : 'text-muted-foreground hover:text-foreground hover:bg-muted'
-                  }`}
+                href="/admin/clinics" onClick={onClose}
+                className={navLinkClass(pathname === '/admin/clinics')}
               >
                 <Building2 size={17} />
                 병원 관리
               </Link>
               <Link
-                href="/admin/users"
-                onClick={onClose}
-                className={`flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-all ${pathname === '/admin/users'
-                  ? 'bg-brand-600/20 text-brand-400'
-                  : 'text-muted-foreground hover:text-foreground hover:bg-muted'
-                  }`}
+                href="/admin/users" onClick={onClose}
+                className={navLinkClass(pathname === '/admin/users')}
               >
                 <UserCog size={17} />
                 계정 관리
               </Link>
               <Link
-                href="/utm"
-                onClick={onClose}
-                className={`flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-all ${pathname.startsWith('/utm')
-                  ? 'bg-brand-600/20 text-brand-400'
-                  : 'text-muted-foreground hover:text-foreground hover:bg-muted'
-                  }`}
+                href="/utm" onClick={onClose}
+                className={navLinkClass(pathname.startsWith('/utm'))}
               >
                 <Link2 size={17} />
                 UTM 생성
               </Link>
               <Link
-                href="/lead-form"
-                onClick={onClose}
-                className={`flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-all ${pathname === '/lead-form'
-                  ? 'bg-brand-600/20 text-brand-400'
-                  : 'text-muted-foreground hover:text-foreground hover:bg-muted'
-                  }`}
+                href="/lead-form" onClick={onClose}
+                className={navLinkClass(pathname === '/lead-form')}
               >
                 <ClipboardList size={17} />
                 리드 수집
               </Link>
               <Link
-                href="/admin/login-logs"
-                onClick={onClose}
-                className={`flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-all ${pathname === '/admin/login-logs'
-                  ? 'bg-brand-600/20 text-brand-400'
-                  : 'text-muted-foreground hover:text-foreground hover:bg-muted'
-                  }`}
+                href="/admin/login-logs" onClick={onClose}
+                className={navLinkClass(pathname === '/admin/login-logs')}
               >
                 <Shield size={17} />
                 로그인 로그

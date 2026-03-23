@@ -22,7 +22,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
         {/* 모바일 오버레이 */}
         {sidebarOpen && (
           <div
-            className="fixed inset-0 z-40 bg-black/60 dark:bg-black/60 md:hidden backdrop-blur-sm transition-all"
+            className="fixed inset-0 z-40 bg-black/60 dark:bg-black/60 md:hidden backdrop-blur-sm transition-opacity duration-300 ease-in-out"
             onClick={() => setSidebarOpen(false)}
           />
         )}

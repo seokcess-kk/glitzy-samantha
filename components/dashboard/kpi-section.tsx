@@ -83,7 +83,7 @@ export function KpiSection({ data, loading, onNavigate }: KpiSectionProps) {
   }))
 
   return (
-    <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-2 md:gap-3 mb-6 md:mb-8">
+    <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3 mb-6 md:mb-8">
       {cards.map((card) => (
         <StatsCard
           key={card.label}

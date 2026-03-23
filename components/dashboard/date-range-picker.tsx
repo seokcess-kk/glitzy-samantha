@@ -69,7 +69,7 @@ export function DateRangePicker({ dateRange, onDateRangeChange }: DateRangePicke
               key={p.label}
               variant="ghost"
               size="sm"
-              className="h-7 px-2.5 text-xs text-muted-foreground hover:text-foreground hover:bg-muted dark:hover:bg-white/10"
+              className="h-8 px-3 text-xs text-muted-foreground hover:text-foreground hover:bg-muted dark:hover:bg-white/10"
               onClick={() => handlePreset(p.days)}
             >
               {p.label}

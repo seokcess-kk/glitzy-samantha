@@ -25,12 +25,16 @@ export function StatsCard({ label, value, loading, icon: Icon, trend, onClick, s
     <Card
       variant="glass"
       className={`${isLg ? 'p-5 md:p-6' : 'p-4 md:p-5'} h-full animate-fade-in-up overflow-hidden ${
-        clickable ? 'cursor-pointer hover:border-border dark:hover:border-white/20 hover:bg-muted/30 dark:hover:bg-white/[0.03] transition-all' : ''
+        clickable ? 'cursor-pointer hover:border-border dark:hover:border-white/20 hover:bg-muted/30 dark:hover:bg-white/[0.03] transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2' : ''
       }`}
       onClick={onClick}
+      role={clickable ? 'button' : undefined}
+      tabIndex={clickable ? 0 : undefined}
+      onKeyDown={clickable ? (e: React.KeyboardEvent) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); onClick?.() } } : undefined}
+      aria-label={clickable ? `${label}: ${value}` : undefined}
     >
       <div className="flex items-center justify-between mb-3">
-        <p className={`${isLg ? 'text-xs' : 'text-[11px]'} text-muted-foreground font-medium truncate`}>
+        <p className="text-xs text-muted-foreground font-medium truncate">
           {label}
         </p>
         {Icon && <Icon size={isLg ? 16 : 14} className="text-muted-foreground/70 shrink-0" />}
@@ -43,7 +47,7 @@ export function StatsCard({ label, value, loading, icon: Icon, trend, onClick, s
         </p>
       )}
       {subtitle && !loading && (
-        <p className={`text-[11px] truncate ${
+        <p className={`text-xs truncate ${
           subtitleColor === 'positive' ? 'text-emerald-500 dark:text-emerald-400' :
           subtitleColor === 'negative' ? 'text-rose-500 dark:text-rose-400' :
           'text-muted-foreground'

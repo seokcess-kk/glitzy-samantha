@@ -20,7 +20,7 @@ const badgeVariants = cva(
         google: "border-transparent bg-red-100 text-red-700 dark:bg-red-500/25 dark:text-red-300",
         tiktok: "border-transparent bg-pink-100 text-pink-700 dark:bg-pink-500/25 dark:text-pink-300",
         naver: "border-transparent bg-green-100 text-green-700 dark:bg-green-500/25 dark:text-green-300",
-        kakao: "border-transparent bg-yellow-100 text-yellow-700 dark:bg-yellow-500/25 dark:text-yellow-300",
+        kakao: "border-transparent bg-yellow-100 text-yellow-800 dark:bg-yellow-500/25 dark:text-yellow-300",
         // 상태별 variant
         success: "border-transparent bg-emerald-100 text-emerald-700 dark:bg-emerald-500/25 dark:text-emerald-300",
         warning: "border-transparent bg-amber-100 text-amber-700 dark:bg-amber-500/25 dark:text-amber-300",

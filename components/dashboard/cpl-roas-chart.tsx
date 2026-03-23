@@ -74,7 +74,7 @@ export function CplRoasChart({ cplData, roasData, loading }: CplRoasChartProps) 
       <Card variant="glass" className="p-5">
         <div className="flex items-center justify-between mb-1">
           <h2 className="text-sm font-semibold text-foreground">매체별 CPL</h2>
-          <span className="text-[11px] text-muted-foreground">광고 + 콘텐츠</span>
+          <span className="text-xs text-muted-foreground">광고 + 콘텐츠</span>
         </div>
         <p className="text-xs text-muted-foreground mb-4">DB 1건 획득 비용 (낮을수록 효율적)</p>
         {cplData.length > 0 ? (

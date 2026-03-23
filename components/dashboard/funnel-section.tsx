@@ -38,13 +38,22 @@ const STAGE_LINKS: Record<string, string> = {
 
 const NODE_SIZE = 40
 
+// 디자인 토큰 — tailwind.config.ts brand 색상과 동기화
+const COLORS = {
+  brand: '#6366f1',      // brand-500
+  brandLight: '#818cf8', // brand-400
+  positive: '#22c55e',   // emerald-500
+  warning: '#eab308',    // yellow-500
+  negative: '#ef4444',   // red-500
+} as const
+
 /** 직전 단계 대비 전환율 기준 커넥터 색상 */
 function getSegmentColor(prevCount: number, currentCount: number): string {
-  if (prevCount === 0) return '#6366f1'
+  if (prevCount === 0) return COLORS.brand
   const rate = (currentCount / prevCount) * 100
-  if (rate >= 70) return '#22c55e'
-  if (rate >= 50) return '#eab308'
-  return '#ef4444'
+  if (rate >= 70) return COLORS.positive
+  if (rate >= 50) return COLORS.warning
+  return COLORS.negative
 }
 
 /** 노드 배경 opacity — 0명이면 연하게 */
@@ -116,7 +125,7 @@ function FunnelProgress({
                   />
                   {prevStageRate && (
                     <span
-                      className="absolute -top-4 left-1/2 -translate-x-1/2 text-[10px] font-medium tabular-nums whitespace-nowrap"
+                      className="absolute -top-4 left-1/2 -translate-x-1/2 text-xs font-medium tabular-nums whitespace-nowrap"
                       style={{ color: segColor }}
                     >
                       {prevStageRate}%
@@ -132,35 +141,48 @@ function FunnelProgress({
         <div className="relative flex justify-between">
           {stages.map((stage, i) => (
             <div key={stage.stage} className="flex flex-col items-center" style={{ minWidth: NODE_SIZE + 16 }}>
-              <Link href={STAGE_LINKS[stage.stage] || '#'}>
-                <div
-                  className="rounded-full flex items-center justify-center font-bold text-white dark:text-white cursor-pointer
-                    transition-all duration-200 hover:scale-110 hover:ring-2 hover:ring-white/20 hover:shadow-lg hover:shadow-brand-500/20"
-                  style={{
-                    width: NODE_SIZE,
-                    height: NODE_SIZE,
-                    background: `linear-gradient(135deg, #6366f1, #818cf8)`,
-                    opacity: getNodeOpacity(stage.count),
-                    fontSize: '13px',
-                  }}
-                  onMouseEnter={(e) => {
-                    const rect = e.currentTarget.getBoundingClientRect()
-                    const containerRect = containerRef.current?.getBoundingClientRect()
-                    if (containerRect) {
-                      setTooltip({
-                        index: i,
-                        x: rect.left - containerRect.left + rect.width / 2,
-                        y: rect.bottom - containerRect.top + 8,
-                      })
-                    }
-                  }}
-                  onMouseLeave={() => setTooltip(null)}
-                >
-                  {stage.count}
-                </div>
+              <Link
+                href={STAGE_LINKS[stage.stage] || '#'}
+                aria-label={`${stage.label}: ${stage.count}명 (리드 대비 ${stage.rate}%)`}
+                className="rounded-full flex items-center justify-center font-bold text-white dark:text-white cursor-pointer
+                  transition-all duration-200 hover:scale-110 hover:ring-2 hover:ring-white/20 hover:shadow-lg hover:shadow-brand-500/20
+                  focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+                style={{
+                  width: NODE_SIZE,
+                  height: NODE_SIZE,
+                  background: `linear-gradient(135deg, ${COLORS.brand}, ${COLORS.brandLight})`,
+                  opacity: getNodeOpacity(stage.count),
+                  fontSize: '13px',
+                }}
+                onClick={(e) => {
+                  const rect = e.currentTarget.getBoundingClientRect()
+                  const containerRect = containerRef.current?.getBoundingClientRect()
+                  if (containerRect) {
+                    e.preventDefault()
+                    setTooltip(prev => prev?.index === i ? null : {
+                      index: i,
+                      x: rect.left - containerRect.left + rect.width / 2,
+                      y: rect.bottom - containerRect.top + 8,
+                    })
+                  }
+                }}
+                onMouseEnter={(e) => {
+                  const rect = e.currentTarget.getBoundingClientRect()
+                  const containerRect = containerRef.current?.getBoundingClientRect()
+                  if (containerRect) {
+                    setTooltip({
+                      index: i,
+                      x: rect.left - containerRect.left + rect.width / 2,
+                      y: rect.bottom - containerRect.top + 8,
+                    })
+                  }
+                }}
+                onMouseLeave={() => setTooltip(null)}
+              >
+                {stage.count}
               </Link>
               <p className="text-xs font-medium text-foreground/80 mt-2">{stage.label}</p>
-              <p className="text-[11px] text-muted-foreground tabular-nums">{stage.rate}%</p>
+              <p className="text-xs text-muted-foreground tabular-nums">{stage.rate}%</p>
             </div>
           ))}
         </div>
@@ -185,7 +207,7 @@ function FunnelProgress({
       <div className="md:hidden space-y-0">
         {stages.map((stage, i) => {
           const segColor =
-            i > 0 ? getSegmentColor(stages[i - 1].count, stage.count) : '#6366f1'
+            i > 0 ? getSegmentColor(stages[i - 1].count, stage.count) : COLORS.brand
           const prevStageRate =
             i > 0 && stages[i - 1].count > 0
               ? ((stage.count / stages[i - 1].count) * 100).toFixed(1)
@@ -205,7 +227,7 @@ function FunnelProgress({
                   />
                   {prevStageRate && (
                     <span
-                      className="text-[10px] font-medium tabular-nums"
+                      className="text-xs font-medium tabular-nums"
                       style={{ color: segColor }}
                     >
                       {prevStageRate}%
@@ -224,7 +246,7 @@ function FunnelProgress({
                   style={{
                     width: NODE_SIZE,
                     height: NODE_SIZE,
-                    background: `linear-gradient(135deg, #6366f1, #818cf8)`,
+                    background: `linear-gradient(135deg, ${COLORS.brand}, ${COLORS.brandLight})`,
                     opacity: getNodeOpacity(stage.count),
                     fontSize: '13px',
                   }}
@@ -257,7 +279,7 @@ function FunnelProgress({
               className="h-full rounded-full transition-all duration-700 ease-out"
               style={{
                 width: `${Math.min(totalRate, 100)}%`,
-                background: 'linear-gradient(90deg, #6366f1, #22c55e)',
+                background: `linear-gradient(90deg, ${COLORS.brand}, ${COLORS.positive})`,
               }}
             />
           </div>
@@ -287,7 +309,7 @@ function FunnelTooltip({
       style={style}
     >
       <p className="text-xs font-semibold text-foreground mb-1">{stage.label}</p>
-      <div className="space-y-0.5 text-[11px]">
+      <div className="space-y-0.5 text-xs">
         <p className="text-foreground/80">
           <span className="text-muted-foreground">인원:</span>{' '}
           <span className="font-medium tabular-nums">{stage.count}명</span>

@@ -9,7 +9,8 @@ import {
 } from '@/components/charts'
 import { TrendingUp } from 'lucide-react'
 
-const BRAND = '#6366f1'
+// 디자인 토큰 — tailwind.config.ts와 동기화
+const BRAND = '#6366f1'      // brand-500
 const LEAD_COLOR = '#34d399' // emerald-400
 
 const fmtKrw = (v: number) => `₩${(v / 10000).toFixed(0)}만`
@@ -96,7 +97,20 @@ export function SpendLeadTrend({ data, loading, periodLabel }: SpendLeadTrendPro
   return (
     <Card variant="glass" className="p-5 w-full">
       <div className="flex items-center justify-between mb-4">
-        <h2 className="text-sm font-semibold text-foreground">광고비 · 리드 추이</h2>
+        <div>
+          <h2 className="text-sm font-semibold text-foreground">광고비 · 리드 추이</h2>
+          {/* 모바일 인라인 범례 */}
+          <div className="flex items-center gap-3 mt-1 md:hidden">
+            <span className="flex items-center gap-1 text-xs text-muted-foreground">
+              <span className="w-2 h-2 rounded-full shrink-0" style={{ background: BRAND }} />
+              광고비
+            </span>
+            <span className="flex items-center gap-1 text-xs text-muted-foreground">
+              <span className="w-2 h-2 rounded-full shrink-0" style={{ background: LEAD_COLOR }} />
+              리드 수
+            </span>
+          </div>
+        </div>
         <span className="text-xs text-muted-foreground">{label} (일별)</span>
       </div>
       {loading ? (

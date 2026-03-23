@@ -78,7 +78,7 @@ export function TreatmentPie({ data, loading }: TreatmentPieProps) {
             </ResponsiveContainer>
             <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
               <div className="text-center">
-                <p className="text-[10px] text-muted-foreground">총 매출</p>
+                <p className="text-xs text-muted-foreground">총 매출</p>
                 <p className="text-sm font-bold text-foreground tabular-nums">{fmtKrw(total)}</p>
               </div>
             </div>
