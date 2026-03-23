@@ -10,11 +10,13 @@
 예: "API 응답 타입을 변경할 때 프론트엔드 타입도 반드시 함께 수정할 것"
 -->
 
-# MMI (Medical Marketing Intelligence)
+# Samantha — Medical Marketing Intelligence
 
 병원 마케팅 인텔리전스 멀티테넌트 SaaS 대시보드. 슈퍼어드민이 여러 병원 고객사를 통합 관리.
 
+**서비스명**: Samantha (브랜드 가이드: [docs/BRAND.md](docs/BRAND.md))
 **기술 스택**: Next.js 14 (App Router) · NextAuth.js (JWT) · Supabase (PostgreSQL) · Tailwind + shadcn/ui · Recharts · Sonner · Upstash QStash
+**컬러 시스템**: Blue 기반 (`brand-500: #3b82f6`, `brand-600: #2563eb`) — 다크모드 기본
 
 ## 빌드 & 실행
 
@@ -86,6 +88,7 @@ npm run analyze      # 번들 크기 분석
 
 ### 파일/폴더 구조 규칙
 - 새 대시보드 페이지: `app/(dashboard)/페이지명/page.tsx`
+- 페이지별 브라우저 탭 제목: `app/(dashboard)/페이지명/layout.tsx` (thin server 래퍼로 `metadata.title` 설정 — `'use client'` 페이지에서 metadata export 불가하므로)
 - 새 API 라우트: `app/api/리소스명/route.ts` (CRUD), `app/api/리소스명/[id]/route.ts` (개별)
 - 새 공용 컴포넌트: `components/common/컴포넌트명.tsx` → `components/common/index.ts`에 re-export
 - 페이지 전용 컴포넌트: `components/페이지명/컴포넌트명.tsx`
@@ -177,6 +180,7 @@ npm run analyze      # 번들 크기 분석
 | [docs/SPEC.md](docs/SPEC.md) | 프로젝트 요구사항 명세 |
 | [docs/API.md](docs/API.md) | REST API 엔드포인트 상세 |
 | [docs/COMPONENTS.md](docs/COMPONENTS.md) | UI 컴포넌트 사용 가이드 |
+| [docs/BRAND.md](docs/BRAND.md) | Samantha 브랜드 가이드 (컬러, 타이포, 심볼) |
 | [docs/WORK_LOG.md](docs/WORK_LOG.md) | 작업 로그 인덱스 |
 | `app/api/CLAUDE.md` | API 라우트 작성 규칙 |
 | `components/CLAUDE.md` | UI 컴포넌트/레이아웃 규칙 |
@@ -207,3 +211,6 @@ npm run analyze      # 번들 크기 분석
 | 2026-03-23 | 예약/결제 관리 필터·정렬 추가: DateRangePicker, 상태/유입경로/결제 필터, SortSelect 공용 컴포넌트(`components/common/sort-select.tsx`) |
 | 2026-03-23 | 캠페인 리드 필터·페이지네이션: 목록/상세 검색·채널·정렬, DateRangePicker, 50건 페이지네이션, `normalizeChannel` 재사용(`lib/channel.ts`) |
 | 2026-03-23 | UI/UX 감사 P0~P3: `prefers-reduced-motion`, StatsCard/퍼널/상태배지 키보드 접근성, 하드코딩 hex→COLORS 상수, `text-[10px]`→`text-xs` 상향, `navLinkClass()` 추출, Firefox 스크롤바, transition `duration-200` 통일, `as any` 제거 |
+| 2026-03-23 | 페이지별 브라우저 탭 제목: thin server layout.tsx 래퍼 패턴 (18개 페이지), `metadata.title.template` 설정 |
+| 2026-03-23 | Samantha 브랜드: 서비스명 확정, 컬러 마이그레이션 Indigo→Blue (15개 파일), `docs/BRAND.md` 생성 |
+| 2026-03-23 | agency_staff 메뉴 권한에 키워드 관리 항목 추가 |
