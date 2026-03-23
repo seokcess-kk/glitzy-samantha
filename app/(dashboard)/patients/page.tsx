@@ -1,6 +1,6 @@
 'use client'
-import { useState, useEffect, useCallback } from 'react'
-import { Search, Plus, ChevronDown, ChevronUp, Check, AlertCircle, Calendar, List, ChevronLeft, ChevronRight, Clock, Phone, Edit2, Trash2, X, Settings } from 'lucide-react'
+import { useState, useEffect, useCallback, useMemo } from 'react'
+import { Search, Plus, ChevronDown, ChevronUp, Check, AlertCircle, Calendar, List, ChevronLeft, ChevronRight, Clock, Phone, Edit2, Trash2, X, Settings, Filter } from 'lucide-react'
 import { useSession } from 'next-auth/react'
 import { useClinic } from '@/components/ClinicContext'
 import { toast } from 'sonner'
@@ -33,8 +33,11 @@ import {
   DialogFooter,
 } from '@/components/ui/dialog'
 import { Textarea } from '@/components/ui/textarea'
-import { PageHeader, ChannelBadge } from '@/components/common'
+import { PageHeader, ChannelBadge, SortSelect } from '@/components/common'
+import { DateRangePicker } from '@/components/dashboard/date-range-picker'
 import { formatDate, formatDateTime, formatTime, toUtcDate } from '@/lib/date'
+import { DateRange } from 'react-day-picker'
+import { subDays, startOfDay } from 'date-fns'
 
 // 상수
 const STATUS_CONFIG: Record<string, { label: string; variant: 'info' | 'success' | 'default' | 'secondary' | 'destructive' }> = {
@@ -1029,6 +1032,10 @@ export default function PatientsPage() {
   const [calView, setCalView] = useState<'month' | 'week' | 'day'>('month')
   const [search, setSearch] = useState('')
   const [statusFilter, setStatusFilter] = useState('all')
+  const [sourceFilter, setSourceFilter] = useState('all')
+  const [paymentFilter, setPaymentFilter] = useState<'all' | 'paid' | 'unpaid'>('all')
+  const [sortBy, setSortBy] = useState<'newest' | 'oldest' | 'name' | 'payment'>('newest')
+  const [dateRange, setDateRange] = useState<DateRange>({ from: subDays(startOfDay(new Date()), 30), to: startOfDay(new Date()) })
   const [currentMonth, setCurrentMonth] = useState(new Date())
   const [selectedDate, setSelectedDate] = useState<string | null>(null)
   // 예약 등록 다이얼로그
@@ -1108,11 +1115,68 @@ export default function PatientsPage() {
     }
   }
 
-  const filtered = bookings.filter(b => {
-    const matchSearch = !search || b.customer?.name?.includes(search) || b.customer?.phone_number?.includes(search)
-    const matchStatus = statusFilter === 'all' || b.status === statusFilter
-    return matchSearch && matchStatus
-  })
+  // 유입 경로 목록 (필터 드롭다운용)
+  const sourceOptions = useMemo(() => {
+    const sources = new Set<string>()
+    for (const b of bookings) {
+      const leads = b.customer?.leads || []
+      const lead = leads.find((l: any) => l.utm_source) || leads[0]
+      const src = lead?.utm_source || b.customer?.first_source
+      if (src) sources.add(src)
+    }
+    return Array.from(sources).sort()
+  }, [bookings])
+
+  const filtered = useMemo(() => {
+    const result = bookings.filter(b => {
+      // 검색
+      const matchSearch = !search || b.customer?.name?.includes(search) || b.customer?.phone_number?.includes(search)
+      // 상태
+      const matchStatus = statusFilter === 'all' || b.status === statusFilter
+      // 날짜 범위
+      let matchDate = true
+      if (dateRange.from && b.booking_datetime) {
+        const bDate = toUtcDate(b.booking_datetime)
+        const from = startOfDay(dateRange.from)
+        const to = dateRange.to ? new Date(startOfDay(dateRange.to).getTime() + 86400000 - 1) : new Date(from.getTime() + 86400000 - 1)
+        matchDate = bDate >= from && bDate <= to
+      }
+      // 유입 경로
+      let matchSource = true
+      if (sourceFilter !== 'all') {
+        const leads = b.customer?.leads || []
+        const lead = leads.find((l: any) => l.utm_source) || leads[0]
+        const src = lead?.utm_source || b.customer?.first_source || ''
+        matchSource = src === sourceFilter
+      }
+      // 결제 여부
+      let matchPayment = true
+      if (paymentFilter !== 'all') {
+        const totalPay = (b.customer?.payments || []).reduce((s: number, p: any) => s + Number(p.payment_amount), 0)
+        matchPayment = paymentFilter === 'paid' ? totalPay > 0 : totalPay === 0
+      }
+      return matchSearch && matchStatus && matchDate && matchSource && matchPayment
+    })
+    // 정렬
+    result.sort((a, b) => {
+      if (sortBy === 'oldest') return new Date(a.booking_datetime || 0).getTime() - new Date(b.booking_datetime || 0).getTime()
+      if (sortBy === 'name') return (a.customer?.name || '').localeCompare(b.customer?.name || '', 'ko')
+      if (sortBy === 'payment') {
+        const pa = (a.customer?.payments || []).reduce((s: number, p: any) => s + Number(p.payment_amount), 0)
+        const pb = (b.customer?.payments || []).reduce((s: number, p: any) => s + Number(p.payment_amount), 0)
+        return pb - pa
+      }
+      // newest (default)
+      return new Date(b.booking_datetime || 0).getTime() - new Date(a.booking_datetime || 0).getTime()
+    })
+    return result
+  }, [bookings, search, statusFilter, dateRange, sourceFilter, paymentFilter, sortBy])
+
+  const activeFilterCount = [
+    statusFilter !== 'all',
+    sourceFilter !== 'all',
+    paymentFilter !== 'all',
+  ].filter(Boolean).length
 
   const stats = {
     total: bookings.length,
@@ -1293,8 +1357,9 @@ export default function PatientsPage() {
 
       {view === 'list' ? (
         <>
-          <div className="flex items-center gap-2 mb-4">
-            <Card variant="glass" className="flex items-center px-3 py-1.5 flex-1 max-w-xs">
+          {/* 필터 바 */}
+          <div className="flex flex-wrap items-center gap-2 mb-4">
+            <Card variant="glass" className="flex items-center px-3 py-1.5 flex-1 max-w-xs min-w-[180px]">
               <Search size={14} className="text-muted-foreground mr-2 shrink-0" />
               <Input
                 type="text"
@@ -1304,22 +1369,23 @@ export default function PatientsPage() {
                 className="bg-transparent border-0 text-sm text-foreground placeholder:text-muted-foreground/60 focus-visible:ring-0 p-0 h-auto"
               />
               {search && (
-                <button onClick={() => setSearch('')} className="text-muted-foreground hover:text-foreground shrink-0 ml-1">
+                <button onClick={() => setSearch('')} className="text-muted-foreground hover:text-foreground shrink-0 ml-1 cursor-pointer">
                   <X size={13} />
                 </button>
               )}
             </Card>
+            <DateRangePicker dateRange={dateRange} onDateRangeChange={setDateRange} />
             <Select value={statusFilter} onValueChange={setStatusFilter}>
-              <SelectTrigger className="w-auto min-w-[120px] h-9 bg-card border-border dark:border-white/10">
+              <SelectTrigger className="w-auto min-w-[120px] h-9 bg-card border-border dark:border-white/10 text-xs">
                 <SelectValue>
                   {statusFilter === 'all'
-                    ? `전체 (${bookings.length})`
-                    : `${STATUS_CONFIG[statusFilter]?.label} (${bookings.filter(b => b.status === statusFilter).length})`
+                    ? `상태 전체`
+                    : STATUS_CONFIG[statusFilter]?.label
                   }
                 </SelectValue>
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="all">전체 ({bookings.length})</SelectItem>
+                <SelectItem value="all">상태 전체 ({bookings.length})</SelectItem>
                 {Object.entries(STATUS_CONFIG).map(([k, v]) => (
                   <SelectItem key={k} value={k}>
                     <span className="flex items-center gap-2">
@@ -1330,6 +1396,63 @@ export default function PatientsPage() {
                 ))}
               </SelectContent>
             </Select>
+            {sourceOptions.length > 0 && (
+              <Select value={sourceFilter} onValueChange={setSourceFilter}>
+                <SelectTrigger className="w-auto min-w-[110px] h-9 bg-card border-border dark:border-white/10 text-xs">
+                  <SelectValue>
+                    {sourceFilter === 'all' ? '유입경로' : sourceFilter}
+                  </SelectValue>
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">유입경로 전체</SelectItem>
+                  {sourceOptions.map(src => (
+                    <SelectItem key={src} value={src}>{src}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            )}
+            <Select value={paymentFilter} onValueChange={v => setPaymentFilter(v as 'all' | 'paid' | 'unpaid')}>
+              <SelectTrigger className="w-auto min-w-[100px] h-9 bg-card border-border dark:border-white/10 text-xs">
+                <SelectValue>
+                  {paymentFilter === 'all' ? '결제 여부' : paymentFilter === 'paid' ? '결제 완료' : '미결제'}
+                </SelectValue>
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">결제 여부 전체</SelectItem>
+                <SelectItem value="paid">결제 완료</SelectItem>
+                <SelectItem value="unpaid">미결제</SelectItem>
+              </SelectContent>
+            </Select>
+            <SortSelect
+              value={sortBy}
+              onValueChange={v => setSortBy(v as typeof sortBy)}
+              options={[
+                { value: 'newest', label: '최신순' },
+                { value: 'oldest', label: '오래된순' },
+                { value: 'name', label: '이름순' },
+                { value: 'payment', label: '결제액순' },
+              ]}
+            />
+            {activeFilterCount > 0 && (
+              <Button
+                variant="ghost"
+                size="sm"
+                className="h-9 px-3 text-xs text-muted-foreground hover:text-foreground"
+                onClick={() => {
+                  setStatusFilter('all')
+                  setSourceFilter('all')
+                  setPaymentFilter('all')
+                  setSearch('')
+                  setSortBy('newest')
+                }}
+              >
+                <X size={12} className="mr-1" />
+                필터 초기화
+              </Button>
+            )}
+            <span className="text-xs text-muted-foreground ml-auto tabular-nums">
+              {filtered.length}건 표시 {filtered.length !== bookings.length && `/ 전체 ${bookings.length}건`}
+            </span>
           </div>
 
           {loading ? (
