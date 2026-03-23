@@ -31,6 +31,9 @@ components/
 │   ├── stats-card.tsx
 │   ├── channel-badge.tsx
 │   ├── status-badge.tsx
+│   ├── sort-select.tsx     # 정렬 드롭다운 (공용)
+│   ├── confirm-dialog.tsx
+│   ├── customer-journey.tsx
 │   └── empty-state.tsx
 │
 ├── charts/               # Recharts 코드 스플리팅 래퍼
@@ -359,6 +362,32 @@ import { FileX } from 'lucide-react'
   description="새 데이터를 추가하세요"
 />
 ```
+
+### SortSelect
+
+정렬 옵션 드롭다운. 여러 페이지에서 공용으로 사용합니다.
+
+```tsx
+import { SortSelect } from '@/components/common'
+
+<SortSelect
+  value={sortBy}
+  onValueChange={setSortBy}
+  options={[
+    { value: 'newest', label: '최신순' },
+    { value: 'oldest', label: '오래된순' },
+    { value: 'name', label: '이름순' },
+    { value: 'payment', label: '결제액순' },
+  ]}
+/>
+```
+
+| Prop | 타입 | 설명 |
+|------|------|------|
+| `value` | `string` | 현재 선택된 정렬 값 |
+| `onValueChange` | `(value: string) => void` | 정렬 변경 콜백 |
+| `options` | `SortOption[]` | `{ value, label }` 배열 |
+| `className` | `string?` | 추가 CSS 클래스 |
 
 ---
 

@@ -7,7 +7,7 @@
 import { Button } from '@/components/ui/button'
 import { Card } from '@/components/ui/card'
 // 공용 컴포넌트
-import { PageHeader, ChannelBadge, StatusBadge, EmptyState } from '@/components/common'
+import { PageHeader, ChannelBadge, StatusBadge, EmptyState, SortSelect } from '@/components/common'
 // 차트 (코드 스플리팅 적용)
 import { AreaChart, BarChart, PieChart } from '@/components/charts'
 // 토스트

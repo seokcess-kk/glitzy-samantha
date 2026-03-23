@@ -204,3 +204,4 @@ npm run analyze      # 번들 크기 분석
 | 2026-03-20 | 순위 모니터링 키워드 삭제 기능 추가 (DELETE API + AlertDialog UI) |
 | 2026-03-20 | 언론보도 DateRangePicker 추가, Google News 검색 기간 제한(6개월) |
 | 2026-03-20 | 광고 성과 날짜 포맷 불일치 수정: ISO→YYYY-MM-DD 통일, timestamptz KST 명시 (8개 API 파일) |
+| 2026-03-23 | 예약/결제 관리 필터·정렬 추가: DateRangePicker, 상태/유입경로/결제 필터, SortSelect 공용 컴포넌트(`components/common/sort-select.tsx`) |
