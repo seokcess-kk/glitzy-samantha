@@ -27,7 +27,8 @@ shadcn/ui 기반 UI/UX 개선 및 기능 개발 작업 기록.
 | Phase 13: UI/UX 감사 + Polish | 2026-03-23 | 접근성(A11y), 색상 토큰화, 타이포 상향, 반응형, 코드품질, LP 분석 분리 | 완료 | - |
 | Phase 14: MediChecker 통합 | 2026-03-24 | 의료광고법 제56조 AI 검증 (7단계 파이프라인, RAG, 온톨로지) | 완료 | - |
 | Phase 14b: MediChecker UI/UX 감사 | 2026-03-24 | 2컬럼 sticky 레이아웃, 심각도 그룹핑, 컴팩트 카드, A11y 13건 수정 | 완료 | - |
-| Phase 15: ERP 연동 | 2026-03-24 | glitzy-web 견적서/계산서 읽기 전용 프록시, Sheet 상세, 탭 UI | 완료 | - |
+| Phase 15: ERP 연동 | 2026-03-24 | glitzy-web 견적서/계산서 읽기 전용 프록시, Sheet 상세, 탭 UI, 견적 승인/반려 | 완료 | - |
+| 버그 수정 | 2026-03-24 | 대시보드 퍼널 날짜 이중 타임존 버그 수정 (전 단계 0명 표시) | 완료 | - |
 
 ---
 
@@ -42,6 +43,7 @@ shadcn/ui 기반 UI/UX 개선 및 기능 개발 작업 기록.
 | P30-5 | 사이드바 | 견적/계산서 메뉴 추가 (Receipt 아이콘, minRole: 2, menuKey: erp-documents) | 03-24 |
 | P30-6 | 문서 수정 | INTEGRATION.md 스펙 오류 3건 수정 (fetchJSON, clinic_staff 차단, UUID ID) | 03-24 |
 | P30-7 | 견적 승인/반려 | `erpClient.respondToQuote()`, PATCH API, quote-list 승인/반려 버튼 + 반려 사유 다이얼로그 | 03-24 |
+| P30-8 | 퍼널 버그 수정 | `funnel/route.ts` `applyDateFilter`에서 ISO 날짜에 타임존 이중 적용 → 쿼리 결과 0건 버그 수정 | 03-24 |
 
 ---
 
@@ -262,5 +264,7 @@ shadcn/ui 기반 UI/UX 개선 및 기능 개발 작업 기록.
 
 | 작업 | 핵심 내용 |
 |------|----------|
+| MediChecker Phase 3 잔여 | 광고 소재 관리 → "검수" 버튼 연동 |
+| MediChecker Phase 4 | 사용량 추적/월 quota, PDF 내보내기, 반복 위반 패턴 분석, 법률 데이터 CRUD (실사용 후 결정) |
 | 코호트 분석 | 월별 가입자 리텐션 |
 | 예측 모델 | LTV 예측, 이탈 예측 |
