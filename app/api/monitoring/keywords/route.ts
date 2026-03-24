@@ -26,7 +26,7 @@ export const GET = withClinicFilter(async (req, { clinicId, assignedClinicIds })
 })
 
 export const POST = withAuth(async (req, { user }) => {
-  if (user.role !== 'superadmin' && user.role !== 'agency_staff') {
+  if (user.role !== 'superadmin' && user.role !== 'agency_staff' && user.role !== 'clinic_admin') {
     return apiError('키워드 관리 권한이 없습니다.', 403)
   }
 
@@ -41,7 +41,7 @@ export const POST = withAuth(async (req, { user }) => {
 
   const supabase = serverSupabase()
 
-  // agency_staff: 배정된 병원만 허용
+  // 역할별 병원 접근 검증
   if (user.role === 'agency_staff') {
     const { data: assignment } = await supabase
       .from('user_clinic_assignments')
@@ -50,6 +50,8 @@ export const POST = withAuth(async (req, { user }) => {
       .eq('clinic_id', cid)
       .single()
     if (!assignment) return apiError('배정되지 않은 병원입니다.', 403)
+  } else if (user.role === 'clinic_admin') {
+    if (cid !== Number(user.clinic_id)) return apiError('자신의 병원 키워드만 관리 가능합니다.', 403)
   }
 
   const insertData: Record<string, any> = {
@@ -76,7 +78,7 @@ export const POST = withAuth(async (req, { user }) => {
 })
 
 export const PATCH = withAuth(async (req, { user }) => {
-  if (user.role !== 'superadmin' && user.role !== 'agency_staff') {
+  if (user.role !== 'superadmin' && user.role !== 'agency_staff' && user.role !== 'clinic_admin') {
     return apiError('키워드 관리 권한이 없습니다.', 403)
   }
 
@@ -94,8 +96,8 @@ export const PATCH = withAuth(async (req, { user }) => {
 
   const supabase = serverSupabase()
 
-  // agency_staff: 배정된 병원의 키워드만 수정 가능
-  if (user.role === 'agency_staff') {
+  // 역할별 병원 접근 검증
+  if (user.role === 'agency_staff' || user.role === 'clinic_admin') {
     const { data: kw } = await supabase
       .from('monitoring_keywords')
       .select('clinic_id')
@@ -103,13 +105,17 @@ export const PATCH = withAuth(async (req, { user }) => {
       .single()
     if (!kw) return apiError('키워드를 찾을 수 없습니다.', 404)
 
-    const { data: assignment } = await supabase
-      .from('user_clinic_assignments')
-      .select('id')
-      .eq('user_id', parseInt(user.id, 10))
-      .eq('clinic_id', kw.clinic_id)
-      .single()
-    if (!assignment) return apiError('배정되지 않은 병원의 키워드입니다.', 403)
+    if (user.role === 'agency_staff') {
+      const { data: assignment } = await supabase
+        .from('user_clinic_assignments')
+        .select('id')
+        .eq('user_id', parseInt(user.id, 10))
+        .eq('clinic_id', kw.clinic_id)
+        .single()
+      if (!assignment) return apiError('배정되지 않은 병원의 키워드입니다.', 403)
+    } else if (kw.clinic_id !== Number(user.clinic_id)) {
+      return apiError('자신의 병원 키워드만 관리 가능합니다.', 403)
+    }
   }
 
   const { data, error } = await supabase
@@ -124,7 +130,7 @@ export const PATCH = withAuth(async (req, { user }) => {
 })
 
 export const DELETE = withAuth(async (req, { user }) => {
-  if (user.role !== 'superadmin' && user.role !== 'agency_staff') {
+  if (user.role !== 'superadmin' && user.role !== 'agency_staff' && user.role !== 'clinic_admin') {
     return apiError('키워드 관리 권한이 없습니다.', 403)
   }
 
@@ -149,6 +155,8 @@ export const DELETE = withAuth(async (req, { user }) => {
       .eq('clinic_id', kw.clinic_id)
       .single()
     if (!assignment) return apiError('배정되지 않은 병원의 키워드입니다.', 403)
+  } else if (user.role === 'clinic_admin') {
+    if (kw.clinic_id !== Number(user.clinic_id)) return apiError('자신의 병원 키워드만 관리 가능합니다.', 403)
   }
 
   await archiveBeforeDelete(supabase, 'monitoring_keywords', keywordId, user.id, kw.clinic_id)

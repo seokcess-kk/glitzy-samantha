@@ -56,7 +56,6 @@ const MENU_OPTIONS = [
   { key: 'monitor', label: '콘텐츠 모니터링' },
   { key: 'press', label: '언론보도' },
   { key: 'monitoring', label: '순위 현황' },
-  { key: 'monitoring-keywords', label: '키워드 관리' },
 ]
 
 export default function UsersPage() {

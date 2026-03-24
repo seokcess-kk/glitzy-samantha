@@ -2,10 +2,11 @@
 import React, { useState, useEffect, useMemo, useCallback } from 'react'
 import { useSession } from 'next-auth/react'
 import { useRouter } from 'next/navigation'
-import { TrendingUp, ChevronLeft, ChevronRight, ExternalLink, Pencil, Save, X } from 'lucide-react'
+import { TrendingUp, ChevronLeft, ChevronRight, ExternalLink, Pencil, Save, X, Plus, Trash2, Eye, EyeOff } from 'lucide-react'
 import { toast } from 'sonner'
 import { Card } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
+import { Input } from '@/components/ui/input'
 import { Skeleton } from '@/components/ui/skeleton'
 import { Label } from '@/components/ui/label'
 import {
@@ -15,6 +16,23 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select'
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogFooter,
+} from '@/components/ui/dialog'
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog'
 import { useClinic } from '@/components/ClinicContext'
 import { PageHeader } from '@/components/common'
 
@@ -33,18 +51,15 @@ function getRankColor(rank: number | null | undefined): string {
   return 'bg-red-500/20 text-red-400'
 }
 
-/** 편집 셀 키 생성 — ':'로 구분하여 keywordId 파싱 오류 방지 */
 function cellKey(keywordId: number, day: number): string {
   return `${keywordId}:${day}`
 }
 
-/** cellKey에서 keywordId, day 추출 */
 function parseCellKey(key: string): { keywordId: number; day: number } {
   const [kwIdStr, dayStr] = key.split(':')
   return { keywordId: parseInt(kwIdStr, 10), day: parseInt(dayStr, 10) }
 }
 
-/** 편집 가능한 셀의 정렬된 키 목록 생성 */
 function buildEditableCellOrder(keywords: any[], days: number[], isCurrentMonth: boolean, todayDay: number): string[] {
   const order: string[] = []
   for (const kw of keywords) {
@@ -72,13 +87,19 @@ export default function MonitoringPage() {
   const [loading, setLoading] = useState(true)
   const [fetchKey, setFetchKey] = useState(0)
 
-  // 인라인 편집 상태
+  // 인라인 순위 편집 상태
   const [editMode, setEditMode] = useState(false)
   const [editedCells, setEditedCells] = useState<Record<string, string>>({})
   const [activeCell, setActiveCell] = useState<string | null>(null)
   const [saving, setSaving] = useState(false)
 
-  // superadmin, agency_staff, clinic_admin 모두 편집 가능
+  // 키워드 관리 상태
+  const [addDialogOpen, setAddDialogOpen] = useState(false)
+  const [addForm, setAddForm] = useState({ keyword: '', category: 'place', url: '' })
+  const [addSaving, setAddSaving] = useState(false)
+  const [deleteTarget, setDeleteTarget] = useState<{ id: number; keyword: string } | null>(null)
+  const [deleting, setDeleting] = useState(false)
+
   const canEdit = user?.role === 'superadmin' || user?.role === 'agency_staff' || user?.role === 'clinic_admin'
 
   useEffect(() => {
@@ -109,6 +130,8 @@ export default function MonitoringPage() {
     fetchData()
   }, [month, category, selectedClinicId, fetchKey])
 
+  const refetch = useCallback(() => setFetchKey(k => k + 1), [])
+
   const changeMonth = (delta: number) => {
     const [y, m] = month.split('-').map(Number)
     const d = new Date(y, m - 1 + delta)
@@ -123,7 +146,7 @@ export default function MonitoringPage() {
   const isCurrentMonth = today.getFullYear() === year && today.getMonth() + 1 === mon
   const todayDay = today.getDate()
 
-  // 순위 맵: keyword_id -> { day: ranking }
+  // 순위 맵
   const rankMap = useMemo(() => {
     const map: Record<number, Record<number, { rank: number | null; url?: string }>> = {}
     for (const r of rankings) {
@@ -134,21 +157,15 @@ export default function MonitoringPage() {
     return map
   }, [rankings])
 
-  // 요약 지표 계산
+  // 요약 지표
   const summary = useMemo(() => {
     if (keywords.length === 0) return null
-
     let latestDay = 0
     for (const r of rankings) {
       const day = parseInt(r.rank_date.split('-')[2], 10)
       if (day > latestDay) latestDay = day
     }
-
-    let top3Count = 0
-    let top10Count = 0
-    let totalRank = 0
-    let rankedCount = 0
-
+    let top3Count = 0, top10Count = 0, totalRank = 0, rankedCount = 0
     for (const kw of keywords) {
       const rd = rankMap[kw.id]?.[latestDay]
       if (rd?.rank != null) {
@@ -158,11 +175,9 @@ export default function MonitoringPage() {
         rankedCount++
       }
     }
-
     const allDays = rankings.map(r => parseInt(r.rank_date.split('-')[2], 10))
     const firstDay = allDays.length > 0 ? Math.min(...allDays) : latestDay
-    let improvedCount = 0
-    let declinedCount = 0
+    let improvedCount = 0, declinedCount = 0
     for (const kw of keywords) {
       const first = rankMap[kw.id]?.[firstDay]?.rank
       const latest = rankMap[kw.id]?.[latestDay]?.rank
@@ -171,34 +186,20 @@ export default function MonitoringPage() {
         else if (latest > first) declinedCount++
       }
     }
-
-    return {
-      avgRank: rankedCount > 0 ? (totalRank / rankedCount).toFixed(1) : '-',
-      top3Count,
-      top10Count,
-      totalKeywords: keywords.length,
-      improvedCount,
-      declinedCount,
-      latestDay,
-    }
+    return { avgRank: rankedCount > 0 ? (totalRank / rankedCount).toFixed(1) : '-', top3Count, top10Count, totalKeywords: keywords.length, improvedCount, declinedCount, latestDay }
   }, [keywords, rankings, rankMap])
 
-  // 편집 가능한 셀 순서 (키보드 네비게이션용)
+  // 순위 편집 기능
   const editableCellOrder = useMemo(
     () => buildEditableCellOrder(keywords, days, isCurrentMonth, todayDay),
     [keywords, days, isCurrentMonth, todayDay],
   )
 
-  // 편집 모드 토글
   const toggleEditMode = useCallback(() => {
-    if (editMode) {
-      setEditedCells({})
-      setActiveCell(null)
-    }
+    if (editMode) { setEditedCells({}); setActiveCell(null) }
     setEditMode(prev => !prev)
   }, [editMode])
 
-  // 셀 값 가져오기 (편집된 값 우선)
   const getCellValue = useCallback((keywordId: number, day: number): string => {
     const key = cellKey(keywordId, day)
     if (key in editedCells) return editedCells[key]
@@ -206,7 +207,6 @@ export default function MonitoringPage() {
     return rank != null ? String(rank) : ''
   }, [editedCells, rankMap])
 
-  // 셀 클릭 → 편집 활성화
   const handleCellClick = useCallback((keywordId: number, day: number) => {
     if (!editMode) return
     const key = cellKey(keywordId, day)
@@ -217,95 +217,109 @@ export default function MonitoringPage() {
     }
   }, [editMode, editedCells, rankMap])
 
-  // 셀 값 변경
   const handleCellChange = useCallback((key: string, value: string) => {
     if (value !== '' && !/^\d+$/.test(value)) return
     setEditedCells(prev => ({ ...prev, [key]: value }))
   }, [])
 
-  // 셀 포커스 해제
   const handleCellBlur = useCallback((keywordId: number, day: number) => {
     const key = cellKey(keywordId, day)
     const originalRank = rankMap[keywordId]?.[day]?.rank
     const originalStr = originalRank != null ? String(originalRank) : ''
     if (editedCells[key] === originalStr) {
-      setEditedCells(prev => {
-        const next = { ...prev }
-        delete next[key]
-        return next
-      })
+      setEditedCells(prev => { const next = { ...prev }; delete next[key]; return next })
     }
     setActiveCell(null)
   }, [editedCells, rankMap])
 
-  // 키보드 네비게이션: Tab/Enter → 다음 셀, Shift+Tab → 이전 셀
   const handleCellKeyDown = useCallback((e: React.KeyboardEvent<HTMLInputElement>, keywordId: number, day: number) => {
-    if (e.key === 'Escape') {
-      e.currentTarget.blur()
-      return
-    }
+    if (e.key === 'Escape') { e.currentTarget.blur(); return }
     if (e.key === 'Tab' || e.key === 'Enter') {
       e.preventDefault()
       const currentKey = cellKey(keywordId, day)
       const currentIdx = editableCellOrder.indexOf(currentKey)
       if (currentIdx === -1) return
-
       const delta = e.shiftKey ? -1 : 1
       const nextIdx = currentIdx + delta
-      if (nextIdx < 0 || nextIdx >= editableCellOrder.length) {
-        e.currentTarget.blur()
-        return
-      }
-
+      if (nextIdx < 0 || nextIdx >= editableCellOrder.length) { e.currentTarget.blur(); return }
       const nextKey = editableCellOrder[nextIdx]
       const { keywordId: nextKwId, day: nextDay } = parseCellKey(nextKey)
-
-      // blur 현재 셀 (정리) → 다음 셀 활성화
       handleCellBlur(keywordId, day)
       handleCellClick(nextKwId, nextDay)
     }
   }, [editableCellOrder, handleCellBlur, handleCellClick])
 
-  // 변경사항 개수
   const changedCount = Object.keys(editedCells).length
 
-  // 저장
   const handleSave = async () => {
-    if (changedCount === 0) {
-      toast.error('변경된 순위가 없습니다.')
-      return
-    }
-
+    if (changedCount === 0) { toast.error('변경된 순위가 없습니다.'); return }
     const rankingsToSave = Object.entries(editedCells).map(([key, value]) => {
       const { keywordId, day } = parseCellKey(key)
-      const rankDate = `${month}-${String(day).padStart(2, '0')}`
-      return {
-        keyword_id: keywordId,
-        rank_date: rankDate,
-        rank_position: value !== '' ? parseInt(value, 10) : null,
-      }
+      return { keyword_id: keywordId, rank_date: `${month}-${String(day).padStart(2, '0')}`, rank_position: value !== '' ? parseInt(value, 10) : null }
     })
-
     setSaving(true)
     try {
-      const res = await fetch('/api/monitoring/rankings/bulk', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ rankings: rankingsToSave }),
-      })
+      const res = await fetch('/api/monitoring/rankings/bulk', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ rankings: rankingsToSave }) })
       const data = await res.json()
       if (!res.ok) throw new Error(data.error || '저장 실패')
       toast.success(`${data.count}개 순위가 저장되었습니다.`)
-      setEditedCells({})
-      setActiveCell(null)
-      setEditMode(false)
-      setFetchKey(k => k + 1)
+      setEditedCells({}); setActiveCell(null); setEditMode(false); refetch()
     } catch (e: unknown) {
-      const message = e instanceof Error ? e.message : '저장 실패'
-      toast.error(message)
-    } finally {
-      setSaving(false)
+      toast.error(e instanceof Error ? e.message : '저장 실패')
+    } finally { setSaving(false) }
+  }
+
+  // 키워드 관리 기능
+  const handleAddKeyword = async () => {
+    if (!addForm.keyword.trim()) { toast.error('키워드를 입력해주세요.'); return }
+    if (!selectedClinicId) { toast.error('병원을 선택해주세요.'); return }
+    setAddSaving(true)
+    try {
+      const res = await fetch('/api/monitoring/keywords', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ clinic_id: selectedClinicId, ...addForm }),
+      })
+      if (!res.ok) { const err = await res.json(); throw new Error(err.error) }
+      setAddForm({ keyword: '', category: 'place', url: '' })
+      setAddDialogOpen(false)
+      toast.success('키워드가 등록되었습니다.')
+      refetch()
+    } catch (e: unknown) {
+      toast.error(e instanceof Error ? e.message : '등록 실패')
+    } finally { setAddSaving(false) }
+  }
+
+  const handleToggleActive = async (id: number, currentActive: boolean) => {
+    try {
+      const res = await fetch('/api/monitoring/keywords', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ id, is_active: !currentActive }),
+      })
+      if (!res.ok) { const err = await res.json(); throw new Error(err.error) }
+      toast.success(currentActive ? '비활성화되었습니다.' : '활성화되었습니다.')
+      refetch()
+    } catch (e: unknown) {
+      toast.error(e instanceof Error ? e.message : '변경 실패')
     }
+  }
+
+  const handleDeleteKeyword = async () => {
+    if (!deleteTarget) return
+    setDeleting(true)
+    try {
+      const res = await fetch('/api/monitoring/keywords', {
+        method: 'DELETE',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ id: deleteTarget.id }),
+      })
+      if (!res.ok) { const err = await res.json(); throw new Error(err.error) }
+      toast.success('키워드가 삭제되었습니다.')
+      refetch()
+    } catch (e: unknown) {
+      toast.error(e instanceof Error ? e.message : '삭제 실패')
+    } finally { setDeleting(false); setDeleteTarget(null) }
   }
 
   if (user?.role === 'clinic_staff') return null
@@ -373,39 +387,113 @@ export default function MonitoringPage() {
           </div>
         </div>
 
-        {/* 수정 모드 토글 — superadmin/agency_staff/clinic_admin, 병원 선택 필수 */}
-        {canEdit && selectedClinicId && keywords.length > 0 && !loading && (
+        {/* 액션 버튼 — canEdit && 병원 선택 시 */}
+        {canEdit && selectedClinicId && !loading && (
           <div className="space-y-1 ml-auto">
-            <Label className="text-xs text-transparent">편집</Label>
+            <Label className="text-xs text-transparent">액션</Label>
             <div className="flex items-center gap-2">
-              {editMode && changedCount > 0 && (
+              {/* 키워드 추가 */}
+              {!editMode && (
                 <Button
                   size="sm"
-                  onClick={handleSave}
-                  disabled={saving}
-                  className="bg-brand-600 hover:bg-brand-700 text-white"
+                  variant="ghost"
+                  onClick={() => setAddDialogOpen(true)}
+                  className="text-muted-foreground hover:text-foreground"
                 >
+                  <Plus size={14} className="mr-1" />키워드 추가
+                </Button>
+              )}
+              {/* 순위 저장 */}
+              {editMode && changedCount > 0 && (
+                <Button size="sm" onClick={handleSave} disabled={saving} className="bg-brand-600 hover:bg-brand-700 text-white">
                   <Save size={14} className="mr-1" />
                   {saving ? '저장 중...' : `저장 (${changedCount}건)`}
                 </Button>
               )}
-              <Button
-                size="sm"
-                variant={editMode ? 'outline' : 'ghost'}
-                onClick={toggleEditMode}
-                disabled={saving}
-                className={editMode ? 'border-red-500/50 text-red-400 hover:bg-red-500/10' : 'text-muted-foreground hover:text-foreground'}
-              >
-                {editMode ? (
-                  <><X size={14} className="mr-1" />편집 취소</>
-                ) : (
-                  <><Pencil size={14} className="mr-1" />순위 수정</>
-                )}
-              </Button>
+              {/* 순위 편집 토글 */}
+              {keywords.length > 0 && (
+                <Button
+                  size="sm"
+                  variant={editMode ? 'outline' : 'ghost'}
+                  onClick={toggleEditMode}
+                  disabled={saving}
+                  className={editMode ? 'border-red-500/50 text-red-400 hover:bg-red-500/10' : 'text-muted-foreground hover:text-foreground'}
+                >
+                  {editMode ? <><X size={14} className="mr-1" />편집 취소</> : <><Pencil size={14} className="mr-1" />순위 수정</>}
+                </Button>
+              )}
             </div>
           </div>
         )}
       </div>
+
+      {/* 키워드 추가 Dialog */}
+      <Dialog open={addDialogOpen} onOpenChange={setAddDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>키워드 추가</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4 py-4">
+            <div className="space-y-2">
+              <Label className="text-xs text-muted-foreground">키워드 *</Label>
+              <Input
+                value={addForm.keyword}
+                onChange={e => setAddForm(f => ({ ...f, keyword: e.target.value }))}
+                placeholder="검색 키워드 입력"
+                onKeyDown={e => { if (e.key === 'Enter') handleAddKeyword() }}
+              />
+            </div>
+            <div className="space-y-2">
+              <Label className="text-xs text-muted-foreground">카테고리 *</Label>
+              <Select value={addForm.category} onValueChange={v => setAddForm(f => ({ ...f, category: v }))}>
+                <SelectTrigger><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="place">네이버 플레이스</SelectItem>
+                  <SelectItem value="website">웹사이트</SelectItem>
+                  <SelectItem value="smartblock">스마트블록</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="space-y-2">
+              <Label className="text-xs text-muted-foreground">URL</Label>
+              <Input
+                value={addForm.url}
+                onChange={e => setAddForm(f => ({ ...f, url: e.target.value }))}
+                placeholder="https://example.com (선택)"
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="ghost" onClick={() => setAddDialogOpen(false)}>취소</Button>
+            <Button onClick={handleAddKeyword} disabled={addSaving} className="bg-brand-600 hover:bg-brand-700">
+              {addSaving ? '추가 중...' : '추가'}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* 키워드 삭제 확인 */}
+      <AlertDialog open={!!deleteTarget} onOpenChange={open => { if (!open) setDeleteTarget(null) }}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>키워드 삭제</AlertDialogTitle>
+            <AlertDialogDescription>
+              &ldquo;{deleteTarget?.keyword}&rdquo; 키워드를 삭제하시겠습니까?
+              해당 키워드의 모든 순위 기록도 함께 삭제됩니다.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={deleting}>취소</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={e => { e.preventDefault(); handleDeleteKeyword() }}
+              disabled={deleting}
+              className="bg-red-600 hover:bg-red-700 text-white"
+            >
+              {deleting ? '삭제 중...' : '삭제'}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
 
       {loading ? (
         <Card variant="glass" className="p-6">
@@ -413,7 +501,12 @@ export default function MonitoringPage() {
         </Card>
       ) : keywords.length === 0 ? (
         <Card variant="glass" className="p-12 text-center">
-          <p className="text-muted-foreground">등록된 키워드가 없습니다.</p>
+          <p className="text-muted-foreground mb-4">등록된 키워드가 없습니다.</p>
+          {canEdit && selectedClinicId && (
+            <Button size="sm" onClick={() => setAddDialogOpen(true)} className="bg-brand-600 hover:bg-brand-700">
+              <Plus size={14} className="mr-1" />키워드 추가
+            </Button>
+          )}
         </Card>
       ) : (
         <>
@@ -492,10 +585,34 @@ export default function MonitoringPage() {
                           </td>
                         </tr>
                       )}
-                      <tr className="border-b border-border dark:border-white/5">
+                      <tr className="group border-b border-border dark:border-white/5">
+                        {/* 키워드 셀 + 행별 관리 아이콘 */}
                         <td className="sticky left-0 bg-card px-3 py-2.5 font-medium z-10">
-                          <span className={kw.is_active === false ? 'text-muted-foreground/60 line-through' : 'text-foreground/80'}>{kw.keyword}</span>
-                          {kw.is_active === false && <span className="ml-1 text-[9px] text-muted-foreground/60">(비활성)</span>}
+                          <div className="flex items-center gap-1">
+                            <span className={`truncate ${kw.is_active === false ? 'text-muted-foreground/60 line-through' : 'text-foreground/80'}`}>
+                              {kw.keyword}
+                            </span>
+                            {kw.is_active === false && <span className="text-[9px] text-muted-foreground/60 shrink-0">(비활성)</span>}
+                            {/* hover 시 행별 관리 아이콘 */}
+                            {canEdit && !editMode && (
+                              <span className="ml-auto shrink-0 flex items-center gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity duration-200">
+                                <button
+                                  onClick={() => handleToggleActive(kw.id, kw.is_active)}
+                                  className="p-1 rounded text-muted-foreground/50 hover:text-brand-400 hover:bg-brand-500/10 transition-colors"
+                                  title={kw.is_active ? '비활성화' : '활성화'}
+                                >
+                                  {kw.is_active ? <EyeOff size={12} /> : <Eye size={12} />}
+                                </button>
+                                <button
+                                  onClick={() => setDeleteTarget({ id: kw.id, keyword: kw.keyword })}
+                                  className="p-1 rounded text-muted-foreground/50 hover:text-red-500 hover:bg-red-500/10 transition-colors"
+                                  title="삭제"
+                                >
+                                  <Trash2 size={12} />
+                                </button>
+                              </span>
+                            )}
+                          </div>
                         </td>
                         <td className="sticky left-[140px] bg-card px-2 py-2.5 z-10">
                           {kw.url ? (
@@ -516,13 +633,8 @@ export default function MonitoringPage() {
                           if (editMode && !isFuture) {
                             const displayValue = getCellValue(kw.id, d)
                             const numValue = displayValue !== '' ? parseInt(displayValue, 10) : null
-
                             return (
-                              <td
-                                key={d}
-                                className="text-center px-0.5 py-1 relative"
-                                onClick={() => handleCellClick(kw.id, d)}
-                              >
+                              <td key={d} className="text-center px-0.5 py-1 relative" onClick={() => handleCellClick(kw.id, d)}>
                                 {isEditing ? (
                                   <input
                                     autoFocus
@@ -551,25 +663,15 @@ export default function MonitoringPage() {
                             )
                           }
 
-                          // 읽기 전용 셀 (편집 모드 아닐 때 또는 미래 날짜)
                           const rd = rankMap[kw.id]?.[d]
                           const rank = rd?.rank
                           return (
                             <td key={d} className={`text-center px-1 py-2 ${isFuture ? 'opacity-20' : ''}`}>
                               {rank != null ? (
                                 rd?.url ? (
-                                  <a
-                                    href={rd.url}
-                                    target="_blank"
-                                    rel="noopener noreferrer"
-                                    className={`inline-flex items-center justify-center w-7 h-6 rounded text-[10px] font-bold ${getRankColor(rank)} cursor-pointer hover:opacity-80`}
-                                  >
-                                    {rank}
-                                  </a>
+                                  <a href={rd.url} target="_blank" rel="noopener noreferrer" className={`inline-flex items-center justify-center w-7 h-6 rounded text-[10px] font-bold ${getRankColor(rank)} cursor-pointer hover:opacity-80`}>{rank}</a>
                                 ) : (
-                                  <span className={`inline-flex items-center justify-center w-7 h-6 rounded text-[10px] font-bold ${getRankColor(rank)}`}>
-                                    {rank}
-                                  </span>
+                                  <span className={`inline-flex items-center justify-center w-7 h-6 rounded text-[10px] font-bold ${getRankColor(rank)}`}>{rank}</span>
                                 )
                               ) : (
                                 <span className="text-muted-foreground/40">-</span>
@@ -590,23 +692,9 @@ export default function MonitoringPage() {
             <div className="sticky bottom-4 z-20 flex justify-end">
               <div className="bg-card/95 backdrop-blur border border-border dark:border-white/10 rounded-lg px-4 py-3 shadow-lg flex items-center gap-3">
                 <span className="text-sm text-muted-foreground">{changedCount}건 변경됨</span>
-                <Button
-                  size="sm"
-                  variant="ghost"
-                  onClick={toggleEditMode}
-                  disabled={saving}
-                  className="text-muted-foreground hover:text-foreground"
-                >
-                  취소
-                </Button>
-                <Button
-                  size="sm"
-                  onClick={handleSave}
-                  disabled={saving}
-                  className="bg-brand-600 hover:bg-brand-700 text-white"
-                >
-                  <Save size={14} className="mr-1" />
-                  {saving ? '저장 중...' : '저장'}
+                <Button size="sm" variant="ghost" onClick={toggleEditMode} disabled={saving} className="text-muted-foreground hover:text-foreground">취소</Button>
+                <Button size="sm" onClick={handleSave} disabled={saving} className="bg-brand-600 hover:bg-brand-700 text-white">
+                  <Save size={14} className="mr-1" />{saving ? '저장 중...' : '저장'}
                 </Button>
               </div>
             </div>
