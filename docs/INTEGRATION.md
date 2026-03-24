@@ -3,10 +3,10 @@
 ## 개요
 
 glitzy-web에서 경량 ERP(견적서, 세금계산서, 수금)를 구축하고,
-Samantha(glitzy_MMI)에서는 병원 고객이 자기 병원의 견적서를 **읽기 전용**으로 조회하는 구조.
+Samantha에서는 병원 고객이 자기 병원의 견적서를 **읽기 전용**으로 조회하는 구조.
 
 ```
-glitzy-web (ERP)                         Samantha (glitzy_MMI)
+glitzy-web (ERP)                         Samantha
 ──────────────                           ─────────────────────
 견적 생성/수정/확정                       견적 조회 (읽기 전용)
 계산서 발행/수금 관리    ──→ API ──→     계산서 확인 (읽기 전용)
@@ -17,8 +17,8 @@ glitzy-web (ERP)                         Samantha (glitzy_MMI)
 
 ## 시스템 비교
 
-| 항목 | Samantha (glitzy_MMI) | glitzy-web (ERP) |
-|------|----------------------|------------------|
+| 항목 | Samantha | glitzy-web (ERP) |
+|------|----------|------------------|
 | **프레임워크** | Next.js 14 (App Router) | Next.js 15 (App Router) |
 | **인증** | NextAuth.js (JWT, credentials) | Better Auth (Google OAuth) |
 | **세션** | JWT (`username`, `password_version`) | Cookie (`email`, `role`) |
@@ -36,7 +36,7 @@ glitzy-web (ERP)                         Samantha (glitzy_MMI)
 
 ```
 [glitzy-web ERP]
-  └─ /api/external/quotes?service_key=xxx&mmi_clinic_id=123
+  └─ /api/external/quotes?service_key=xxx&clinic_id=123
        │
        ▼
 [Samantha API]
@@ -62,14 +62,14 @@ glitzy-web (ERP)                         Samantha (glitzy_MMI)
 
 ## glitzy-web ERP 구축 시 필수 사항
 
-### 1. `clients` 테이블에 `mmi_clinic_id` 필드
+### 1. `clients` 테이블에 `clinic_id` 필드
 
 ```sql
 CREATE TABLE clients (
   id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
-  mmi_clinic_id INTEGER UNIQUE,  -- Samantha clinics.id 논리적 참조
+  clinic_id INTEGER UNIQUE,       -- Samantha clinics.id 논리적 참조
   name TEXT NOT NULL,
-  business_number TEXT,          -- 사업자등록번호
+  business_number TEXT,            -- 사업자등록번호
   email TEXT,
   phone TEXT,
   address TEXT,
@@ -79,7 +79,7 @@ CREATE TABLE clients (
 ```
 
 - FK 제약 없음 (별개 DB이므로 논리적 매핑)
-- `mmi_clinic_id`는 UNIQUE → 1:1 매핑
+- `clinic_id`는 UNIQUE → 1:1 매핑
 - Samantha `clinics.id`와 동일한 INTEGER 값 저장
 
 ### 2. 외부 조회 API 설계
@@ -87,15 +87,15 @@ CREATE TABLE clients (
 glitzy-web에 Samantha가 호출할 수 있는 외부 API 필요:
 
 ```
-GET  /api/external/quotes?mmi_clinic_id=123&status=sent
+GET  /api/external/quotes?clinic_id=123&status=sent
 GET  /api/external/quotes/:id
-GET  /api/external/invoices?mmi_clinic_id=123
+GET  /api/external/invoices?clinic_id=123
 GET  /api/external/invoices/:id
 ```
 
 인증: 요청 헤더에 서비스 키
 ```
-Authorization: Bearer {SAMANTHA_SERVICE_KEY}
+Authorization: Bearer {SERVICE_KEY}
 ```
 
 응답 형식 (Samantha API 패턴과 호환):
@@ -181,7 +181,7 @@ ERP_SERVICE_KEY=xxx
 ### glitzy-web (.env.local)
 ```
 # Samantha 연동
-SAMANTHA_SERVICE_KEY=xxx
+SERVICE_KEY=xxx
 ```
 
 ---
@@ -190,7 +190,7 @@ SAMANTHA_SERVICE_KEY=xxx
 
 - [ ] DB는 별개 Supabase 프로젝트 → 크로스 DB 쿼리 불가, API 기반 연동만
 - [ ] 인증 시스템 통합 불필요 → 서비스 키로 API 호출
-- [ ] `clients.mmi_clinic_id`로 병원 매핑 (FK 아닌 논리적 참조)
+- [ ] `clients.clinic_id`로 병원 매핑 (FK 아닌 논리적 참조)
 - [ ] 데이터 흐름 단방향 유지 (ERP → Samantha 읽기 전용)
 - [ ] Samantha 멀티테넌트 원칙 유지 → 견적 조회에도 `clinic_id` 필터 필수
 - [ ] 견적서 `draft` 상태는 Samantha에 미노출
