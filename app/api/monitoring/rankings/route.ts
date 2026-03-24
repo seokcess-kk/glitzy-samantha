@@ -69,7 +69,7 @@ export const POST = withAuth(async (req, { user }) => {
 
   if (!keyword) return apiError('키워드를 찾을 수 없습니다.', 404)
 
-  // agency_staff: 배정된 병원인지 확인
+  // 역할별 병원 접근 검증
   if (user.role === 'agency_staff') {
     const { data: assignment } = await supabase
       .from('user_clinic_assignments')
@@ -78,6 +78,11 @@ export const POST = withAuth(async (req, { user }) => {
       .eq('clinic_id', keyword.clinic_id)
       .single()
     if (!assignment) return apiError('배정되지 않은 병원입니다.', 403)
+  } else if (user.role === 'clinic_admin') {
+    // clinic_admin: 자기 병원 키워드만 허용
+    if (keyword.clinic_id !== Number(user.clinic_id)) {
+      return apiError('자신의 병원 키워드만 수정 가능합니다.', 403)
+    }
   } else if (user.role !== 'superadmin') {
     return apiError('순위 입력 권한이 없습니다.', 403)
   }

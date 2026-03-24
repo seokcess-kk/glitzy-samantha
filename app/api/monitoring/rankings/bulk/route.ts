@@ -35,7 +35,7 @@ export const POST = withAuth(async (req, { user }) => {
 
   if (!keywords?.length) return apiError('유효한 키워드가 없습니다.', 400)
 
-  // agency_staff: 배정된 병원만 허용
+  // 역할별 병원 접근 검증
   if (user.role === 'agency_staff') {
     const { data: assignments } = await supabase
       .from('user_clinic_assignments')
@@ -46,6 +46,12 @@ export const POST = withAuth(async (req, { user }) => {
     const clinicIds = new Set(keywords.map(k => k.clinic_id))
     for (const cid of clinicIds) {
       if (!assignedIds.has(cid)) return apiError('배정되지 않은 병원의 키워드가 포함되어 있습니다.', 403)
+    }
+  } else if (user.role === 'clinic_admin') {
+    // clinic_admin: 자기 병원 키워드만 허용
+    const clinicIds = new Set(keywords.map(k => k.clinic_id))
+    if (clinicIds.size !== 1 || !clinicIds.has(Number(user.clinic_id))) {
+      return apiError('자신의 병원 키워드만 수정 가능합니다.', 403)
     }
   } else if (user.role !== 'superadmin') {
     return apiError('순위 입력 권한이 없습니다.', 403)

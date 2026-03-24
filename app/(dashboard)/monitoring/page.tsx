@@ -1,8 +1,8 @@
 'use client'
-import React, { useState, useEffect, useMemo } from 'react'
+import React, { useState, useEffect, useMemo, useCallback } from 'react'
 import { useSession } from 'next-auth/react'
 import { useRouter } from 'next/navigation'
-import { TrendingUp, ChevronLeft, ChevronRight, ExternalLink } from 'lucide-react'
+import { TrendingUp, ChevronLeft, ChevronRight, ExternalLink, Pencil, Save, X } from 'lucide-react'
 import { toast } from 'sonner'
 import { Card } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
@@ -17,8 +17,6 @@ import {
 } from '@/components/ui/select'
 import { useClinic } from '@/components/ClinicContext'
 import { PageHeader } from '@/components/common'
-// 차트 숨김 처리 — 필요 시 복원
-// import { LineChart, ResponsiveContainer, Line, XAxis, YAxis, CartesianGrid, Tooltip } from '@/components/charts'
 
 const CATEGORY_LABELS: Record<string, string> = {
   place: '네이버 플레이스',
@@ -35,6 +33,29 @@ function getRankColor(rank: number | null | undefined): string {
   return 'bg-red-500/20 text-red-400'
 }
 
+/** 편집 셀 키 생성 — ':'로 구분하여 keywordId 파싱 오류 방지 */
+function cellKey(keywordId: number, day: number): string {
+  return `${keywordId}:${day}`
+}
+
+/** cellKey에서 keywordId, day 추출 */
+function parseCellKey(key: string): { keywordId: number; day: number } {
+  const [kwIdStr, dayStr] = key.split(':')
+  return { keywordId: parseInt(kwIdStr, 10), day: parseInt(dayStr, 10) }
+}
+
+/** 편집 가능한 셀의 정렬된 키 목록 생성 */
+function buildEditableCellOrder(keywords: any[], days: number[], isCurrentMonth: boolean, todayDay: number): string[] {
+  const order: string[] = []
+  for (const kw of keywords) {
+    for (const d of days) {
+      if (isCurrentMonth && d > todayDay) continue
+      order.push(cellKey(kw.id, d))
+    }
+  }
+  return order
+}
+
 export default function MonitoringPage() {
   const { data: session } = useSession()
   const router = useRouter()
@@ -49,6 +70,16 @@ export default function MonitoringPage() {
   const [keywords, setKeywords] = useState<any[]>([])
   const [rankings, setRankings] = useState<any[]>([])
   const [loading, setLoading] = useState(true)
+  const [fetchKey, setFetchKey] = useState(0)
+
+  // 인라인 편집 상태
+  const [editMode, setEditMode] = useState(false)
+  const [editedCells, setEditedCells] = useState<Record<string, string>>({})
+  const [activeCell, setActiveCell] = useState<string | null>(null)
+  const [saving, setSaving] = useState(false)
+
+  // superadmin, agency_staff, clinic_admin 모두 편집 가능
+  const canEdit = user?.role === 'superadmin' || user?.role === 'agency_staff' || user?.role === 'clinic_admin'
 
   useEffect(() => {
     if (user?.role === 'clinic_staff') router.replace('/patients')
@@ -76,7 +107,7 @@ export default function MonitoringPage() {
       }
     }
     fetchData()
-  }, [month, category, selectedClinicId])
+  }, [month, category, selectedClinicId, fetchKey])
 
   const changeMonth = (delta: number) => {
     const [y, m] = month.split('-').map(Number)
@@ -88,12 +119,11 @@ export default function MonitoringPage() {
   const daysInMonth = new Date(year, mon, 0).getDate()
   const days = Array.from({ length: daysInMonth }, (_, i) => i + 1)
 
-  // 오늘 날짜 (현재 월인지 확인용)
   const today = new Date()
   const isCurrentMonth = today.getFullYear() === year && today.getMonth() + 1 === mon
   const todayDay = today.getDate()
 
-  // 순위 맵: keyword_id -> { day: ranking } — 문자열 파싱으로 UTC 이슈 방지
+  // 순위 맵: keyword_id -> { day: ranking }
   const rankMap = useMemo(() => {
     const map: Record<number, Record<number, { rank: number | null; url?: string }>> = {}
     for (const r of rankings) {
@@ -108,7 +138,6 @@ export default function MonitoringPage() {
   const summary = useMemo(() => {
     if (keywords.length === 0) return null
 
-    // 최신 순위 (가장 마지막 입력 날짜 기준)
     let latestDay = 0
     for (const r of rankings) {
       const day = parseInt(r.rank_date.split('-')[2], 10)
@@ -130,7 +159,6 @@ export default function MonitoringPage() {
       }
     }
 
-    // 월초 대비 변동
     const allDays = rankings.map(r => parseInt(r.rank_date.split('-')[2], 10))
     const firstDay = allDays.length > 0 ? Math.min(...allDays) : latestDay
     let improvedCount = 0
@@ -155,7 +183,130 @@ export default function MonitoringPage() {
     }
   }, [keywords, rankings, rankMap])
 
-  // 차트 숨김 처리 — 필요 시 복원
+  // 편집 가능한 셀 순서 (키보드 네비게이션용)
+  const editableCellOrder = useMemo(
+    () => buildEditableCellOrder(keywords, days, isCurrentMonth, todayDay),
+    [keywords, days, isCurrentMonth, todayDay],
+  )
+
+  // 편집 모드 토글
+  const toggleEditMode = useCallback(() => {
+    if (editMode) {
+      setEditedCells({})
+      setActiveCell(null)
+    }
+    setEditMode(prev => !prev)
+  }, [editMode])
+
+  // 셀 값 가져오기 (편집된 값 우선)
+  const getCellValue = useCallback((keywordId: number, day: number): string => {
+    const key = cellKey(keywordId, day)
+    if (key in editedCells) return editedCells[key]
+    const rank = rankMap[keywordId]?.[day]?.rank
+    return rank != null ? String(rank) : ''
+  }, [editedCells, rankMap])
+
+  // 셀 클릭 → 편집 활성화
+  const handleCellClick = useCallback((keywordId: number, day: number) => {
+    if (!editMode) return
+    const key = cellKey(keywordId, day)
+    setActiveCell(key)
+    if (!(key in editedCells)) {
+      const rank = rankMap[keywordId]?.[day]?.rank
+      setEditedCells(prev => ({ ...prev, [key]: rank != null ? String(rank) : '' }))
+    }
+  }, [editMode, editedCells, rankMap])
+
+  // 셀 값 변경
+  const handleCellChange = useCallback((key: string, value: string) => {
+    if (value !== '' && !/^\d+$/.test(value)) return
+    setEditedCells(prev => ({ ...prev, [key]: value }))
+  }, [])
+
+  // 셀 포커스 해제
+  const handleCellBlur = useCallback((keywordId: number, day: number) => {
+    const key = cellKey(keywordId, day)
+    const originalRank = rankMap[keywordId]?.[day]?.rank
+    const originalStr = originalRank != null ? String(originalRank) : ''
+    if (editedCells[key] === originalStr) {
+      setEditedCells(prev => {
+        const next = { ...prev }
+        delete next[key]
+        return next
+      })
+    }
+    setActiveCell(null)
+  }, [editedCells, rankMap])
+
+  // 키보드 네비게이션: Tab/Enter → 다음 셀, Shift+Tab → 이전 셀
+  const handleCellKeyDown = useCallback((e: React.KeyboardEvent<HTMLInputElement>, keywordId: number, day: number) => {
+    if (e.key === 'Escape') {
+      e.currentTarget.blur()
+      return
+    }
+    if (e.key === 'Tab' || e.key === 'Enter') {
+      e.preventDefault()
+      const currentKey = cellKey(keywordId, day)
+      const currentIdx = editableCellOrder.indexOf(currentKey)
+      if (currentIdx === -1) return
+
+      const delta = e.shiftKey ? -1 : 1
+      const nextIdx = currentIdx + delta
+      if (nextIdx < 0 || nextIdx >= editableCellOrder.length) {
+        e.currentTarget.blur()
+        return
+      }
+
+      const nextKey = editableCellOrder[nextIdx]
+      const { keywordId: nextKwId, day: nextDay } = parseCellKey(nextKey)
+
+      // blur 현재 셀 (정리) → 다음 셀 활성화
+      handleCellBlur(keywordId, day)
+      handleCellClick(nextKwId, nextDay)
+    }
+  }, [editableCellOrder, handleCellBlur, handleCellClick])
+
+  // 변경사항 개수
+  const changedCount = Object.keys(editedCells).length
+
+  // 저장
+  const handleSave = async () => {
+    if (changedCount === 0) {
+      toast.error('변경된 순위가 없습니다.')
+      return
+    }
+
+    const rankingsToSave = Object.entries(editedCells).map(([key, value]) => {
+      const { keywordId, day } = parseCellKey(key)
+      const rankDate = `${month}-${String(day).padStart(2, '0')}`
+      return {
+        keyword_id: keywordId,
+        rank_date: rankDate,
+        rank_position: value !== '' ? parseInt(value, 10) : null,
+      }
+    })
+
+    setSaving(true)
+    try {
+      const res = await fetch('/api/monitoring/rankings/bulk', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ rankings: rankingsToSave }),
+      })
+      const data = await res.json()
+      if (!res.ok) throw new Error(data.error || '저장 실패')
+      toast.success(`${data.count}개 순위가 저장되었습니다.`)
+      setEditedCells({})
+      setActiveCell(null)
+      setEditMode(false)
+      setFetchKey(k => k + 1)
+    } catch (e: unknown) {
+      const message = e instanceof Error ? e.message : '저장 실패'
+      toast.error(message)
+    } finally {
+      setSaving(false)
+    }
+  }
 
   if (user?.role === 'clinic_staff') return null
 
@@ -170,6 +321,7 @@ export default function MonitoringPage() {
           <Select
             value={selectedClinicId ? String(selectedClinicId) : '_none'}
             onValueChange={v => setSelectedClinicId(v === '_none' ? null : Number(v))}
+            disabled={editMode}
           >
             <SelectTrigger className="w-[200px] bg-muted dark:bg-white/5 border-border dark:border-white/10 text-foreground">
               <SelectValue />
@@ -185,11 +337,11 @@ export default function MonitoringPage() {
         <div className="space-y-1">
           <Label className="text-xs text-muted-foreground">월</Label>
           <div className="flex items-center gap-1">
-            <Button variant="ghost" size="icon" onClick={() => changeMonth(-1)} className="h-10 w-8">
+            <Button variant="ghost" size="icon" onClick={() => changeMonth(-1)} className="h-10 w-8" disabled={editMode}>
               <ChevronLeft size={16} />
             </Button>
             <span className="text-foreground font-medium min-w-[100px] text-center text-sm">{year}년 {mon}월</span>
-            <Button variant="ghost" size="icon" onClick={() => changeMonth(1)} className="h-10 w-8">
+            <Button variant="ghost" size="icon" onClick={() => changeMonth(1)} className="h-10 w-8" disabled={editMode}>
               <ChevronRight size={16} />
             </Button>
           </div>
@@ -201,6 +353,7 @@ export default function MonitoringPage() {
               variant={category === 'all' ? 'default' : 'ghost'}
               size="sm"
               onClick={() => setCategory('all')}
+              disabled={editMode}
               className={category === 'all' ? 'bg-brand-600 hover:bg-brand-700 text-white' : 'text-muted-foreground hover:text-foreground'}
             >
               전체
@@ -211,6 +364,7 @@ export default function MonitoringPage() {
                 variant={category === c ? 'default' : 'ghost'}
                 size="sm"
                 onClick={() => setCategory(c)}
+                disabled={editMode}
                 className={category === c ? 'bg-brand-600 hover:bg-brand-700 text-white' : 'text-muted-foreground hover:text-foreground'}
               >
                 {CATEGORY_LABELS[c]}
@@ -218,6 +372,39 @@ export default function MonitoringPage() {
             ))}
           </div>
         </div>
+
+        {/* 수정 모드 토글 — superadmin/agency_staff/clinic_admin, 병원 선택 필수 */}
+        {canEdit && selectedClinicId && keywords.length > 0 && !loading && (
+          <div className="space-y-1 ml-auto">
+            <Label className="text-xs text-transparent">편집</Label>
+            <div className="flex items-center gap-2">
+              {editMode && changedCount > 0 && (
+                <Button
+                  size="sm"
+                  onClick={handleSave}
+                  disabled={saving}
+                  className="bg-brand-600 hover:bg-brand-700 text-white"
+                >
+                  <Save size={14} className="mr-1" />
+                  {saving ? '저장 중...' : `저장 (${changedCount}건)`}
+                </Button>
+              )}
+              <Button
+                size="sm"
+                variant={editMode ? 'outline' : 'ghost'}
+                onClick={toggleEditMode}
+                disabled={saving}
+                className={editMode ? 'border-red-500/50 text-red-400 hover:bg-red-500/10' : 'text-muted-foreground hover:text-foreground'}
+              >
+                {editMode ? (
+                  <><X size={14} className="mr-1" />편집 취소</>
+                ) : (
+                  <><Pencil size={14} className="mr-1" />순위 수정</>
+                )}
+              </Button>
+            </div>
+          </div>
+        )}
       </div>
 
       {loading ? (
@@ -261,6 +448,17 @@ export default function MonitoringPage() {
             </div>
           )}
 
+          {/* 편집 모드 안내 */}
+          {editMode && (
+            <div className="mb-4 px-4 py-2.5 rounded-lg bg-brand-600/10 border border-brand-500/20 text-sm text-brand-400 flex items-center gap-2">
+              <Pencil size={14} />
+              <span>셀을 클릭하여 순위를 입력하세요. Tab/Enter로 다음 셀, 비우면 순위 삭제.</span>
+              {changedCount > 0 && (
+                <span className="ml-auto text-xs bg-brand-600/20 px-2 py-0.5 rounded-full font-medium">{changedCount}건 변경</span>
+              )}
+            </div>
+          )}
+
           {/* 월간 순위 테이블 */}
           <Card variant="glass" className="p-4 mb-6 overflow-x-auto">
             <h3 className="text-sm font-semibold text-foreground mb-3">월간 순위 테이블</h3>
@@ -283,7 +481,6 @@ export default function MonitoringPage() {
               </thead>
               <tbody>
                 {keywords.map((kw, kwIdx) => {
-                  // 전체 보기에서 카테고리 구분 헤더
                   const prevCategory = kwIdx > 0 ? keywords[kwIdx - 1].category : null
                   const showCategoryHeader = category === 'all' && kw.category !== prevCategory
                   return (
@@ -310,33 +507,76 @@ export default function MonitoringPage() {
                             <span className="text-muted-foreground/40 text-[11px]">-</span>
                           )}
                         </td>
-                    {days.map(d => {
-                      const rd = rankMap[kw.id]?.[d]
-                      const rank = rd?.rank
-                      const isFuture = isCurrentMonth && d > todayDay
-                      return (
-                        <td key={d} className={`text-center px-1 py-2 ${isFuture ? 'opacity-20' : ''}`}>
-                          {rank != null ? (
-                            rd?.url ? (
-                              <a
-                                href={rd.url}
-                                target="_blank"
-                                rel="noopener noreferrer"
-                                className={`inline-flex items-center justify-center w-7 h-6 rounded text-[10px] font-bold ${getRankColor(rank)} cursor-pointer hover:opacity-80`}
+                        {days.map(d => {
+                          const key = cellKey(kw.id, d)
+                          const isEditing = editMode && activeCell === key
+                          const isEdited = key in editedCells
+                          const isFuture = isCurrentMonth && d > todayDay
+
+                          if (editMode && !isFuture) {
+                            const displayValue = getCellValue(kw.id, d)
+                            const numValue = displayValue !== '' ? parseInt(displayValue, 10) : null
+
+                            return (
+                              <td
+                                key={d}
+                                className="text-center px-0.5 py-1 relative"
+                                onClick={() => handleCellClick(kw.id, d)}
                               >
-                                {rank}
-                              </a>
-                            ) : (
-                              <span className={`inline-flex items-center justify-center w-7 h-6 rounded text-[10px] font-bold ${getRankColor(rank)}`}>
-                                {rank}
-                              </span>
+                                {isEditing ? (
+                                  <input
+                                    autoFocus
+                                    type="text"
+                                    inputMode="numeric"
+                                    value={editedCells[key] ?? ''}
+                                    onChange={e => handleCellChange(key, e.target.value)}
+                                    onBlur={() => handleCellBlur(kw.id, d)}
+                                    onKeyDown={e => handleCellKeyDown(e, kw.id, d)}
+                                    className="w-8 h-7 text-center text-[11px] font-bold bg-brand-600/20 border border-brand-500/50 rounded text-foreground outline-none focus:border-brand-400"
+                                  />
+                                ) : (
+                                  <span
+                                    className={`inline-flex items-center justify-center w-8 h-7 rounded text-[10px] font-bold cursor-pointer transition-colors duration-200 ${
+                                      isEdited
+                                        ? `${getRankColor(numValue)} ring-1 ring-brand-400/50`
+                                        : numValue != null
+                                          ? `${getRankColor(numValue)} hover:ring-1 hover:ring-white/20`
+                                          : 'text-muted-foreground/40 hover:bg-white/5 hover:text-muted-foreground/60'
+                                    }`}
+                                  >
+                                    {numValue != null ? numValue : '-'}
+                                  </span>
+                                )}
+                              </td>
                             )
-                          ) : (
-                            <span className="text-muted-foreground/40">-</span>
-                          )}
-                        </td>
-                      )
-                    })}
+                          }
+
+                          // 읽기 전용 셀 (편집 모드 아닐 때 또는 미래 날짜)
+                          const rd = rankMap[kw.id]?.[d]
+                          const rank = rd?.rank
+                          return (
+                            <td key={d} className={`text-center px-1 py-2 ${isFuture ? 'opacity-20' : ''}`}>
+                              {rank != null ? (
+                                rd?.url ? (
+                                  <a
+                                    href={rd.url}
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                    className={`inline-flex items-center justify-center w-7 h-6 rounded text-[10px] font-bold ${getRankColor(rank)} cursor-pointer hover:opacity-80`}
+                                  >
+                                    {rank}
+                                  </a>
+                                ) : (
+                                  <span className={`inline-flex items-center justify-center w-7 h-6 rounded text-[10px] font-bold ${getRankColor(rank)}`}>
+                                    {rank}
+                                  </span>
+                                )
+                              ) : (
+                                <span className="text-muted-foreground/40">-</span>
+                              )}
+                            </td>
+                          )
+                        })}
                       </tr>
                     </React.Fragment>
                   )
@@ -345,7 +585,32 @@ export default function MonitoringPage() {
             </table>
           </Card>
 
-          {/* 추이 차트 — 현재 숨김 처리 */}
+          {/* 편집 모드 하단 저장 바 */}
+          {editMode && changedCount > 0 && (
+            <div className="sticky bottom-4 z-20 flex justify-end">
+              <div className="bg-card/95 backdrop-blur border border-border dark:border-white/10 rounded-lg px-4 py-3 shadow-lg flex items-center gap-3">
+                <span className="text-sm text-muted-foreground">{changedCount}건 변경됨</span>
+                <Button
+                  size="sm"
+                  variant="ghost"
+                  onClick={toggleEditMode}
+                  disabled={saving}
+                  className="text-muted-foreground hover:text-foreground"
+                >
+                  취소
+                </Button>
+                <Button
+                  size="sm"
+                  onClick={handleSave}
+                  disabled={saving}
+                  className="bg-brand-600 hover:bg-brand-700 text-white"
+                >
+                  <Save size={14} className="mr-1" />
+                  {saving ? '저장 중...' : '저장'}
+                </Button>
+              </div>
+            </div>
+          )}
         </>
       )}
     </>
