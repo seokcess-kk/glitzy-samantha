@@ -99,6 +99,7 @@ export default function MonitoringPage() {
   const [addSaving, setAddSaving] = useState(false)
   const [deleteTarget, setDeleteTarget] = useState<{ id: number; keyword: string } | null>(null)
   const [deleting, setDeleting] = useState(false)
+  const [togglingId, setTogglingId] = useState<number | null>(null)
 
   const canEdit = user?.role === 'superadmin' || user?.role === 'agency_staff' || user?.role === 'clinic_admin'
 
@@ -291,6 +292,8 @@ export default function MonitoringPage() {
   }
 
   const handleToggleActive = async (id: number, currentActive: boolean) => {
+    if (togglingId !== null) return
+    setTogglingId(id)
     try {
       const res = await fetch('/api/monitoring/keywords', {
         method: 'PATCH',
@@ -302,7 +305,7 @@ export default function MonitoringPage() {
       refetch()
     } catch (e: unknown) {
       toast.error(e instanceof Error ? e.message : '변경 실패')
-    }
+    } finally { setTogglingId(null) }
   }
 
   const handleDeleteKeyword = async () => {
@@ -329,7 +332,7 @@ export default function MonitoringPage() {
       <PageHeader icon={TrendingUp} title="순위 모니터링" description="네이버 플레이스 · 웹사이트 · 스마트블록 순위 추적" />
 
       {/* 필터 */}
-      <div className="flex items-center gap-4 mb-6 flex-wrap">
+      <div className="flex items-center gap-4 mb-4 flex-wrap">
         <div className="space-y-1">
           <Label className="text-xs text-muted-foreground">병원</Label>
           <Select
@@ -386,49 +389,50 @@ export default function MonitoringPage() {
             ))}
           </div>
         </div>
-
-        {/* 액션 버튼 — canEdit && 병원 선택 시 */}
-        {canEdit && selectedClinicId && !loading && (
-          <div className="space-y-1 ml-auto">
-            <Label className="text-xs text-transparent">액션</Label>
-            <div className="flex items-center gap-2">
-              {/* 키워드 추가 */}
-              {!editMode && (
-                <Button
-                  size="sm"
-                  variant="ghost"
-                  onClick={() => setAddDialogOpen(true)}
-                  className="text-muted-foreground hover:text-foreground"
-                >
-                  <Plus size={14} className="mr-1" />키워드 추가
-                </Button>
-              )}
-              {/* 순위 저장 */}
-              {editMode && changedCount > 0 && (
-                <Button size="sm" onClick={handleSave} disabled={saving} className="bg-brand-600 hover:bg-brand-700 text-white">
-                  <Save size={14} className="mr-1" />
-                  {saving ? '저장 중...' : `저장 (${changedCount}건)`}
-                </Button>
-              )}
-              {/* 순위 편집 토글 */}
-              {keywords.length > 0 && (
-                <Button
-                  size="sm"
-                  variant={editMode ? 'outline' : 'ghost'}
-                  onClick={toggleEditMode}
-                  disabled={saving}
-                  className={editMode ? 'border-red-500/50 text-red-400 hover:bg-red-500/10' : 'text-muted-foreground hover:text-foreground'}
-                >
-                  {editMode ? <><X size={14} className="mr-1" />편집 취소</> : <><Pencil size={14} className="mr-1" />순위 수정</>}
-                </Button>
-              )}
-            </div>
-          </div>
-        )}
       </div>
 
+      {/* 액션 바 — canEdit && 병원 선택 시 */}
+      {canEdit && selectedClinicId && !loading && (
+        <div className="flex items-center gap-2 mb-6">
+          {!editMode && (
+            <Button
+              size="sm"
+              variant="outline"
+              onClick={() => setAddDialogOpen(true)}
+              className="border-border dark:border-white/10 text-muted-foreground hover:text-foreground"
+            >
+              <Plus size={14} className="mr-1" />키워드 추가
+            </Button>
+          )}
+          {editMode && changedCount > 0 && (
+            <Button size="sm" onClick={handleSave} disabled={saving} className="bg-brand-600 hover:bg-brand-700 text-white">
+              <Save size={14} className="mr-1" />
+              {saving ? '저장 중...' : `저장 (${changedCount}건)`}
+            </Button>
+          )}
+          {keywords.length > 0 && (
+            <Button
+              size="sm"
+              variant={editMode ? 'outline' : 'default'}
+              onClick={toggleEditMode}
+              disabled={saving}
+              className={editMode ? 'border-red-500/50 text-red-400 hover:bg-red-500/10' : 'bg-brand-600 hover:bg-brand-700 text-white'}
+            >
+              {editMode ? <><X size={14} className="mr-1" />편집 취소</> : <><Pencil size={14} className="mr-1" />순위 수정</>}
+            </Button>
+          )}
+        </div>
+      )}
+
+      {/* 병원 미선택 + 키워드 있을 때 안내 */}
+      {canEdit && !selectedClinicId && !loading && keywords.length > 0 && (
+        <div className="mb-6 px-4 py-2.5 rounded-lg bg-muted/50 border border-border dark:border-white/10 text-xs text-muted-foreground">
+          병원을 선택하면 순위 수정 및 키워드 관리를 할 수 있습니다.
+        </div>
+      )}
+
       {/* 키워드 추가 Dialog */}
-      <Dialog open={addDialogOpen} onOpenChange={setAddDialogOpen}>
+      <Dialog open={addDialogOpen} onOpenChange={open => { setAddDialogOpen(open); if (!open) setAddForm({ keyword: '', category: 'place', url: '' }) }}>
         <DialogContent>
           <DialogHeader>
             <DialogTitle>키워드 추가</DialogTitle>
@@ -580,7 +584,7 @@ export default function MonitoringPage() {
                     <React.Fragment key={kw.id}>
                       {showCategoryHeader && (
                         <tr>
-                          <td colSpan={days.length + 2} className="sticky left-0 bg-muted/50 dark:bg-card px-2 pt-4 pb-1 text-[10px] text-muted-foreground uppercase tracking-wider font-medium z-10">
+                          <td colSpan={days.length + 2} className="sticky left-0 bg-muted/50 dark:bg-card px-2 pt-4 pb-1 text-xs text-muted-foreground uppercase tracking-wider font-medium z-10">
                             {CATEGORY_LABELS[kw.category] || kw.category}
                           </td>
                         </tr>
@@ -592,23 +596,24 @@ export default function MonitoringPage() {
                             <span className={`truncate ${kw.is_active === false ? 'text-muted-foreground/60 line-through' : 'text-foreground/80'}`}>
                               {kw.keyword}
                             </span>
-                            {kw.is_active === false && <span className="text-[9px] text-muted-foreground/60 shrink-0">(비활성)</span>}
-                            {/* hover 시 행별 관리 아이콘 */}
+                            {kw.is_active === false && <span className="text-[10px] text-muted-foreground/60 shrink-0">(비활성)</span>}
+                            {/* 행별 관리 아이콘 — hover 디바이스: hover 시 표시, 터치 디바이스: 항상 표시 */}
                             {canEdit && !editMode && (
-                              <span className="ml-auto shrink-0 flex items-center gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity duration-200">
+                              <span className="ml-auto shrink-0 flex items-center gap-0.5 opacity-100 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity duration-200">
                                 <button
                                   onClick={() => handleToggleActive(kw.id, kw.is_active)}
-                                  className="p-1 rounded text-muted-foreground/50 hover:text-brand-400 hover:bg-brand-500/10 transition-colors"
+                                  disabled={togglingId !== null}
+                                  className="p-1.5 rounded text-muted-foreground/50 hover:text-brand-400 hover:bg-brand-500/10 transition-colors disabled:opacity-30"
                                   title={kw.is_active ? '비활성화' : '활성화'}
                                 >
-                                  {kw.is_active ? <EyeOff size={12} /> : <Eye size={12} />}
+                                  {kw.is_active ? <EyeOff size={14} /> : <Eye size={14} />}
                                 </button>
                                 <button
                                   onClick={() => setDeleteTarget({ id: kw.id, keyword: kw.keyword })}
-                                  className="p-1 rounded text-muted-foreground/50 hover:text-red-500 hover:bg-red-500/10 transition-colors"
+                                  className="p-1.5 rounded text-muted-foreground/50 hover:text-red-500 hover:bg-red-500/10 transition-colors"
                                   title="삭제"
                                 >
-                                  <Trash2 size={12} />
+                                  <Trash2 size={14} />
                                 </button>
                               </span>
                             )}
@@ -648,12 +653,12 @@ export default function MonitoringPage() {
                                   />
                                 ) : (
                                   <span
-                                    className={`inline-flex items-center justify-center w-8 h-7 rounded text-[10px] font-bold cursor-pointer transition-colors duration-200 ${
+                                    className={`inline-flex items-center justify-center w-8 h-7 rounded text-[10px] font-bold cursor-pointer transition-all duration-200 ${
                                       isEdited
                                         ? `${getRankColor(numValue)} ring-1 ring-brand-400/50`
                                         : numValue != null
                                           ? `${getRankColor(numValue)} hover:ring-1 hover:ring-white/20`
-                                          : 'text-muted-foreground/40 hover:bg-white/5 hover:text-muted-foreground/60'
+                                          : 'text-muted-foreground/30 border border-dashed border-transparent hover:border-white/15 hover:text-muted-foreground/60 hover:bg-white/5'
                                     }`}
                                   >
                                     {numValue != null ? numValue : '-'}
