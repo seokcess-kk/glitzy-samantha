@@ -908,6 +908,50 @@ data: {"type":"error","error":"에러 메시지"}
 
 ---
 
+## ERP 문서 API (견적서/계산서)
+
+glitzy-web 외부 API 프록시. 읽기 전용.
+
+**권한:** clinic_admin 이상 (clinic_staff 차단). clinicId 필수.
+
+### GET /api/erp-documents
+
+견적서 또는 계산서 목록을 조회합니다.
+
+**Query Parameters:**
+- `type`: `quotes` (기본) | `invoices`
+- `status` (optional): 상태 필터
+- `page` (default: 1)
+- `limit` (default: 20)
+- `clinic_id`: 병원 ID (필수)
+
+**Response:** glitzy-web 응답을 그대로 전달
+```json
+{
+  "success": true,
+  "data": [...],
+  "pagination": { "page": 1, "totalPages": 3, "totalCount": 42 }
+}
+```
+
+### GET /api/erp-documents/{id}
+
+견적서 또는 계산서 상세를 조회합니다. ID는 UUID 형식.
+
+**Query Parameters:**
+- `type`: `quotes` (기본) | `invoices`
+- `clinic_id`: 병원 ID (필수)
+
+**Response:**
+```json
+{
+  "success": true,
+  "data": { "id": "uuid", "quote_number": "QT-202603-001", "title": "...", "quote_items": [...] }
+}
+```
+
+---
+
 ## 병원 API 키 관리 API (superadmin 전용)
 
 ### GET /api/admin/clinics/{id}/api-configs

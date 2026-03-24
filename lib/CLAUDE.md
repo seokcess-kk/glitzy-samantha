@@ -88,6 +88,7 @@
 | `date.ts` | `formatDate`, `getKstDateString`, `getKstDayStartISO` | KST 기준 날짜 포맷/생성 |
 | `services/metaCapi.ts` | Meta CAPI 전송 | 리드 유입 시 서버사이드 전환 이벤트 전송 |
 | `services/pressSync.ts` | `syncPressForClinic` | 언론보도 수집 (다중 키워드 → Google News RSS → upsert) |
+| `services/erpClient.ts` | `fetchQuotes`, `fetchInvoices` 등 | glitzy-web ERP 외부 API 프록시 (fetchJSON 기반) |
 | `medichecker/types.ts` | 전체 타입 정의 | VerifyRequest, Violation, VerifyResult, Chunk, LawArticle 등 |
 | `medichecker/verification.ts` | `verify` | 7단계 파이프라인 오케스트레이터 (SSE 진행 콜백) |
 | `medichecker/rag.ts` | `hybridSearch` | pgvector 시맨틱 + pg_trgm 키워드 RRF 결합 |

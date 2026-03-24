@@ -43,6 +43,7 @@ npm run analyze      # 번들 크기 분석
 | `components/ads/` | 광고 성과 UI (KPI카드, 효율추이, 매체비교, 퍼널, 캠페인, 요일, LP) | |
 | `components/attribution/` | 매출 기여 분석 UI (퍼널, CPL/ROAS, 고객 여정) | |
 | `components/medichecker/` | 원고 검수 UI (텍스트 입력, 위반 하이라이트, 진행 표시, 이력) | |
+| `components/erp-documents/` | ERP 문서 UI (견적서/계산서 목록, Sheet 상세) | |
 | `lib/medichecker/` | 의료광고 검증 도메인 서비스 (7단계 AI 파이프라인, RAG, 온톨로지) | |
 | `data/medichecker-seed/` | 의료광고법 시드 데이터 (법조문 15건, 시술 50건, 관계, 청크) | |
 | `supabase/migrations/` | DB 마이그레이션 (`YYYYMMDD_설명.sql`) | |
@@ -245,3 +246,4 @@ npm run analyze      # 번들 크기 분석
 | 2026-03-24 | 검증 규칙에 '문서 업데이트 필수' 단계 추가 — 코드 리뷰 완료 후 관련 문서(CLAUDE.md, API.md, COMPONENTS.md 등) 반드시 업데이트 |
 | 2026-03-24 | MediChecker Phase 2: logActivity 연동 + 이력 상세 보기 |
 | 2026-03-24 | MediChecker Phase 3: agency_staff 메뉴 권한에 `medichecker` 항목 추가 (MENU_OPTIONS) |
+| 2026-03-24 | ERP 연동: glitzy-web 견적서/계산서 읽기 전용 프록시 (erpClient, API 2개, UI 2컴포넌트, Sheet 상세) |

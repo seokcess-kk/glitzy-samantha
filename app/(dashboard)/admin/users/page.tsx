@@ -57,6 +57,7 @@ const MENU_OPTIONS = [
   { key: 'press', label: '언론보도' },
   { key: 'monitoring', label: '순위 현황' },
   { key: 'medichecker', label: '원고 검수' },
+  { key: 'erp-documents', label: '견적/계산서' },
 ]
 
 export default function UsersPage() {

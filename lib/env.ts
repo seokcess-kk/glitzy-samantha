@@ -69,6 +69,11 @@ const ENV_GROUPS: EnvGroup[] = [
     ],
   },
   {
+    name: 'ERP (glitzy-web)',
+    required: [],
+    optional: ['ERP_API_URL', 'ERP_SERVICE_KEY'],
+  },
+  {
     name: 'AI',
     required: [],
     optional: ['ANTHROPIC_API_KEY', 'OPENAI_API_KEY'],

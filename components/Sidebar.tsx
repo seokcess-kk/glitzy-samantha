@@ -4,7 +4,7 @@ import { usePathname } from 'next/navigation'
 import { signOut } from 'next-auth/react'
 import { useSession } from 'next-auth/react'
 import { useState, useEffect } from 'react'
-import { LayoutDashboard, Users, BarChart2, LogOut, Activity, Calendar, Film, Link2, Scan, Newspaper, ChevronUp, User, ClipboardList, LucideIcon, Building2, UserCog, FileText, Image as ImageIcon, Megaphone, TrendingUp, Shield, KeyRound, ShieldCheck } from 'lucide-react'
+import { LayoutDashboard, Users, BarChart2, LogOut, Activity, Calendar, Film, Link2, Scan, Newspaper, ChevronUp, User, ClipboardList, LucideIcon, Building2, UserCog, FileText, Image as ImageIcon, Megaphone, TrendingUp, Shield, KeyRound, ShieldCheck, Receipt } from 'lucide-react'
 import { useClinic } from './ClinicContext'
 import { Button } from '@/components/ui/button'
 import {
@@ -83,10 +83,17 @@ const menuGroups: MenuGroup[] = [
     ]
   },
   {
-    label: '광고 검수',
+    label: '원고 검수',
     minRole: 2,
     items: [
-      { href: '/medichecker', label: '광고 검수', icon: ShieldCheck, menuKey: 'medichecker' },
+      { href: '/medichecker', label: '원고 검수', icon: ShieldCheck, menuKey: 'medichecker' },
+    ]
+  },
+  {
+    label: '견적/계산서',
+    minRole: 2,
+    items: [
+      { href: '/erp-documents', label: '견적/계산서', icon: Receipt, menuKey: 'erp-documents' },
     ]
   },
 ]
@@ -96,11 +103,10 @@ import PasswordChangeDialog from '@/components/PasswordChangeDialog'
 import ThemeToggle from '@/components/ThemeToggle'
 
 function navLinkClass(isActive: boolean): string {
-  return `flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-colors duration-200 ${
-    isActive
+  return `flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-colors duration-200 ${isActive
       ? 'bg-brand-600/20 text-brand-400'
       : 'text-muted-foreground hover:text-foreground hover:bg-muted'
-  }`
+    }`
 }
 
 export default function Sidebar({ onClose }: { onClose?: () => void }) {

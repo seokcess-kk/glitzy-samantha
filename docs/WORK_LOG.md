@@ -27,10 +27,24 @@ shadcn/ui 기반 UI/UX 개선 및 기능 개발 작업 기록.
 | Phase 13: UI/UX 감사 + Polish | 2026-03-23 | 접근성(A11y), 색상 토큰화, 타이포 상향, 반응형, 코드품질, LP 분석 분리 | 완료 | - |
 | Phase 14: MediChecker 통합 | 2026-03-24 | 의료광고법 제56조 AI 검증 (7단계 파이프라인, RAG, 온톨로지) | 완료 | - |
 | Phase 14b: MediChecker UI/UX 감사 | 2026-03-24 | 2컬럼 sticky 레이아웃, 심각도 그룹핑, 컴팩트 카드, A11y 13건 수정 | 완료 | - |
+| Phase 15: ERP 연동 | 2026-03-24 | glitzy-web 견적서/계산서 읽기 전용 프록시, Sheet 상세, 탭 UI | 완료 | - |
 
 ---
 
-## 최신 작업 (Phase 14b: MediChecker UI/UX 감사)
+## 최신 작업 (Phase 15: ERP 연동)
+
+| # | 작업 | 핵심 내용 | 날짜 |
+|---|------|----------|------|
+| P30-1 | 타입 + 환경변수 | `types/erp.ts` 타입 정의, `lib/env.ts`에 ERP 그룹 추가 | 03-24 |
+| P30-2 | ERP 클라이언트 | `lib/services/erpClient.ts` — fetchJSON 기반 4개 함수 (quotes/invoices 목록+상세) | 03-24 |
+| P30-3 | API 라우트 | `/api/erp-documents` 목록 + `/api/erp-documents/[id]` 상세 (UUID 검증, clinic_staff 차단) | 03-24 |
+| P30-4 | 프론트엔드 | 견적서/계산서 탭 페이지 + quote-list/invoice-list 컴포넌트 + Sheet 상세 | 03-24 |
+| P30-5 | 사이드바 | 견적/계산서 메뉴 추가 (Receipt 아이콘, minRole: 2, menuKey: erp-documents) | 03-24 |
+| P30-6 | 문서 수정 | INTEGRATION.md 스펙 오류 3건 수정 (fetchJSON, clinic_staff 차단, UUID ID) | 03-24 |
+
+---
+
+## Phase 14b (MediChecker UI/UX 감사)
 
 | # | 작업 | 핵심 내용 | 날짜 |
 |---|------|----------|------|
