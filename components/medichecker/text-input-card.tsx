@@ -1,5 +1,5 @@
 'use client'
-import { useState, useRef, useCallback } from 'react'
+import { useState, useCallback } from 'react'
 import { AlertTriangle, Pencil, ClipboardPaste } from 'lucide-react'
 import { Card } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
@@ -30,7 +30,6 @@ export function TextInputCard({
   onSelectViolation,
   disabled,
 }: TextInputCardProps) {
-  const textareaRef = useRef<HTMLTextAreaElement>(null)
   const [isFocused, setIsFocused] = useState(false)
 
   const charCount = text.length
@@ -55,7 +54,7 @@ export function TextInputCard({
       {/* 헤더 */}
       <div className="flex items-center justify-between mb-3">
         <div className="flex items-center gap-2">
-          <h3 className="text-sm font-medium text-foreground">광고 문구 입력</h3>
+          <label htmlFor="mc-ad-text" className="text-sm font-medium text-foreground">광고 문구 입력</label>
           {violations.length > 0 && onToggleHighlight && (
             <Button
               type="button"
@@ -96,7 +95,7 @@ export function TextInputCard({
         </div>
       ) : (
         <textarea
-          ref={textareaRef}
+          id="mc-ad-text"
           value={text}
           onChange={(e) => onTextChange(e.target.value)}
           onFocus={() => setIsFocused(true)}

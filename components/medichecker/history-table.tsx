@@ -18,6 +18,7 @@ import { EmptyState } from '@/components/common'
 import { formatDateTime } from '@/lib/date'
 import type { AdType } from '@/lib/medichecker/types'
 import { AD_TYPE_LABELS } from '@/lib/medichecker/types'
+import { getRiskLevel } from '@/lib/medichecker/risk-level'
 
 interface HistoryItem {
   id: number
@@ -37,17 +38,7 @@ interface HistoryResponse {
 
 const PAGE_SIZE = 10
 
-function getRiskBadgeVariant(score: number): 'destructive' | 'warning' | 'success' {
-  if (score >= 70) return 'destructive'
-  if (score >= 40) return 'warning'
-  return 'success'
-}
-
-function getRiskLabel(score: number): string {
-  if (score >= 70) return '위험'
-  if (score >= 40) return '주의'
-  return '양호'
-}
+// getRiskLevel 유틸 사용 (lib/medichecker/risk-level.ts)
 
 interface HistoryTableProps {
   onSelectHistory?: (id: number) => void
@@ -141,8 +132,8 @@ export function HistoryTable({ onSelectHistory }: HistoryTableProps) {
                     </Badge>
                   </TableCell>
                   <TableCell>
-                    <Badge variant={getRiskBadgeVariant(item.risk_score)} className="text-xs tabular-nums">
-                      {item.risk_score}점 {getRiskLabel(item.risk_score)}
+                    <Badge variant={getRiskLevel(item.risk_score).badgeVariant} className="text-xs tabular-nums">
+                      {item.risk_score}점 {getRiskLevel(item.risk_score).label}
                     </Badge>
                   </TableCell>
                   <TableCell className="text-xs text-foreground tabular-nums">

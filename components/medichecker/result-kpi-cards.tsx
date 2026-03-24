@@ -1,6 +1,7 @@
 'use client'
 import { StatsCard } from '@/components/common'
 import { ShieldAlert, AlertTriangle, Clock, Search } from 'lucide-react'
+import { getRiskLevel } from '@/lib/medichecker/risk-level'
 import type { VerifyResult } from '@/lib/medichecker/types'
 
 interface ResultKpiCardsProps {
@@ -9,8 +10,7 @@ interface ResultKpiCardsProps {
 }
 
 export function ResultKpiCards({ result, loading }: ResultKpiCardsProps) {
-  const riskLabel = result.riskScore >= 70 ? '위험' : result.riskScore >= 40 ? '주의' : '양호'
-  const riskColor = result.riskScore >= 70 ? 'negative' : result.riskScore >= 40 ? undefined : 'positive'
+  const risk = getRiskLevel(result.riskScore)
 
   return (
     <div className="grid grid-cols-2 md:grid-cols-4 gap-2 md:gap-3">
@@ -19,8 +19,8 @@ export function ResultKpiCards({ result, loading }: ResultKpiCardsProps) {
         value={`${result.riskScore}점`}
         loading={loading}
         icon={ShieldAlert}
-        subtitle={riskLabel}
-        subtitleColor={riskColor as 'positive' | 'negative' | undefined}
+        subtitle={risk.label}
+        subtitleColor={risk.subtitleColor}
       />
       <StatsCard
         label="위반 의심"

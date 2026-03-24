@@ -100,7 +100,7 @@ export function ViolationHighlight({ text, violations, selectedIndex, onSelectVi
     segments.push(
       <span
         key={`hl-${i}`}
-        className={`rounded-sm px-0.5 transition-colors duration-200 ${className}`}
+        className={`rounded-sm px-0.5 transition-colors duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring ${className}`}
         onClick={() => onSelectViolation?.(range.violationIndex)}
         role="button"
         tabIndex={0}

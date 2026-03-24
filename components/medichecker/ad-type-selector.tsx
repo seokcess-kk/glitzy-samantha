@@ -37,6 +37,8 @@ export function AdTypeSelector({ value, onChange, disabled }: AdTypeSelectorProp
               className={isActive ? 'bg-brand-600 hover:bg-brand-700 text-white' : ''}
               onClick={() => onChange(type)}
               disabled={disabled}
+              aria-label={AD_TYPE_LABELS[type]}
+              aria-pressed={isActive}
             >
               <Icon size={14} />
               <span className="hidden sm:inline">{AD_TYPE_LABELS[type]}</span>

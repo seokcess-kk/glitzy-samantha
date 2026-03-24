@@ -1,6 +1,7 @@
 'use client'
 import { useState, useCallback } from 'react'
 import { Copy, Check, ChevronDown, ArrowDown } from 'lucide-react'
+import { toast } from 'sonner'
 import { Button } from '@/components/ui/button'
 import type { Violation } from '@/lib/medichecker/types'
 
@@ -47,7 +48,7 @@ function ExampleFix({ violation }: { violation: Violation }) {
       setCopied(true)
       setTimeout(() => setCopied(false), 2000)
     } catch {
-      // 복사 실패
+      toast.error('복사에 실패했습니다.')
     }
   }, [violation.exampleFix])
 
@@ -132,15 +133,7 @@ export function ViolationCard({ violation, index, isSelected, onSelect }: Violat
       {/* === 컴팩트 헤더 (항상 표시) === */}
       <div
         className="p-3 cursor-pointer"
-        role="button"
-        tabIndex={0}
         onClick={() => onSelect?.(index)}
-        onKeyDown={(e) => {
-          if (e.key === 'Enter' || e.key === ' ') {
-            e.preventDefault()
-            onSelect?.(index)
-          }
-        }}
       >
         {/* 1행: 메타 정보 */}
         <div className="flex items-center justify-between gap-2 mb-1.5">

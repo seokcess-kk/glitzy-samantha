@@ -15,7 +15,8 @@ import { VerifyProgress } from '@/components/medichecker/verify-progress'
 import { ResultKpiCards } from '@/components/medichecker/result-kpi-cards'
 import { ViolationCard } from '@/components/medichecker/violation-card'
 import { HistoryTable } from '@/components/medichecker/history-table'
-import type { AdType } from '@/lib/medichecker/types'
+import type { AdType, Violation } from '@/lib/medichecker/types'
+import { getRiskLevel } from '@/lib/medichecker/risk-level'
 
 export default function MediCheckerPage() {
   const { data: session } = useSession()
@@ -75,10 +76,13 @@ export default function MediCheckerPage() {
   const hasProgress = progress.size > 0
   const hasViolations = result && result.violations.length > 0
 
-  // 심각도별 위반 그룹핑
+  // 심각도별 위반 그룹핑 + 글로벌 인덱스 맵
   const highViolations = result?.violations.filter(v => v.confidence >= 90) ?? []
   const mediumViolations = result?.violations.filter(v => v.confidence >= 60 && v.confidence < 90) ?? []
   const lowViolations = result?.violations.filter(v => v.confidence < 60) ?? []
+
+  const globalIndexMap = new Map<Violation, number>()
+  result?.violations.forEach((v, i) => globalIndexMap.set(v, i))
 
   return (
     <div className="space-y-4 md:space-y-6">
@@ -153,24 +157,18 @@ export default function MediCheckerPage() {
           {/* KPI 요약 + 액션 바 */}
           <div className="flex items-center justify-between flex-wrap gap-3">
             <div className="flex items-center gap-3">
-              {/* 결과 요약 배지 */}
-              {result.riskScore >= 70 ? (
-                <span className="inline-flex items-center gap-1.5 text-sm font-medium text-rose-400">
-                  <AlertTriangle size={16} />
-                  위험 ({result.riskScore}점) · 위반 {result.violations.length}건
-                </span>
-              ) : result.riskScore >= 40 ? (
-                <span className="inline-flex items-center gap-1.5 text-sm font-medium text-amber-400">
-                  <AlertTriangle size={16} />
-                  주의 ({result.riskScore}점) · 위반 {result.violations.length}건
-                </span>
-              ) : (
-                <span className="inline-flex items-center gap-1.5 text-sm font-medium text-emerald-400">
-                  <CheckCircle size={16} />
-                  양호 ({result.riskScore}점)
-                  {result.violations.length > 0 && ` · 위반 ${result.violations.length}건`}
-                </span>
-              )}
+              {(() => {
+                const risk = getRiskLevel(result.riskScore)
+                const Icon = risk.color === 'emerald' ? CheckCircle : AlertTriangle
+                const colorClass = risk.color === 'rose' ? 'text-rose-400' : risk.color === 'amber' ? 'text-amber-400' : 'text-emerald-400'
+                return (
+                  <span className={`inline-flex items-center gap-1.5 text-sm font-medium ${colorClass}`}>
+                    <Icon size={16} />
+                    {risk.label} ({result.riskScore}점)
+                    {result.violations.length > 0 && ` · 위반 ${result.violations.length}건`}
+                  </span>
+                )
+              })()}
             </div>
             <div className="flex items-center gap-2">
               <Button type="button" variant="ghost" size="sm" onClick={handleReset}>
@@ -192,8 +190,8 @@ export default function MediCheckerPage() {
           {/* 2컬럼 레이아웃: 좌=원문, 우=위반목록 */}
           {hasViolations ? (
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 md:gap-6">
-              {/* 좌측: 원문 하이라이트 (데스크톱에서 sticky) */}
-              <div className="lg:sticky lg:top-4 lg:self-start">
+              {/* 좌측: 원문 하이라이트 (데스크톱에서 max-height 고정) */}
+              <div className="lg:max-h-[calc(100vh-12rem)] lg:overflow-y-auto">
                 <TextInputCard
                   text={text}
                   onTextChange={setText}
@@ -215,7 +213,7 @@ export default function MediCheckerPage() {
                     count={highViolations.length}
                     color="rose"
                     violations={highViolations}
-                    result={result}
+                    globalIndexMap={globalIndexMap}
                     selectedViolationIndex={selectedViolationIndex}
                     onSelectViolation={(idx) => {
                       setSelectedViolationIndex(prev => prev === idx ? null : idx)
@@ -229,7 +227,7 @@ export default function MediCheckerPage() {
                     count={mediumViolations.length}
                     color="amber"
                     violations={mediumViolations}
-                    result={result}
+                    globalIndexMap={globalIndexMap}
                     selectedViolationIndex={selectedViolationIndex}
                     onSelectViolation={(idx) => {
                       setSelectedViolationIndex(prev => prev === idx ? null : idx)
@@ -243,7 +241,7 @@ export default function MediCheckerPage() {
                     count={lowViolations.length}
                     color="muted"
                     violations={lowViolations}
-                    result={result}
+                    globalIndexMap={globalIndexMap}
                     selectedViolationIndex={selectedViolationIndex}
                     onSelectViolation={(idx) => {
                       setSelectedViolationIndex(prev => prev === idx ? null : idx)
@@ -263,7 +261,7 @@ export default function MediCheckerPage() {
           )}
 
           {/* 면책 조항 */}
-          <p className="text-xs text-muted-foreground/70 text-center py-2">
+          <p className="text-xs text-muted-foreground text-center py-2">
             본 검수 결과는 AI 기반 참고 자료이며, 최종 법적 판단은 전문가의 검토가 필요합니다.
           </p>
         </>
@@ -276,14 +274,12 @@ export default function MediCheckerPage() {
 // 위반 그룹 컴포넌트
 // ============================================================
 
-import type { Violation, VerifyResult } from '@/lib/medichecker/types'
-
 function ViolationGroup({
   label,
   count,
   color,
   violations,
-  result,
+  globalIndexMap,
   selectedViolationIndex,
   onSelectViolation,
 }: {
@@ -291,7 +287,7 @@ function ViolationGroup({
   count: number
   color: 'rose' | 'amber' | 'muted'
   violations: Violation[]
-  result: VerifyResult
+  globalIndexMap: Map<Violation, number>
   selectedViolationIndex: number | null
   onSelectViolation: (idx: number) => void
 }) {
@@ -327,7 +323,7 @@ function ViolationGroup({
       {/* 위반 카드 */}
       <div className="space-y-2">
         {violations.map((violation) => {
-          const globalIdx = result.violations.indexOf(violation)
+          const globalIdx = globalIndexMap.get(violation) ?? 0
           return (
             <ViolationCard
               key={globalIdx}
