@@ -4,7 +4,7 @@ import { usePathname } from 'next/navigation'
 import { signOut } from 'next-auth/react'
 import { useSession } from 'next-auth/react'
 import { useState, useEffect } from 'react'
-import { LayoutDashboard, Users, BarChart2, LogOut, Activity, Calendar, Film, Link2, Scan, Newspaper, Settings, ChevronUp, User, FileEdit, ClipboardList, LucideIcon, Building2, UserCog, FileText, Image as ImageIcon, Megaphone, TrendingUp, Shield, KeyRound } from 'lucide-react'
+import { LayoutDashboard, Users, BarChart2, LogOut, Activity, Calendar, Film, Link2, Scan, Newspaper, Settings, ChevronUp, User, ClipboardList, LucideIcon, Building2, UserCog, FileText, Image as ImageIcon, Megaphone, TrendingUp, Shield, KeyRound } from 'lucide-react'
 import { useClinic } from './ClinicContext'
 import { Button } from '@/components/ui/button'
 import {
@@ -80,7 +80,6 @@ const menuGroups: MenuGroup[] = [
     minRole: 2,
     items: [
       { href: '/monitoring', label: '순위 현황', icon: TrendingUp, menuKey: 'monitoring' },
-      { href: '/monitoring/input', label: '순위 입력', icon: FileEdit, minRole: 2, menuKey: 'monitoring-input' },
       { href: '/monitoring/keywords', label: '키워드 관리', icon: Settings, minRole: 2, menuKey: 'monitoring-keywords' },
     ]
   },
