@@ -2,7 +2,7 @@
 
 > 최종 갱신: 2026-03-24
 > glitzy-web 외부 API: **구현 완료**
-> Samantha 측: **미구현** (이 문서를 참고하여 구현)
+> Samantha 측: **구현 완료** (프로덕션 배포 확인)
 
 ---
 
@@ -427,7 +427,10 @@ components/erp-documents/
 - [x] 사이드바 메뉴에 '견적/계산서' 항목 추가 (Receipt 아이콘)
 - [x] agency_staff 메뉴 권한에 'erp-documents' 추가
 
-검증 (환경변수 설정 후):
+검증:
+- [x] 로컬 환경 동작 확인 (Samantha:3002 → glitzy-web:3000)
+- [x] 프로덕션 배포 확인 (glitzymmi.kr → glitzy.kr/api/external)
+- [x] Vercel 환경변수 설정 (ERP_API_URL, ERP_SERVICE_KEY)
 - [ ] clinic_admin으로 로그인 → 자기 병원 견적서 조회
 - [ ] superadmin으로 로그인 → clinic_id 파라미터로 필터
 - [ ] clinic_staff로 로그인 → 접근 차단 확인
