@@ -414,6 +414,32 @@ import { SortSelect } from '@/components/common'
 | `options` | `SortOption[]` | `{ value, label }` 배열 |
 | `className` | `string?` | 추가 CSS 클래스 |
 
+### DateRangePicker
+
+시작일/종료일을 명시적으로 표시하는 날짜 범위 선택 컴포넌트. 프리셋(오늘, 7일, 14일, 이번 달, 30일, 90일) + 캘린더(2개월) 제공.
+
+```tsx
+import { DateRangePicker } from '@/components/dashboard/date-range-picker'
+import { DateRange } from 'react-day-picker'
+
+const [dateRange, setDateRange] = useState<DateRange>({
+  from: startOfMonth(startOfDay(new Date())),
+  to: startOfDay(new Date()),
+})
+
+<DateRangePicker dateRange={dateRange} onDateRangeChange={setDateRange} />
+```
+
+**Props:**
+| Prop | Type | Description |
+|------|------|-------------|
+| `dateRange` | `DateRange` | `{ from?: Date, to?: Date }` |
+| `onDateRangeChange` | `(range: DateRange) => void` | 범위 변경 콜백 |
+
+**트리거 표시:** `📅 2026.03.01 ~ 2026.03.26` (시작일/종료일 명시)
+**팝오버 상단:** 시작일/종료일 라벨 + `yyyy.MM.dd (eee)` 포맷으로 선택 상태 표시
+**사용 페이지:** 대시보드, 광고 성과, 언론보도, 캠페인 리드, 환자/예약 (5곳)
+
 ---
 
 ## 대시보드 섹션 컴포넌트
