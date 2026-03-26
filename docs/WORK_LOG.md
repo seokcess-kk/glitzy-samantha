@@ -43,7 +43,9 @@ shadcn/ui 기반 UI/UX 개선 및 기능 개발 작업 기록.
 | P31-4 | ad_stats 마이그레이션 | `ad_stats` 테이블 신규 — ad 레벨 일별 성과 (clinic_id, ad_id, utm_content, spend/clicks/impressions) | 03-26 |
 | P31-5 | Ad 레벨 수집 | `fetchMetaAdStats()` — insights?level=ad 페이지네이션, url_tags/effective_link→utm_content 자동 추출, DB 캐시 | 03-26 |
 | P31-6 | 소재별 성과 통합 | creatives-performance API에 ad_stats 4번째 쿼리 추가, 지출/노출/클릭/CPC/CTR/CPL 13컬럼 + 정렬 | 03-26 |
-| P31-7 | 캠페인 CPL | ads/stats API에 campaignLeadCounts 추가 (ad_stats→utm_content→leads 경유), campaign-ranking-table CPL 실제 값 표시 | 03-26 |
+| P31-7 | 캠페인 CPL | ads/stats API에 campaignLeadCounts 추가 (inflow_url utm_id→campaign_id 매칭), campaign-ranking-table CPL 실제 값 표시 | 03-26 |
+| P31-8 | 소재 광고 지표 폴백 | creatives-performance utm_id→campaign_id→리드 비율 배분 (ads_read 권한 없이 동작), campTotalLeads 사전 계산 | 03-26 |
+| P31-9 | 날짜 표시 통일 | CreativePerformance "최근 N일" → "M.D ~ M.D" 형식 통일 (parentDays→startDate/endDate prop 변경) | 03-26 |
 
 ---
 
