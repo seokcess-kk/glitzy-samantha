@@ -17,6 +17,20 @@ interface StatsCardProps {
   size?: 'default' | 'lg'
 }
 
+function getValueSizeClass(value: string | number, isLg: boolean): string {
+  const len = String(value).length
+  if (isLg) {
+    if (len <= 6) return 'text-2xl md:text-3xl'
+    if (len <= 9) return 'text-xl md:text-2xl'
+    if (len <= 12) return 'text-lg md:text-xl'
+    return 'text-base md:text-lg'
+  }
+  if (len <= 6) return 'text-xl md:text-2xl'
+  if (len <= 9) return 'text-lg md:text-xl'
+  if (len <= 12) return 'text-base md:text-lg'
+  return 'text-sm md:text-base'
+}
+
 export function StatsCard({ label, value, loading, icon: Icon, trend, onClick, subtitle, subtitleColor = 'default', size = 'default' }: StatsCardProps) {
   const isLg = size === 'lg'
   const clickable = !!onClick
@@ -42,7 +56,7 @@ export function StatsCard({ label, value, loading, icon: Icon, trend, onClick, s
       {loading ? (
         <Skeleton className={`${isLg ? 'h-9 md:h-10' : 'h-7 md:h-8'} mb-2`} />
       ) : (
-        <p className={`${isLg ? 'text-2xl md:text-3xl' : 'text-xl md:text-2xl'} font-bold text-foreground mb-1 truncate tabular-nums`}>
+        <p className={`${getValueSizeClass(value, isLg)} font-bold text-foreground mb-1 tabular-nums break-all`}>
           {value}
         </p>
       )}

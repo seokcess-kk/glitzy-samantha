@@ -366,6 +366,15 @@ import { TrendingUp } from 'lucide-react'
 | `subtitleColor` | `'default' \| 'positive' \| 'negative'` | `'default'` | 서브타이틀 색상 |
 | `size` | `'default' \| 'lg'` | `'default'` | lg: 큰 폰트 + 패딩 |
 
+**동적 폰트 크기:** 값 문자열 길이에 따라 폰트 크기가 자동 축소되어, 좁은 카드(8열 그리드 등)에서도 값이 잘리지 않고 전체 표시됩니다.
+
+| 길이 | 기본 사이즈 | lg 사이즈 |
+|------|------------|-----------|
+| ≤6자 | `text-xl` / `md:text-2xl` | `text-2xl` / `md:text-3xl` |
+| 7–9자 | `text-lg` / `md:text-xl` | `text-xl` / `md:text-2xl` |
+| 10–12자 | `text-base` / `md:text-lg` | `text-lg` / `md:text-xl` |
+| 13자+ | `text-sm` / `md:text-base` | `text-base` / `md:text-lg` |
+
 ### EmptyState
 
 ```tsx
