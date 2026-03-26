@@ -231,29 +231,29 @@ export default function CampaignRankingTable({ startDate, endDate, platformFilte
             <Table className="min-w-[720px]">
               <TableHeader>
                 <TableRow className="border-b border-border dark:border-white/5 hover:bg-transparent">
-                  <TableHead className={thClass} onClick={() => handleSort('campaign_name')}>
+                  <TableHead className={thClass} role="columnheader" tabIndex={0} aria-sort={sortField === 'campaign_name' ? (sortDir === 'asc' ? 'ascending' : 'descending') : 'none'} onClick={() => handleSort('campaign_name')} onKeyDown={(e) => e.key === 'Enter' && handleSort('campaign_name')}>
                     캠페인명 <SortIcon field="campaign_name" sortField={sortField} sortDir={sortDir} />
                   </TableHead>
                   <TableHead className={`${thClass} w-[80px]`}>매체</TableHead>
-                  <TableHead className={`${thClass} text-right`} onClick={() => handleSort('spend')}>
+                  <TableHead className={`${thClass} text-right`} role="columnheader" tabIndex={0} aria-sort={sortField === 'spend' ? (sortDir === 'asc' ? 'ascending' : 'descending') : 'none'} onClick={() => handleSort('spend')} onKeyDown={(e) => e.key === 'Enter' && handleSort('spend')}>
                     지출 <SortIcon field="spend" sortField={sortField} sortDir={sortDir} />
                   </TableHead>
-                  <TableHead className={`${thClass} text-right`} onClick={() => handleSort('clicks')}>
+                  <TableHead className={`${thClass} text-right`} role="columnheader" tabIndex={0} aria-sort={sortField === 'clicks' ? (sortDir === 'asc' ? 'ascending' : 'descending') : 'none'} onClick={() => handleSort('clicks')} onKeyDown={(e) => e.key === 'Enter' && handleSort('clicks')}>
                     클릭 <SortIcon field="clicks" sortField={sortField} sortDir={sortDir} />
                   </TableHead>
-                  <TableHead className={`${thClass} text-right`} onClick={() => handleSort('impressions')}>
+                  <TableHead className={`${thClass} text-right`} role="columnheader" tabIndex={0} aria-sort={sortField === 'impressions' ? (sortDir === 'asc' ? 'ascending' : 'descending') : 'none'} onClick={() => handleSort('impressions')} onKeyDown={(e) => e.key === 'Enter' && handleSort('impressions')}>
                     노출 <SortIcon field="impressions" sortField={sortField} sortDir={sortDir} />
                   </TableHead>
-                  <TableHead className={`${thClass} text-right`} onClick={() => handleSort('cpc')}>
+                  <TableHead className={`${thClass} text-right`} role="columnheader" tabIndex={0} aria-sort={sortField === 'cpc' ? (sortDir === 'asc' ? 'ascending' : 'descending') : 'none'} onClick={() => handleSort('cpc')} onKeyDown={(e) => e.key === 'Enter' && handleSort('cpc')}>
                     CPC <SortIcon field="cpc" sortField={sortField} sortDir={sortDir} />
                   </TableHead>
-                  <TableHead className={`${thClass} text-right`} onClick={() => handleSort('ctr')}>
+                  <TableHead className={`${thClass} text-right`} role="columnheader" tabIndex={0} aria-sort={sortField === 'ctr' ? (sortDir === 'asc' ? 'ascending' : 'descending') : 'none'} onClick={() => handleSort('ctr')} onKeyDown={(e) => e.key === 'Enter' && handleSort('ctr')}>
                     CTR <SortIcon field="ctr" sortField={sortField} sortDir={sortDir} />
                   </TableHead>
-                  <TableHead className={`${thClass} text-right`} onClick={() => handleSort('leads')}>
+                  <TableHead className={`${thClass} text-right`} role="columnheader" tabIndex={0} aria-sort={sortField === 'leads' ? (sortDir === 'asc' ? 'ascending' : 'descending') : 'none'} onClick={() => handleSort('leads')} onKeyDown={(e) => e.key === 'Enter' && handleSort('leads')}>
                     리드 <SortIcon field="leads" sortField={sortField} sortDir={sortDir} />
                   </TableHead>
-                  <TableHead className={`${thClass} text-right`} onClick={() => handleSort('cpl')}>
+                  <TableHead className={`${thClass} text-right`} role="columnheader" tabIndex={0} aria-sort={sortField === 'cpl' ? (sortDir === 'asc' ? 'ascending' : 'descending') : 'none'} onClick={() => handleSort('cpl')} onKeyDown={(e) => e.key === 'Enter' && handleSort('cpl')}>
                     CPL <SortIcon field="cpl" sortField={sortField} sortDir={sortDir} />
                   </TableHead>
                 </TableRow>

@@ -1,6 +1,5 @@
-import { NextResponse } from 'next/server'
 import { serverSupabase } from '@/lib/supabase'
-import { withClinicFilter, ClinicContext } from '@/lib/api-middleware'
+import { withClinicFilter, ClinicContext, applyClinicFilter, applyDateRange, apiSuccess } from '@/lib/api-middleware'
 
 
 /**
@@ -16,45 +15,35 @@ export const GET = withClinicFilter(async (req: Request, { clinicId, assignedCli
 
   // agency_staff 배정 병원 0개 → 빈 결과
   if (assignedClinicIds !== null && assignedClinicIds.length === 0) {
-    return NextResponse.json({ type: 'total', funnel: { stages: [], totalConversionRate: 0, summary: { leads: 0, payments: 0 } } })
+    return apiSuccess({ type: 'total', funnel: { stages: [], totalConversionRate: 0, summary: { leads: 0, payments: 0 } } })
   }
 
-  const applyFilter = <T>(q: T): T => {
-    if (clinicId) return (q as any).eq('clinic_id', clinicId)
-    if (assignedClinicIds !== null && assignedClinicIds.length > 0) return (q as any).in('clinic_id', assignedClinicIds)
-    return q
-  }
-  const applyDateFilter = <T>(q: T, dateField: string): T => {
-    let query = q
-    if (startDate) query = (query as any).gte(dateField, startDate)
-    if (endDate) query = (query as any).lte(dateField, endDate)
-    return query
-  }
+  const ctx = { clinicId, assignedClinicIds }
 
   // 데이터 조회
   let leadsQuery = supabase
     .from('leads')
     .select('id, customer_id, utm_source, utm_campaign, created_at')
-  leadsQuery = applyFilter(leadsQuery)
-  leadsQuery = applyDateFilter(leadsQuery, 'created_at')
+  leadsQuery = applyClinicFilter(leadsQuery, ctx)!
+  leadsQuery = applyDateRange(leadsQuery, 'created_at', startDate, endDate)
 
   let bookingsQuery = supabase
     .from('bookings')
     .select('id, customer_id, status, created_at')
-  bookingsQuery = applyFilter(bookingsQuery)
-  bookingsQuery = applyDateFilter(bookingsQuery, 'created_at')
+  bookingsQuery = applyClinicFilter(bookingsQuery, ctx)!
+  bookingsQuery = applyDateRange(bookingsQuery, 'created_at', startDate, endDate)
 
   let consultationsQuery = supabase
     .from('consultations')
     .select('id, customer_id, status, created_at')
-  consultationsQuery = applyFilter(consultationsQuery)
-  consultationsQuery = applyDateFilter(consultationsQuery, 'created_at')
+  consultationsQuery = applyClinicFilter(consultationsQuery, ctx)!
+  consultationsQuery = applyDateRange(consultationsQuery, 'created_at', startDate, endDate)
 
   let paymentsQuery = supabase
     .from('payments')
     .select('id, customer_id, payment_amount, payment_date')
-  paymentsQuery = applyFilter(paymentsQuery)
-  paymentsQuery = applyDateFilter(paymentsQuery, 'payment_date')
+  paymentsQuery = applyClinicFilter(paymentsQuery, ctx)!
+  paymentsQuery = applyDateRange(paymentsQuery, 'payment_date', startDate, endDate)
 
   const [leadsRes, bookingsRes, consultationsRes, paymentsRes] = await Promise.all([
     leadsQuery,
@@ -104,7 +93,7 @@ export const GET = withClinicFilter(async (req: Request, { clinicId, assignedCli
       consultedCustomers,
       paidCustomers
     )
-    return NextResponse.json({ type: 'total', funnel })
+    return apiSuccess({ type: 'total', funnel })
   }
 
   // 채널별 또는 캠페인별 그룹
@@ -167,7 +156,7 @@ export const GET = withClinicFilter(async (req: Request, { clinicId, assignedCli
     }))
     .sort((a, b) => b.funnel.stages[0].count - a.funnel.stages[0].count)
 
-  return NextResponse.json({ type: groupBy, funnels: result })
+  return apiSuccess({ type: groupBy, funnels: result })
 })
 
 /**

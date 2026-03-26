@@ -6,6 +6,7 @@ import { Card } from '@/components/ui/card'
 import { Skeleton } from '@/components/ui/skeleton'
 import { EmptyState } from '@/components/common'
 import { TrendingDown } from 'lucide-react'
+import { FUNNEL_GRADIENT } from '@/lib/chart-colors'
 
 function fmtShort(iso: string) {
   const d = new Date(iso)
@@ -48,7 +49,6 @@ interface Props {
   endDate: string
 }
 
-const STAGE_GRADIENT = 'linear-gradient(90deg, #3b82f6 0%, #8b5cf6 50%, #a78bfa 100%)'
 
 export default function AdsFunnel({ startDate, endDate }: Props) {
   const { selectedClinicId } = useClinic()
@@ -225,7 +225,7 @@ export default function AdsFunnel({ startDate, endDate }: Props) {
                     className="h-full rounded-lg transition-all duration-500"
                     style={{
                       width: `${barWidthPct}%`,
-                      background: STAGE_GRADIENT,
+                      background: FUNNEL_GRADIENT,
                       opacity: 1 - idx * 0.12,
                     }}
                   />

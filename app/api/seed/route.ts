@@ -1,6 +1,7 @@
 import bcrypt from 'bcryptjs'
 import { serverSupabase } from '@/lib/supabase'
 import { apiError, apiSuccess } from '@/lib/api-middleware'
+import { getKstDateString } from '@/lib/date'
 
 // POST /api/seed?secret=YOUR_CRON_SECRET
 // 프로덕션 환경에서는 사용 불가
@@ -239,7 +240,7 @@ export async function POST(req: Request) {
     for (const platform of platforms) {
       for (let d = 0; d < 10; d++) {
         const date = new Date(Date.now() - d * 24 * 60 * 60 * 1000)
-        const dateStr = date.toISOString().split('T')[0]
+        const dateStr = getKstDateString(date)
         adStats.push({
           clinic_id: clinic.id,
           platform,
@@ -340,7 +341,7 @@ export async function POST(req: Request) {
           const date = new Date(Date.now() - d * 24 * 60 * 60 * 1000)
           statsRows.push({
             post_id: post.id,
-            stat_date: date.toISOString().split('T')[0],
+            stat_date: getKstDateString(date),
             views: Math.floor(base * (1 - d * 0.04) * (0.8 + Math.random() * 0.4)),
             likes: Math.floor(likeBase * (1 - d * 0.04) * (0.8 + Math.random() * 0.4)),
             comments: Math.floor(likeBase * 0.1 * (1 - d * 0.04)),

@@ -1,6 +1,9 @@
 import { syncPressForClinic } from '@/lib/services/pressSync'
 import { apiError, apiSuccess } from '@/lib/api-middleware'
 import { sendErrorAlert } from '@/lib/error-alert'
+import { createLogger } from '@/lib/logger'
+
+const logger = createLogger('SyncPress')
 
 export const maxDuration = 60
 
@@ -12,7 +15,7 @@ export async function GET(req: Request) {
 
   try {
     const result = await syncPressForClinic(null) // null = 전체 병원
-    console.log(`[CronJob] 언론보도 자동 수집 완료 — ${result.inserted}건`)
+    logger.info('언론보도 자동 수집 완료', { count: result.inserted })
     return apiSuccess({ success: true, inserted: result.inserted })
   } catch (err) {
     const errorMsg = err instanceof Error ? err.message : String(err)

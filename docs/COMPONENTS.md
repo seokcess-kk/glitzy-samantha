@@ -707,6 +707,32 @@ getChannelColor('Google')  // → '#ef4444'
 getChannelColor('unknown') // → '#64748b' (기본 slate)
 ```
 
+### 차트 컬러 상수 (`lib/chart-colors.ts`)
+
+Recharts 컴포넌트의 하드코딩된 hex 값을 중앙 관리합니다.
+
+```tsx
+import { CHART_PALETTE, CHART_SEMANTIC, PIE_SHADES, BAR_COLORS, FUNNEL_COLORS } from '@/lib/chart-colors'
+
+CHART_PALETTE       // 범용 5색 팔레트 (blue, amber, emerald, red, violet)
+CHART_SEMANTIC.cpl  // '#3b82f6' — CPL 차트
+CHART_SEMANTIC.cpc  // '#f59e0b' — CPC 차트
+CHART_SEMANTIC.ctr  // '#10b981' — CTR 차트
+PIE_SHADES          // 파이/도넛 6색 그라데이션
+BAR_COLORS.max      // '#3b82f6' — 최대값 바
+BAR_COLORS.default  // '#93c5fd' — 기본 바
+FUNNEL_COLORS       // 퍼널 5단계 컬러
+```
+
+### Recharts 커스텀 툴팁 타입 (`types/recharts.d.ts`)
+
+```tsx
+import { ChartTooltipProps, ChartLabelProps } from '@/types/recharts'
+
+function MyTooltip({ active, payload, label }: ChartTooltipProps) { ... }
+function MyLabel(props: ChartLabelProps) { ... }
+```
+
 ---
 
 ## 스타일 가이드

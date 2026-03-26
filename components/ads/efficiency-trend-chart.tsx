@@ -17,10 +17,8 @@ import {
   ResponsiveContainer,
 } from '@/components/charts'
 import { TrendingUp } from 'lucide-react'
-
-const CPL_COLOR = '#3b82f6'
-const CPC_COLOR = '#f59e0b'
-const CTR_COLOR = '#10b981'
+import { ChartTooltipProps } from '@/types/recharts'
+import { CHART_SEMANTIC } from '@/lib/chart-colors'
 
 interface EfficiencyDataItem {
   date: string
@@ -46,11 +44,11 @@ function fmtPct(v: number) {
   return `${v.toFixed(2)}%`
 }
 
-function EfficiencyTooltip({ active, payload, label }: any) {
+function EfficiencyTooltip({ active, payload, label }: ChartTooltipProps) {
   if (!active || !payload?.length) return null
-  const cpl = payload.find((p: any) => p.dataKey === 'cpl')
-  const cpc = payload.find((p: any) => p.dataKey === 'cpc')
-  const ctr = payload.find((p: any) => p.dataKey === 'ctr')
+  const cpl = payload.find((p) => p.dataKey === 'cpl')
+  const cpc = payload.find((p) => p.dataKey === 'cpc')
+  const ctr = payload.find((p) => p.dataKey === 'ctr')
   return (
     <div className="bg-card border border-border rounded-lg p-3 text-xs shadow-xl backdrop-blur-sm">
       <p className="font-medium text-foreground/80 mb-1.5">{label}</p>
@@ -96,8 +94,8 @@ function EfficiencyChart({
       <ComposedChart data={data}>
         <defs>
           <linearGradient id={gradientId} x1="0" y1="0" x2="0" y2="1">
-            <stop offset="0%" stopColor={CPL_COLOR} stopOpacity={0.25} />
-            <stop offset="100%" stopColor={CPL_COLOR} stopOpacity={0} />
+            <stop offset="0%" stopColor={CHART_SEMANTIC.cpl} stopOpacity={0.25} />
+            <stop offset="100%" stopColor={CHART_SEMANTIC.cpl} stopOpacity={0} />
           </linearGradient>
         </defs>
         <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
@@ -148,7 +146,7 @@ function EfficiencyChart({
           type="monotone"
           dataKey="cpl"
           name="CPL"
-          stroke={CPL_COLOR}
+          stroke={CHART_SEMANTIC.cpl}
           fill={`url(#${gradientId})`}
           strokeWidth={2}
         />
@@ -157,7 +155,7 @@ function EfficiencyChart({
           type="monotone"
           dataKey="cpc"
           name="CPC"
-          stroke={CPC_COLOR}
+          stroke={CHART_SEMANTIC.cpc}
           strokeWidth={2}
           dot={false}
         />
@@ -166,7 +164,7 @@ function EfficiencyChart({
           type="monotone"
           dataKey="ctr"
           name="CTR"
-          stroke={CTR_COLOR}
+          stroke={CHART_SEMANTIC.ctr}
           strokeWidth={2}
           dot={false}
         />

@@ -95,7 +95,7 @@ const DATE_FORMAT_OPTIONS: Intl.DateTimeFormatOptions = {
 export default function UtmPage() {
   const { data: session } = useSession()
   const router = useRouter()
-  const user = session?.user as any
+  const user = session?.user
 
   useEffect(() => {
     if (user && user.role !== 'superadmin') router.replace('/')

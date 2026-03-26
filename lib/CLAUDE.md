@@ -74,7 +74,7 @@
 
 | 모듈 | 핵심 export | 용도 |
 |------|------------|------|
-| `api-middleware.ts` | `withAuth`, `withClinicFilter`, `apiSuccess`, `apiError` | API 인증/필터 래퍼 |
+| `api-middleware.ts` | `withAuth`, `withClinicFilter`, `apiSuccess`, `apiError`, `applyClinicFilter`, `applyDateRange` | API 인증/필터 래퍼 + 쿼리 필터 헬퍼 |
 | `security.ts` | `parseId`, `sanitizeString`, `sanitizeUrl`, `canModifyBooking` | 입력 검증/권한 체크. URL에는 `sanitizeUrl` 사용 (`&` 보존) |
 | `logger.ts` | `createLogger` | 환경별 로깅 (dev=readable, prod=JSON) |
 | `api-client.ts` | `fetchJSON`, `fetchWithRetry` | 외부 API 호출 (재시도+타임아웃) |
@@ -86,6 +86,7 @@
 | `archive.ts` | `archiveBeforeDelete`, `archiveBulkBeforeDelete` | 삭제 전 스냅샷 보관 |
 | `channel.ts` | `normalizeChannel` | utm_source → canonical 채널명 (Meta, Google 등) |
 | `channel-colors.ts` | `getChannelColor` | 채널별 Recharts 색상 코드 |
+| `chart-colors.ts` | `CHART_PALETTE`, `CHART_SEMANTIC`, `PIE_SHADES`, `BAR_COLORS`, `FUNNEL_COLORS`, `FUNNEL_GRADIENT` | Recharts 차트 컬러 중앙 상수 |
 | `date.ts` | `formatDate`, `getKstDateString`, `getKstDayStartISO` | KST 기준 날짜 포맷/생성 |
 | `services/metaAds.ts` | `fetchMetaAds`, `fetchMetaAdStats` | 캠페인 레벨 + ad 레벨 수집 (ad_stats: utm_content 자동 매핑) |
 | `services/metaCapi.ts` | Meta CAPI 전송 | 리드 유입 시 서버사이드 전환 이벤트 전송 |

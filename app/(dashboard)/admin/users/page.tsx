@@ -63,7 +63,7 @@ const MENU_OPTIONS = [
 export default function UsersPage() {
   const { data: session } = useSession()
   const router = useRouter()
-  const user = session?.user as any
+  const user = session?.user
 
   const [users, setUsers] = useState<any[]>([])
   const [clinics, setClinics] = useState<any[]>([])

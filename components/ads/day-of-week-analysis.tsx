@@ -16,14 +16,13 @@ import {
   ResponsiveContainer,
 } from '@/components/charts'
 import { CalendarDays } from 'lucide-react'
+import { ChartTooltipProps, ChartLabelProps } from '@/types/recharts'
+import { BAR_COLORS } from '@/lib/chart-colors'
 
 function fmtShort(iso: string) {
   const d = new Date(iso)
   return d.toLocaleDateString('ko', { timeZone: 'Asia/Seoul', month: 'numeric', day: 'numeric' }).replace(/\.$/, '')
 }
-
-const BAR_MAX_COLOR = '#3b82f6'
-const BAR_DEFAULT_COLOR = '#93c5fd'
 
 interface DayData {
   day: number
@@ -42,9 +41,9 @@ interface Props {
   endDate: string
 }
 
-function DayTooltip({ active, payload, label }: any) {
+function DayTooltip({ active, payload, label }: ChartTooltipProps) {
   if (!active || !payload?.length) return null
-  const d = payload[0]?.payload as DayData | undefined
+  const d = payload[0]?.payload as unknown as DayData | undefined
   if (!d) return null
   return (
     <div className="bg-card border border-border rounded-lg p-3 text-xs shadow-xl backdrop-blur-sm">
@@ -63,9 +62,9 @@ function DayTooltip({ active, payload, label }: any) {
 }
 
 // Custom label rendered above each bar showing CPL (from payload, not bar value)
-function CplLabel(props: any) {
-  const { x, y, width, index } = props
-  const cpl = props?.payload?.cpl
+function CplLabel(props: ChartLabelProps) {
+  const { x = 0, y = 0, width = 0 } = props
+  const cpl = Number(props?.payload?.cpl) || 0
   if (!cpl || cpl === 0) return null
   const displayVal = cpl >= 10000
     ? `₩${(cpl / 10000).toFixed(0)}만`
@@ -124,7 +123,7 @@ export default function DayOfWeekAnalysis({ startDate, endDate }: Props) {
     () =>
       byDay.map((d) => ({
         ...d,
-        fill: d.leads === maxLeads && maxLeads > 0 ? BAR_MAX_COLOR : BAR_DEFAULT_COLOR,
+        fill: d.leads === maxLeads && maxLeads > 0 ? BAR_COLORS.max : BAR_COLORS.default,
       })),
     [byDay, maxLeads]
   )
@@ -165,7 +164,7 @@ export default function DayOfWeekAnalysis({ startDate, endDate }: Props) {
               dataKey="leads"
               name="리드 수"
               radius={[4, 4, 0, 0]}
-              fill={BAR_DEFAULT_COLOR}
+              fill={BAR_COLORS.default}
               isAnimationActive={false}
               label={<CplLabel />}
             >

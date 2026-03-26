@@ -1,6 +1,5 @@
-import { NextResponse } from 'next/server'
 import { serverSupabase } from '@/lib/supabase'
-import { withClinicFilter, ClinicContext } from '@/lib/api-middleware'
+import { withClinicFilter, ClinicContext, applyClinicFilter, apiSuccess } from '@/lib/api-middleware'
 
 // GET /api/content/analytics?groupBy=campaign|month|post&startDate=...&endDate=...
 export const GET = withClinicFilter(async (req: Request, { clinicId, assignedClinicIds }: ClinicContext) => {
@@ -12,26 +11,22 @@ export const GET = withClinicFilter(async (req: Request, { clinicId, assignedCli
 
   // agency_staff 배정 병원 0개 → 빈 결과
   if (assignedClinicIds !== null && assignedClinicIds.length === 0) {
-    return NextResponse.json([])
+    return apiSuccess([])
   }
 
-  const applyFilter = <T>(q: T): T => {
-    if (clinicId) return (q as any).eq('clinic_id', clinicId)
-    if (assignedClinicIds !== null && assignedClinicIds.length > 0) return (q as any).in('clinic_id', assignedClinicIds)
-    return q
-  }
+  const ctx = { clinicId, assignedClinicIds }
 
   // 콘텐츠 포스트
   let postsQuery = supabase.from('content_posts').select('id, title, platform, utm_campaign, budget, published_at')
-  postsQuery = applyFilter(postsQuery)
+  postsQuery = applyClinicFilter(postsQuery, ctx)!
   if (startDate) postsQuery = postsQuery.gte('published_at', startDate)
   if (endDate) postsQuery = postsQuery.lte('published_at', endDate)
   const { data: posts } = await postsQuery
-  if (!posts?.length) return NextResponse.json([])
+  if (!posts?.length) return apiSuccess([])
 
   // 리드 조회 (기간 필터 적용)
   let leadsQuery = supabase.from('leads').select('id, customer_id, campaign_id, created_at')
-  leadsQuery = applyFilter(leadsQuery)
+  leadsQuery = applyClinicFilter(leadsQuery, ctx)!
   if (startDate) leadsQuery = leadsQuery.gte('created_at', startDate)
   if (endDate) leadsQuery = leadsQuery.lte('created_at', endDate)
   const { data: leads } = await leadsQuery
@@ -165,5 +160,5 @@ export const GET = withClinicFilter(async (req: Request, { clinicId, assignedCli
     })
   }
 
-  return NextResponse.json(result)
+  return apiSuccess(result)
 })

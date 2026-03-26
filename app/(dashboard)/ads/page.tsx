@@ -25,7 +25,7 @@ const TABS = [
 export default function AdsPage() {
   const { data: session } = useSession()
   const router = useRouter()
-  const user = session?.user as any
+  const user = session?.user
 
   // Role guard — clinic_staff cannot access ads
   useEffect(() => {

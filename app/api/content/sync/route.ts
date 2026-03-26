@@ -1,6 +1,5 @@
-import { NextResponse } from 'next/server'
 import { serverSupabase } from '@/lib/supabase'
-import { withClinicFilter, ClinicContext } from '@/lib/api-middleware'
+import { withClinicFilter, ClinicContext, apiSuccess } from '@/lib/api-middleware'
 import { syncYoutubeContent } from '@/lib/services/youtubeContent'
 import { syncInstagramContent } from '@/lib/services/instagramContent'
 
@@ -62,8 +61,8 @@ export const POST = withClinicFilter(async (req: Request, { clinicId }: ClinicCo
   }
 
   if (Object.keys(results).length === 0) {
-    return NextResponse.json({ message: 'API 키가 설정되지 않은 매체는 수기 입력을 이용해주세요.', results })
+    return apiSuccess({ message: 'API 키가 설정되지 않은 매체는 수기 입력을 이용해주세요.', results })
   }
 
-  return NextResponse.json({ success: true, results })
+  return apiSuccess({ success: true, results })
 })

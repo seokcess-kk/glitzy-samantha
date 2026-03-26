@@ -54,7 +54,7 @@ const CATEGORY_LABELS: Record<string, string> = {
 export default function MonitoringKeywordsPage() {
   const { data: session } = useSession()
   const router = useRouter()
-  const user = session?.user as any
+  const user = session?.user
   const { selectedClinicId, setSelectedClinicId, clinics } = useClinic()
 
   const [keywords, setKeywords] = useState<any[]>([])

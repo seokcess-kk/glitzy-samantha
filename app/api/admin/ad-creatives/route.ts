@@ -7,42 +7,48 @@ import { createLogger } from '@/lib/logger'
 const logger = createLogger('AdCreatives')
 
 export const GET = withSuperAdmin(async (req: Request) => {
-  const url = new URL(req.url)
-  const clinicId = url.searchParams.get('clinic_id')
-  const landingPageId = url.searchParams.get('landing_page_id')
-  const activeOnly = url.searchParams.get('active') === 'true'
+  try {
+    const url = new URL(req.url)
+    const clinicId = url.searchParams.get('clinic_id')
+    const landingPageId = url.searchParams.get('landing_page_id')
+    const activeOnly = url.searchParams.get('active') === 'true'
 
-  const supabase = serverSupabase()
-  let query = supabase
-    .from('ad_creatives')
-    .select(`
-      *,
-      clinic:clinics(id, name),
-      landing_page:landing_pages(id, name, file_name)
-    `)
-    .order('created_at', { ascending: false })
+    const supabase = serverSupabase()
+    let query = supabase
+      .from('ad_creatives')
+      .select(`
+        *,
+        clinic:clinics(id, name),
+        landing_page:landing_pages(id, name, file_name)
+      `)
+      .order('created_at', { ascending: false })
 
-  if (clinicId) {
-    const parsedClinicId = parseId(clinicId)
-    if (parsedClinicId) query = query.eq('clinic_id', parsedClinicId)
+    if (clinicId) {
+      const parsedClinicId = parseId(clinicId)
+      if (parsedClinicId) query = query.eq('clinic_id', parsedClinicId)
+    }
+
+    if (landingPageId) {
+      const parsedLpId = parseId(landingPageId)
+      if (parsedLpId) query = query.eq('landing_page_id', parsedLpId)
+    }
+
+    if (activeOnly) {
+      query = query.eq('is_active', true)
+    }
+
+    const { data, error } = await query
+
+    if (error) return apiError(error.message, 500)
+    return apiSuccess(data)
+  } catch (err) {
+    logger.error('광고 소재 목록 조회 실패', err)
+    return apiError('서버 오류가 발생했습니다.', 500)
   }
-
-  if (landingPageId) {
-    const parsedLpId = parseId(landingPageId)
-    if (parsedLpId) query = query.eq('landing_page_id', parsedLpId)
-  }
-
-  if (activeOnly) {
-    query = query.eq('is_active', true)
-  }
-
-  const { data, error } = await query
-
-  if (error) return apiError(error.message, 500)
-  return apiSuccess(data)
 })
 
 export const POST = withSuperAdmin(async (req: Request) => {
+  try {
   const body = await req.json()
   const {
     name, description, utm_content, utm_source, utm_medium, utm_campaign, utm_term,
@@ -184,4 +190,8 @@ export const POST = withSuperAdmin(async (req: Request) => {
   }
 
   return apiSuccess(data)
+  } catch (err) {
+    logger.error('광고 소재 생성 실패', err)
+    return apiError('서버 오류가 발생했습니다.', 500)
+  }
 })

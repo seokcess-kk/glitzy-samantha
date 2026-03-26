@@ -167,6 +167,21 @@ export function applyClinicFilter<T extends { eq: Function; in: Function }>(
 }
 
 /**
+ * Supabase 쿼리에 날짜 범위 필터를 적용하는 헬퍼
+ */
+export function applyDateRange<T extends { gte: Function; lte: Function }>(
+  query: T,
+  dateField: string,
+  startDate: string | null,
+  endDate: string | null
+): T {
+  let q = query
+  if (startDate) q = q.gte(dateField, startDate)
+  if (endDate) q = q.lte(dateField, endDate)
+  return q
+}
+
+/**
  * API 에러 응답 헬퍼
  */
 export function apiError(message: string, status: number = 400): NextResponse {

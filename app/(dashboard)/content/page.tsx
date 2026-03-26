@@ -339,7 +339,7 @@ function ContentRow({ post, onDelete, onRefresh }: { post: any; onDelete: (id: n
 export default function ContentPage() {
   const { data: session } = useSession()
   const router = useRouter()
-  const user = session?.user as any
+  const user = session?.user
 
   useEffect(() => {
     if (user?.role === 'clinic_staff') router.replace('/patients')

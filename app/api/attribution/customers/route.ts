@@ -1,6 +1,5 @@
-import { NextResponse } from 'next/server'
 import { serverSupabase } from '@/lib/supabase'
-import { withClinicFilter, ClinicContext } from '@/lib/api-middleware'
+import { withClinicFilter, ClinicContext, applyClinicFilter, apiSuccess } from '@/lib/api-middleware'
 import { normalizeChannel } from '@/lib/channel'
 
 /**
@@ -16,28 +15,24 @@ export const GET = withClinicFilter(async (req: Request, { clinicId, assignedCli
   const campaignFilter = url.searchParams.get('campaign')
 
   if (assignedClinicIds !== null && assignedClinicIds.length === 0) {
-    return NextResponse.json([])
+    return apiSuccess([])
   }
 
-  const applyFilter = <T>(q: T): T => {
-    if (clinicId) return (q as any).eq('clinic_id', clinicId)
-    if (assignedClinicIds !== null && assignedClinicIds.length > 0) return (q as any).in('clinic_id', assignedClinicIds)
-    return q
-  }
+  const ctx = { clinicId, assignedClinicIds }
 
   // 결제 + 고객 정보 조회 (기간 필터)
   let paymentsQuery = supabase
     .from('payments')
     .select('id, payment_amount, payment_date, treatment_name, customer_id, customers(id, name, phone_number, first_source, first_campaign_id, created_at)')
     .order('payment_date', { ascending: false })
-  paymentsQuery = applyFilter(paymentsQuery)
+  paymentsQuery = applyClinicFilter(paymentsQuery, ctx)!
   if (startDate) paymentsQuery = paymentsQuery.gte('payment_date', startDate)
   if (endDate) paymentsQuery = paymentsQuery.lte('payment_date', endDate)
 
   const { data: payments } = await paymentsQuery
 
   if (!payments || payments.length === 0) {
-    return NextResponse.json([])
+    return apiSuccess([])
   }
 
   // 고객 ID 수집 + 채널/캠페인 필터
@@ -67,7 +62,7 @@ export const GET = withClinicFilter(async (req: Request, { clinicId, assignedCli
   }
 
   if (customerIds.size === 0) {
-    return NextResponse.json([])
+    return apiSuccess([])
   }
 
   const ids = Array.from(customerIds)
@@ -135,6 +130,6 @@ export const GET = withClinicFilter(async (req: Request, { clinicId, assignedCli
     }
   }).filter(Boolean)
 
-  return NextResponse.json(result)
+  return apiSuccess(result)
 })
 

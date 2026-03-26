@@ -340,7 +340,7 @@ function LoadingFallback() {
 export default function LeadFormPage() {
   const { data: session } = useSession()
   const router = useRouter()
-  const user = session?.user as any
+  const user = session?.user
 
   useEffect(() => {
     if (user && user.role !== 'superadmin') router.replace('/')

@@ -8,10 +8,8 @@ import {
   ResponsiveContainer,
 } from '@/components/charts'
 import { TrendingUp } from 'lucide-react'
-
-// 디자인 토큰 — tailwind.config.ts brand와 동기화
-const BRAND = '#3b82f6'      // brand-500
-const LEAD_COLOR = '#34d399' // emerald-400
+import { ChartTooltipProps } from '@/types/recharts'
+import { CHART_SEMANTIC } from '@/lib/chart-colors'
 
 const fmtKrw = (v: number) => `₩${(v / 10000).toFixed(0)}만`
 
@@ -27,12 +25,12 @@ interface SpendLeadTrendProps {
   periodLabel?: string
 }
 
-function DualTooltip({ active, payload, label }: any) {
+function DualTooltip({ active, payload, label }: ChartTooltipProps) {
   if (!active || !payload?.length) return null
   return (
     <div className="bg-card border border-border rounded-lg p-3 text-xs shadow-xl backdrop-blur-sm">
       <p className="font-medium text-foreground/80 mb-1.5">{label}</p>
-      {payload.map((p: any) => (
+      {payload.map((p) => (
         <p key={p.dataKey} className="text-muted-foreground">
           {p.name}:{' '}
           <span className="text-foreground font-medium">
@@ -57,8 +55,8 @@ function DualChart({ data, height, fontSize, dotRadius, gradientId, showLegend }
       <ComposedChart data={data}>
         <defs>
           <linearGradient id={gradientId} x1="0" y1="0" x2="0" y2="1">
-            <stop offset="0%" stopColor={BRAND} stopOpacity={0.2} />
-            <stop offset="100%" stopColor={BRAND} stopOpacity={0} />
+            <stop offset="0%" stopColor={CHART_SEMANTIC.brand} stopOpacity={0.2} />
+            <stop offset="100%" stopColor={CHART_SEMANTIC.brand} stopOpacity={0} />
           </linearGradient>
         </defs>
         <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
@@ -85,8 +83,8 @@ function DualChart({ data, height, fontSize, dotRadius, gradientId, showLegend }
             wrapperStyle={{ fontSize: 11, color: 'hsl(var(--muted-foreground))', paddingBottom: 8 }}
           />
         )}
-        <Area yAxisId="spend" type="monotone" dataKey="spend" name="광고비" stroke={BRAND} fill={`url(#${gradientId})`} strokeWidth={2} />
-        <Line yAxisId="leads" type="monotone" dataKey="leads" name="리드 수" stroke={LEAD_COLOR} strokeWidth={2} dot={dotRadius > 0 ? { r: dotRadius, fill: LEAD_COLOR } : false} />
+        <Area yAxisId="spend" type="monotone" dataKey="spend" name="광고비" stroke={CHART_SEMANTIC.brand} fill={`url(#${gradientId})`} strokeWidth={2} />
+        <Line yAxisId="leads" type="monotone" dataKey="leads" name="리드 수" stroke={CHART_SEMANTIC.lead} strokeWidth={2} dot={dotRadius > 0 ? { r: dotRadius, fill: CHART_SEMANTIC.lead } : false} />
       </ComposedChart>
     </ResponsiveContainer>
   )
@@ -102,11 +100,11 @@ export function SpendLeadTrend({ data, loading, periodLabel }: SpendLeadTrendPro
           {/* 모바일 인라인 범례 */}
           <div className="flex items-center gap-3 mt-1 md:hidden">
             <span className="flex items-center gap-1 text-xs text-muted-foreground">
-              <span className="w-2 h-2 rounded-full shrink-0" style={{ background: BRAND }} />
+              <span className="w-2 h-2 rounded-full shrink-0" style={{ background: CHART_SEMANTIC.brand }} />
               광고비
             </span>
             <span className="flex items-center gap-1 text-xs text-muted-foreground">
-              <span className="w-2 h-2 rounded-full shrink-0" style={{ background: LEAD_COLOR }} />
+              <span className="w-2 h-2 rounded-full shrink-0" style={{ background: CHART_SEMANTIC.lead }} />
               리드 수
             </span>
           </div>

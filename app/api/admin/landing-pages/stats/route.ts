@@ -1,5 +1,5 @@
 import { serverSupabase } from '@/lib/supabase'
-import { withClinicFilter, ClinicContext, apiError, apiSuccess } from '@/lib/api-middleware'
+import { withClinicFilter, ClinicContext, apiError, apiSuccess, applyClinicFilter, applyDateRange } from '@/lib/api-middleware'
 
 /**
  * 랜딩 페이지별 성과 통계 API
@@ -17,39 +17,29 @@ export const GET = withClinicFilter(async (req: Request, { clinicId, assignedCli
     return apiSuccess([])
   }
 
-  const applyClinic = <T>(q: T): T => {
-    if (clinicId) return (q as any).eq('clinic_id', clinicId)
-    if (assignedClinicIds !== null && assignedClinicIds.length > 0) return (q as any).in('clinic_id', assignedClinicIds)
-    return q
-  }
-  const applyDate = <T>(q: T, field: string): T => {
-    let query = q
-    if (startDate) query = (query as any).gte(field, startDate)
-    if (endDate) query = (query as any).lte(field, endDate)
-    return query
-  }
+  const ctx = { clinicId, assignedClinicIds }
 
   // 1. 리드 조회 (landing_page_id 있는 것만)
   let leadsQuery = supabase
     .from('leads')
     .select('id, customer_id, landing_page_id, utm_source, utm_campaign, created_at')
     .not('landing_page_id', 'is', null)
-  leadsQuery = applyClinic(leadsQuery)
-  leadsQuery = applyDate(leadsQuery, 'created_at')
+  leadsQuery = applyClinicFilter(leadsQuery, ctx)!
+  leadsQuery = applyDateRange(leadsQuery, 'created_at', startDate, endDate)
 
   // 2. 결제 데이터
   let paymentsQuery = supabase
     .from('payments')
     .select('customer_id, payment_amount')
-  paymentsQuery = applyClinic(paymentsQuery)
-  if (startDate || endDate) paymentsQuery = applyDate(paymentsQuery, 'payment_date')
+  paymentsQuery = applyClinicFilter(paymentsQuery, ctx)!
+  paymentsQuery = applyDateRange(paymentsQuery, 'payment_date', startDate, endDate)
 
   // 3. 예약 데이터
   let bookingsQuery = supabase
     .from('bookings')
     .select('customer_id, status')
-  bookingsQuery = applyClinic(bookingsQuery)
-  if (startDate || endDate) bookingsQuery = applyDate(bookingsQuery, 'created_at')
+  bookingsQuery = applyClinicFilter(bookingsQuery, ctx)!
+  bookingsQuery = applyDateRange(bookingsQuery, 'created_at', startDate, endDate)
 
   const [leadsRes, paymentsRes, bookingsRes] = await Promise.all([
     leadsQuery,

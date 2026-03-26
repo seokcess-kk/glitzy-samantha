@@ -13,6 +13,7 @@ import {
   ResponsiveContainer,
 } from '@/components/charts'
 import { getChannelColor } from '@/lib/channel-colors'
+import { ChartTooltipProps } from '@/types/recharts'
 
 interface ChannelData {
   channel: string
@@ -29,14 +30,14 @@ interface Props {
   channelBreakdown: PageChannelBreakdown[]
 }
 
-function ChannelTooltip({ active, payload, label }: any) {
+function ChannelTooltip({ active, payload, label }: ChartTooltipProps) {
   if (!active || !payload?.length) return null
-  const filtered = payload.filter((p: any) => p.value > 0)
+  const filtered = payload.filter((p) => p.value > 0)
   if (filtered.length === 0) return null
   return (
     <div className="bg-card border border-border rounded-lg p-3 text-xs shadow-xl backdrop-blur-sm max-w-[200px]">
       <p className="font-medium text-foreground/80 mb-1.5 truncate">{label}</p>
-      {filtered.map((p: any) => (
+      {filtered.map((p) => (
         <p key={p.dataKey} className="text-muted-foreground">
           <span style={{ color: p.color }}>●</span>{' '}
           {p.name}: <span className="text-foreground font-medium">{p.value}건</span>

@@ -8,8 +8,8 @@ import { Card } from '@/components/ui/card'
 import { Skeleton } from '@/components/ui/skeleton'
 import { EmptyState } from '@/components/common'
 import { PieChart as PieChartIcon } from 'lucide-react'
-
-const PIE_SHADES = ['#3b82f6', '#60a5fa', '#93c5fd', '#bfdbfe', '#dbeafe', '#8b5cf6']
+import { ChartTooltipProps } from '@/types/recharts'
+import { PIE_SHADES } from '@/lib/chart-colors'
 const MAX_ITEMS = 5
 
 interface TreatmentData {
@@ -24,7 +24,7 @@ interface TreatmentPieProps {
 
 const fmtKrw = (v: number) => `₩${(v / 10000).toFixed(0)}만`
 
-const PieTooltip = ({ active, payload }: any) => {
+const PieTooltip = ({ active, payload }: ChartTooltipProps) => {
   if (!active || !payload?.length) return null
   const d = payload[0]
   return (

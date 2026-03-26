@@ -1,6 +1,5 @@
-import { NextResponse } from 'next/server'
 import { serverSupabase } from '@/lib/supabase'
-import { withClinicFilter, ClinicContext, applyClinicFilter } from '@/lib/api-middleware'
+import { withClinicFilter, ClinicContext, applyClinicFilter, applyDateRange, apiSuccess } from '@/lib/api-middleware'
 import { normalizeChannel } from '@/lib/channel'
 
 /**
@@ -14,41 +13,31 @@ export const GET = withClinicFilter(async (req: Request, { clinicId, assignedCli
   const endDate = url.searchParams.get('endDate')
   // agency_staff 배정 병원 0개 → 빈 결과
   if (assignedClinicIds !== null && assignedClinicIds.length === 0) {
-    return NextResponse.json([])
+    return apiSuccess([])
   }
 
-  const applyFilter = <T>(q: T): T => {
-    if (clinicId) return (q as any).eq('clinic_id', clinicId)
-    if (assignedClinicIds !== null && assignedClinicIds.length > 0) return (q as any).in('clinic_id', assignedClinicIds)
-    return q
-  }
-  const applyDateFilter = <T>(q: T, dateField: string): T => {
-    let query = q
-    if (startDate) query = (query as any).gte(dateField, startDate)
-    if (endDate) query = (query as any).lte(dateField, endDate)
-    return query
-  }
+  const ctx = { clinicId, assignedClinicIds }
 
   // 1. 리드 데이터 조회 (utm_source 포함)
   let leadsQuery = supabase
     .from('leads')
     .select('id, customer_id, utm_source, created_at')
-  leadsQuery = applyFilter(leadsQuery)
-  leadsQuery = applyDateFilter(leadsQuery, 'created_at')
+  leadsQuery = applyClinicFilter(leadsQuery, ctx)!
+  leadsQuery = applyDateRange(leadsQuery, 'created_at', startDate, endDate)
 
   // 2. 광고 지출 데이터
   let adStatsQuery = supabase
     .from('ad_campaign_stats')
     .select('platform, spend_amount, stat_date')
-  adStatsQuery = applyFilter(adStatsQuery)
-  adStatsQuery = applyDateFilter(adStatsQuery, 'stat_date')
+  adStatsQuery = applyClinicFilter(adStatsQuery, ctx)!
+  adStatsQuery = applyDateRange(adStatsQuery, 'stat_date', startDate, endDate)
 
   // 3. 결제 데이터 (customer_id로 리드와 연결)
   let paymentsQuery = supabase
     .from('payments')
     .select('payment_amount, customer_id, payment_date')
-  paymentsQuery = applyFilter(paymentsQuery)
-  paymentsQuery = applyDateFilter(paymentsQuery, 'payment_date')
+  paymentsQuery = applyClinicFilter(paymentsQuery, ctx)!
+  paymentsQuery = applyDateRange(paymentsQuery, 'payment_date', startDate, endDate)
 
   const [leadsRes, adStatsRes, paymentsRes] = await Promise.all([
     leadsQuery,
@@ -124,6 +113,6 @@ export const GET = withClinicFilter(async (req: Request, { clinicId, assignedCli
     })
     .sort((a, b) => b.leads - a.leads) // 리드 많은 순 정렬
 
-  return NextResponse.json(result)
+  return apiSuccess(result)
 })
 

@@ -12,19 +12,20 @@ import {
   ResponsiveContainer,
 } from '@/components/charts'
 
-const LINE_COLORS = ['#3b82f6', '#f59e0b', '#10b981', '#ef4444', '#8b5cf6']
+import { ChartTooltipProps } from '@/types/recharts'
+import { CHART_PALETTE } from '@/lib/chart-colors'
 
 interface Props {
   trend: Array<Record<string, string | number>>
   pageNames: string[]
 }
 
-function TrendTooltip({ active, payload, label }: any) {
+function TrendTooltip({ active, payload, label }: ChartTooltipProps) {
   if (!active || !payload?.length) return null
   return (
     <div className="bg-card border border-border rounded-lg p-3 text-xs shadow-xl backdrop-blur-sm">
       <p className="font-medium text-foreground/80 mb-1.5">{label}</p>
-      {payload.map((p: any) => (
+      {payload.map((p) => (
         <p key={p.dataKey} className="text-muted-foreground">
           <span style={{ color: p.color }}>●</span>{' '}
           {p.name}: <span className="text-foreground font-medium">{p.value}건</span>
@@ -85,7 +86,7 @@ export default function LandingPageTrendChart({ trend, pageNames }: Props) {
                 type="monotone"
                 dataKey={name}
                 name={name}
-                stroke={LINE_COLORS[i % LINE_COLORS.length]}
+                stroke={CHART_PALETTE[i % CHART_PALETTE.length]}
                 strokeWidth={2}
                 dot={false}
               />
@@ -121,7 +122,7 @@ export default function LandingPageTrendChart({ trend, pageNames }: Props) {
                 type="monotone"
                 dataKey={name}
                 name={name}
-                stroke={LINE_COLORS[i % LINE_COLORS.length]}
+                stroke={CHART_PALETTE[i % CHART_PALETTE.length]}
                 strokeWidth={1.5}
                 dot={false}
               />

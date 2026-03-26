@@ -24,11 +24,10 @@ import {
   ResponsiveContainer,
 } from '@/components/charts'
 import { FileText } from 'lucide-react'
+import { ChartTooltipProps } from '@/types/recharts'
+import { BAR_COLORS } from '@/lib/chart-colors'
 import LandingPageTrendChart from './landing-page-trend-chart'
 import LandingPageChannelBreakdown from './landing-page-channel-breakdown'
-
-const BAR_MAX_COLOR = '#3b82f6'
-const BAR_DEFAULT_COLOR = '#93c5fd'
 
 interface LandingPageRow {
   landingPageId: number
@@ -70,9 +69,9 @@ function fmtShort(iso: string) {
   return d.toLocaleDateString('ko', { timeZone: 'Asia/Seoul', month: 'numeric', day: 'numeric' }).replace(/\.$/, '')
 }
 
-function BarTooltip({ active, payload }: any) {
+function BarTooltip({ active, payload }: ChartTooltipProps) {
   if (!active || !payload?.length) return null
-  const d = payload[0]?.payload
+  const d = payload[0]?.payload as { name: string; leads: number } | undefined
   if (!d) return null
   return (
     <div className="bg-card border border-border rounded-lg p-3 text-xs shadow-xl backdrop-blur-sm">
@@ -206,7 +205,7 @@ export default function LandingPageAnalysis({ startDate, endDate }: Props) {
               {barData.map((entry, index) => (
                 <Cell
                   key={`cell-${index}`}
-                  fill={entry.leads === maxLeads && maxLeads > 0 ? BAR_MAX_COLOR : BAR_DEFAULT_COLOR}
+                  fill={entry.leads === maxLeads && maxLeads > 0 ? BAR_COLORS.max : BAR_COLORS.default}
                 />
               ))}
             </Bar>

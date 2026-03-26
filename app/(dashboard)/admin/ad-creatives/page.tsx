@@ -84,7 +84,7 @@ function getCreativeUrl(fileName: string): string {
 export default function AdCreativesPage() {
   const { data: session } = useSession()
   const router = useRouter()
-  const user = session?.user as any
+  const user = session?.user
   const fileInputRef = useRef<HTMLInputElement>(null)
 
   const [adCreatives, setAdCreatives] = useState<AdCreative[]>([])

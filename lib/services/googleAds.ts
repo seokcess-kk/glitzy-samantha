@@ -17,6 +17,9 @@ export interface GoogleAdsOptions {
 
 export async function fetchGoogleAds(date = new Date(), options?: GoogleAdsOptions) {
   const dateStr = getKstDateString(date)
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(dateStr)) {
+    throw new Error(`Invalid date format: ${dateStr}`)
+  }
   const startTime = Date.now()
 
   // options 제공 시 options 사용, 아닐 시 환경변수 폴백

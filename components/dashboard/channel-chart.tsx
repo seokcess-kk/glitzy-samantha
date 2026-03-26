@@ -9,6 +9,7 @@ import { Card } from '@/components/ui/card'
 import { Skeleton } from '@/components/ui/skeleton'
 import { EmptyState } from '@/components/common'
 import { getChannelColor } from '@/lib/channel-colors'
+import { ChartTooltipProps } from '@/types/recharts'
 import { BarChart3, ArrowRight } from 'lucide-react'
 import Link from 'next/link'
 
@@ -29,9 +30,9 @@ interface ChannelChartProps {
   days?: string
 }
 
-const BarTooltip = ({ active, payload }: any) => {
+const BarTooltip = ({ active, payload }: ChartTooltipProps) => {
   if (!active || !payload?.length) return null
-  const d = payload[0]?.payload
+  const d = payload[0]?.payload as unknown as ChannelData | undefined
   if (!d) return null
   return (
     <div className="bg-card border border-border rounded-lg px-3 py-2.5 text-xs shadow-xl backdrop-blur-sm">

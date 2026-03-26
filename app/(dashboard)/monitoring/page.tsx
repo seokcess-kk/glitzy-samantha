@@ -74,7 +74,7 @@ function buildEditableCellOrder(keywords: any[], days: number[], isCurrentMonth:
 export default function MonitoringPage() {
   const { data: session } = useSession()
   const router = useRouter()
-  const user = session?.user as any
+  const user = session?.user
   const { selectedClinicId, setSelectedClinicId, clinics } = useClinic()
 
   const [category, setCategory] = useState('all')

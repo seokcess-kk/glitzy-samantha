@@ -20,7 +20,7 @@ const ClinicContext = createContext<ClinicContextType>({
 
 export function ClinicProvider({ children }: { children: ReactNode }) {
   const { data: session } = useSession()
-  const user = session?.user as any
+  const user = session?.user
   const isSuperAdmin = user?.role === 'superadmin'
   const isAgencyStaff = user?.role === 'agency_staff'
 

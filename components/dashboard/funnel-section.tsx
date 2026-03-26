@@ -5,6 +5,7 @@ import { Skeleton } from '@/components/ui/skeleton'
 import { EmptyState } from '@/components/common'
 import { Users, Filter } from 'lucide-react'
 import Link from 'next/link'
+import { FUNNEL_COLORS } from '@/lib/chart-colors'
 import { useState, useRef } from 'react'
 
 interface FunnelStage {
@@ -38,22 +39,13 @@ const STAGE_LINKS: Record<string, string> = {
 
 const NODE_SIZE = 40
 
-// 디자인 토큰 — tailwind.config.ts brand 색상과 동기화
-const COLORS = {
-  brand: '#3b82f6',      // brand-500
-  brandLight: '#60a5fa', // brand-400
-  positive: '#22c55e',   // emerald-500
-  warning: '#eab308',    // yellow-500
-  negative: '#ef4444',   // red-500
-} as const
-
 /** 직전 단계 대비 전환율 기준 커넥터 색상 */
 function getSegmentColor(prevCount: number, currentCount: number): string {
-  if (prevCount === 0) return COLORS.brand
+  if (prevCount === 0) return FUNNEL_COLORS.brand
   const rate = (currentCount / prevCount) * 100
-  if (rate >= 70) return COLORS.positive
-  if (rate >= 50) return COLORS.warning
-  return COLORS.negative
+  if (rate >= 70) return FUNNEL_COLORS.positive
+  if (rate >= 50) return FUNNEL_COLORS.warning
+  return FUNNEL_COLORS.negative
 }
 
 /** 노드 배경 opacity — 0명이면 연하게 */
@@ -150,7 +142,7 @@ function FunnelProgress({
                 style={{
                   width: NODE_SIZE,
                   height: NODE_SIZE,
-                  background: `linear-gradient(135deg, ${COLORS.brand}, ${COLORS.brandLight})`,
+                  background: `linear-gradient(135deg, ${FUNNEL_COLORS.brand}, ${FUNNEL_COLORS.brandLight})`,
                   opacity: getNodeOpacity(stage.count),
                   fontSize: '13px',
                 }}
@@ -207,7 +199,7 @@ function FunnelProgress({
       <div className="md:hidden space-y-0">
         {stages.map((stage, i) => {
           const segColor =
-            i > 0 ? getSegmentColor(stages[i - 1].count, stage.count) : COLORS.brand
+            i > 0 ? getSegmentColor(stages[i - 1].count, stage.count) : FUNNEL_COLORS.brand
           const prevStageRate =
             i > 0 && stages[i - 1].count > 0
               ? ((stage.count / stages[i - 1].count) * 100).toFixed(1)
@@ -246,7 +238,7 @@ function FunnelProgress({
                   style={{
                     width: NODE_SIZE,
                     height: NODE_SIZE,
-                    background: `linear-gradient(135deg, ${COLORS.brand}, ${COLORS.brandLight})`,
+                    background: `linear-gradient(135deg, ${FUNNEL_COLORS.brand}, ${FUNNEL_COLORS.brandLight})`,
                     opacity: getNodeOpacity(stage.count),
                     fontSize: '13px',
                   }}
@@ -279,7 +271,7 @@ function FunnelProgress({
               className="h-full rounded-full transition-all duration-700 ease-out"
               style={{
                 width: `${Math.min(totalRate, 100)}%`,
-                background: `linear-gradient(90deg, ${COLORS.brand}, ${COLORS.positive})`,
+                background: `linear-gradient(90deg, ${FUNNEL_COLORS.brand}, ${FUNNEL_COLORS.positive})`,
               }}
             />
           </div>

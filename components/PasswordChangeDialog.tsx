@@ -107,7 +107,8 @@ export default function PasswordChangeDialog({ open, onOpenChange }: PasswordCha
                 variant="ghost"
                 size="icon"
                 onClick={() => setShowCurrent(v => !v)}
-                className="absolute right-1 top-1/2 -translate-y-1/2 h-7 w-7 text-muted-foreground hover:text-foreground hover:bg-muted dark:hover:bg-white/10"
+                aria-label={showCurrent ? '비밀번호 숨기기' : '비밀번호 표시'}
+                className="absolute right-1 top-1/2 -translate-y-1/2 h-9 w-9 text-muted-foreground hover:text-foreground hover:bg-muted dark:hover:bg-white/10"
               >
                 {showCurrent ? <EyeOff size={15} /> : <Eye size={15} />}
               </Button>
@@ -133,7 +134,8 @@ export default function PasswordChangeDialog({ open, onOpenChange }: PasswordCha
                 variant="ghost"
                 size="icon"
                 onClick={() => setShowNew(v => !v)}
-                className="absolute right-1 top-1/2 -translate-y-1/2 h-7 w-7 text-muted-foreground hover:text-foreground hover:bg-muted dark:hover:bg-white/10"
+                aria-label={showNew ? '비밀번호 숨기기' : '비밀번호 표시'}
+                className="absolute right-1 top-1/2 -translate-y-1/2 h-9 w-9 text-muted-foreground hover:text-foreground hover:bg-muted dark:hover:bg-white/10"
               >
                 {showNew ? <EyeOff size={15} /> : <Eye size={15} />}
               </Button>

@@ -8,11 +8,10 @@ import { Card } from '@/components/ui/card'
 import { Skeleton } from '@/components/ui/skeleton'
 import { EmptyState } from '@/components/common'
 import { getChannelColor } from '@/lib/channel-colors'
+import { ChartTooltipProps } from '@/types/recharts'
+import { CHART_SEMANTIC } from '@/lib/chart-colors'
 import { BarChart3, ArrowRight } from 'lucide-react'
 import Link from 'next/link'
-
-const POSITIVE = '#34d399'
-const NEGATIVE = '#fb7185'
 
 interface CplItem {
   name: string
@@ -30,23 +29,23 @@ interface CplRoasChartProps {
   loading?: boolean
 }
 
-const CplTooltip = ({ active, payload }: any) => {
+const CplTooltip = ({ active, payload }: ChartTooltipProps) => {
   if (!active || !payload?.length) return null
   const d = payload[0]
   return (
     <div className="bg-card border border-border rounded-lg px-3 py-2 text-xs shadow-xl backdrop-blur-sm">
-      <span className="text-muted-foreground">{d.payload.name}: </span>
+      <span className="text-muted-foreground">{String(d.payload.name)}: </span>
       <span className="text-foreground font-medium">₩{Number(d.value).toLocaleString()}</span>
     </div>
   )
 }
 
-const RoasTooltip = ({ active, payload }: any) => {
+const RoasTooltip = ({ active, payload }: ChartTooltipProps) => {
   if (!active || !payload?.length) return null
   const d = payload[0]
   return (
     <div className="bg-card border border-border rounded-lg px-3 py-2 text-xs shadow-xl backdrop-blur-sm">
-      <span className="text-muted-foreground">{d.payload.name}: </span>
+      <span className="text-muted-foreground">{String(d.payload.name)}: </span>
       <span className="text-foreground font-medium">{d.value}%</span>
     </div>
   )
@@ -120,7 +119,7 @@ export function CplRoasChart({ cplData, roasData, loading }: CplRoasChartProps) 
               <Tooltip content={<RoasTooltip />} />
               <Bar dataKey="roas" radius={[0, 4, 4, 0]}>
                 {roasData.map((entry, i) => (
-                  <Cell key={i} fill={entry.roas >= 100 ? POSITIVE : NEGATIVE} fillOpacity={0.7} />
+                  <Cell key={i} fill={entry.roas >= 100 ? CHART_SEMANTIC.positive : CHART_SEMANTIC.negative} fillOpacity={0.7} />
                 ))}
               </Bar>
             </BarChart>

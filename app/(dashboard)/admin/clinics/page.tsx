@@ -47,7 +47,7 @@ const PLATFORMS: Platform[] = ['meta_ads', 'google_ads', 'tiktok_ads']
 export default function ClinicsPage() {
   const { data: session } = useSession()
   const router = useRouter()
-  const user = session?.user as any
+  const user = session?.user
 
   const [clinics, setClinics] = useState<any[]>([])
   const [loading, setLoading] = useState(true)

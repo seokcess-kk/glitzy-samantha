@@ -51,7 +51,7 @@ interface LandingPage {
 export default function LandingPagesPage() {
   const { data: session } = useSession()
   const router = useRouter()
-  const user = session?.user as any
+  const user = session?.user
 
   const [landingPages, setLandingPages] = useState<LandingPage[]>([])
   const [availableFiles, setAvailableFiles] = useState<string[]>([])

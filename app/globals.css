@@ -65,6 +65,8 @@
     --input: 225 8% 16%;
     --ring: 217 91% 60%;
     --ring-offset-background: var(--background);
+
+    --overlay: 230 25% 14%;
   }
 }
 

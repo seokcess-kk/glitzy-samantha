@@ -37,7 +37,7 @@ interface KeywordEntry {
 export default function MonitoringInputPage() {
   const { data: session } = useSession()
   const router = useRouter()
-  const user = session?.user as any
+  const user = session?.user
   const { selectedClinicId, setSelectedClinicId, clinics } = useClinic()
 
   const [date, setDate] = useState(() => new Date().toLocaleDateString('en-CA', { timeZone: 'Asia/Seoul' }))

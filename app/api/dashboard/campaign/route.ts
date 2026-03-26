@@ -1,6 +1,5 @@
-import { NextResponse } from 'next/server'
 import { serverSupabase } from '@/lib/supabase'
-import { withClinicFilter, ClinicContext } from '@/lib/api-middleware'
+import { withClinicFilter, ClinicContext, applyClinicFilter, applyDateRange, apiSuccess } from '@/lib/api-middleware'
 import { normalizeChannel } from '@/lib/channel'
 
 /**
@@ -16,28 +15,18 @@ export const GET = withClinicFilter(async (req: Request, { clinicId, assignedCli
 
   // agency_staff 배정 병원 0개 → 빈 결과
   if (assignedClinicIds !== null && assignedClinicIds.length === 0) {
-    return NextResponse.json([])
+    return apiSuccess([])
   }
 
-  const applyFilter = <T>(q: T): T => {
-    if (clinicId) return (q as any).eq('clinic_id', clinicId)
-    if (assignedClinicIds !== null && assignedClinicIds.length > 0) return (q as any).in('clinic_id', assignedClinicIds)
-    return q
-  }
-  const applyDateFilter = <T>(q: T, dateField: string): T => {
-    let query = q
-    if (startDate) query = (query as any).gte(dateField, startDate)
-    if (endDate) query = (query as any).lte(dateField, endDate)
-    return query
-  }
+  const ctx = { clinicId, assignedClinicIds }
 
   // 1. 리드 데이터 조회 (utm_source, utm_campaign 포함)
   let leadsQuery = supabase
     .from('leads')
     .select('id, customer_id, utm_source, utm_campaign, utm_content, created_at')
     .not('utm_campaign', 'is', null) // 캠페인이 있는 리드만
-  leadsQuery = applyFilter(leadsQuery)
-  leadsQuery = applyDateFilter(leadsQuery, 'created_at')
+  leadsQuery = applyClinicFilter(leadsQuery, ctx)!
+  leadsQuery = applyDateRange(leadsQuery, 'created_at', startDate, endDate)
   if (channel) {
     leadsQuery = leadsQuery.ilike('utm_source', channel)
   }
@@ -46,22 +35,22 @@ export const GET = withClinicFilter(async (req: Request, { clinicId, assignedCli
   let adStatsQuery = supabase
     .from('ad_campaign_stats')
     .select('campaign_name, campaign_id, platform, spend_amount, clicks, impressions, stat_date')
-  adStatsQuery = applyFilter(adStatsQuery)
-  adStatsQuery = applyDateFilter(adStatsQuery, 'stat_date')
+  adStatsQuery = applyClinicFilter(adStatsQuery, ctx)!
+  adStatsQuery = applyDateRange(adStatsQuery, 'stat_date', startDate, endDate)
 
   // 3. 결제 데이터
   let paymentsQuery = supabase
     .from('payments')
     .select('payment_amount, customer_id, payment_date')
-  paymentsQuery = applyFilter(paymentsQuery)
-  paymentsQuery = applyDateFilter(paymentsQuery, 'payment_date')
+  paymentsQuery = applyClinicFilter(paymentsQuery, ctx)!
+  paymentsQuery = applyDateRange(paymentsQuery, 'payment_date', startDate, endDate)
 
   // 4. 예약 데이터 (전환율 계산용)
   let bookingsQuery = supabase
     .from('bookings')
     .select('id, customer_id, status, created_at')
-  bookingsQuery = applyFilter(bookingsQuery)
-  bookingsQuery = applyDateFilter(bookingsQuery, 'created_at')
+  bookingsQuery = applyClinicFilter(bookingsQuery, ctx)!
+  bookingsQuery = applyDateRange(bookingsQuery, 'created_at', startDate, endDate)
 
   const [leadsRes, adStatsRes, paymentsRes, bookingsRes] = await Promise.all([
     leadsQuery,
@@ -170,6 +159,6 @@ export const GET = withClinicFilter(async (req: Request, { clinicId, assignedCli
     .sort((a, b) => b.leads - a.leads) // 리드 많은 순
     .slice(0, 20) // 상위 20개
 
-  return NextResponse.json(result)
+  return apiSuccess(result)
 })
 

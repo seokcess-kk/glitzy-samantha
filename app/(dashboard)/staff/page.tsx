@@ -31,7 +31,7 @@ import { EmptyState, PageHeader } from '@/components/common'
 export default function StaffPage() {
   const { data: session } = useSession()
   const router = useRouter()
-  const user = session?.user as any
+  const user = session?.user
 
   const [staff, setStaff] = useState<any[]>([])
   const [loading, setLoading] = useState(true)
