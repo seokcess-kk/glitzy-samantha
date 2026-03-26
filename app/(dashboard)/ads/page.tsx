@@ -3,7 +3,7 @@
 import { useState, useEffect, useCallback } from 'react'
 import { useSession } from 'next-auth/react'
 import { useRouter } from 'next/navigation'
-import { subDays, startOfDay } from 'date-fns'
+import { startOfDay, startOfMonth } from 'date-fns'
 import { DateRange } from 'react-day-picker'
 import { RefreshCw, Play } from 'lucide-react'
 import { toast } from 'sonner'
@@ -36,13 +36,13 @@ export default function AdsPage() {
   const [activeTab, setActiveTab] = useState('overview')
   const [dateRange, setDateRange] = useState<DateRange>(() => {
     const today = startOfDay(new Date())
-    return { from: subDays(today, 30), to: today }
+    return { from: startOfMonth(today), to: today }
   })
   const [syncing, setSyncing] = useState(false)
   const [refreshKey, setRefreshKey] = useState(0)
 
   // KST 기준 YYYY-MM-DD 문자열 (ad_campaign_stats.stat_date와 동일 형식)
-  const startDate = dateRange.from ? getKstDateString(dateRange.from) : getKstDateString(subDays(new Date(), 30))
+  const startDate = dateRange.from ? getKstDateString(dateRange.from) : getKstDateString(startOfMonth(new Date()))
   const endDate = dateRange.to ? getKstDateString(dateRange.to) : getKstDateString(new Date())
 
   // 기간 일수 계산 (표시용 + 캠페인 탭 stats API용)

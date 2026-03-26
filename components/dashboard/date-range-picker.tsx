@@ -1,7 +1,7 @@
 'use client'
 
 import { useState } from 'react'
-import { format, subDays, startOfDay } from 'date-fns'
+import { format, subDays, startOfDay, startOfMonth } from 'date-fns'
 import { ko } from 'date-fns/locale'
 import { CalendarIcon } from 'lucide-react'
 import { DateRange } from 'react-day-picker'
@@ -18,6 +18,7 @@ const PRESETS = [
   { label: '오늘', days: 0 },
   { label: '7일', days: 7 },
   { label: '14일', days: 14 },
+  { label: '이번 달', days: -1 },
   { label: '30일', days: 30 },
   { label: '90일', days: 90 },
 ]
@@ -27,7 +28,7 @@ export function DateRangePicker({ dateRange, onDateRangeChange }: DateRangePicke
 
   const handlePreset = (days: number) => {
     const to = startOfDay(new Date())
-    const from = days === 0 ? to : subDays(to, days)
+    const from = days === -1 ? startOfMonth(to) : days === 0 ? to : subDays(to, days)
     onDateRangeChange({ from, to })
     setOpen(false)
   }
@@ -80,7 +81,7 @@ export function DateRangePicker({ dateRange, onDateRangeChange }: DateRangePicke
           mode="range"
           selected={dateRange}
           onSelect={handleCalendarSelect}
-          numberOfMonths={1}
+          numberOfMonths={2}
           disabled={{ after: new Date() }}
         />
       </PopoverContent>
