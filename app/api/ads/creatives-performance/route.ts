@@ -5,9 +5,20 @@ import { normalizeChannel } from '@/lib/channel'
 
 const logger = createLogger('CreativesPerformance')
 
+// inflow_url에서 utm_id (Meta campaign_id) 추출
+function extractUtmId(inflowUrl: string | null): string | null {
+  if (!inflowUrl) return null
+  const match = inflowUrl.match(/utm_id=(\d+)/)
+  return match?.[1] || null
+}
+
 /**
  * 소재별 성과 분석 API
  * utm_content 기반으로 리드/결제/매출 + 광고 지표(spend/clicks/impressions) 통합
+ *
+ * 광고 지표 매칭 전략:
+ * 1차: ad_stats.utm_content 직접 매칭 (url_tags/effective_link 설정된 경우)
+ * 2차: leads.inflow_url의 utm_id → campaign_id → ad_stats 캠페인별 집계 → 리드 비율 배분
  */
 export const GET = withClinicFilter(async (req: Request, { clinicId, assignedClinicIds }: ClinicContext) => {
   const supabase = serverSupabase()
@@ -20,10 +31,10 @@ export const GET = withClinicFilter(async (req: Request, { clinicId, assignedCli
   }
 
   try {
-    // 1) leads — utm_content가 있는 리드
+    // 1) leads — utm_content가 있는 리드 (inflow_url도 포함)
     let leadsQuery = supabase
       .from('leads')
-      .select('id, customer_id, utm_content, created_at')
+      .select('id, customer_id, utm_content, inflow_url, created_at')
       .not('utm_content', 'is', null)
 
     const filteredLeads = applyClinicFilter(leadsQuery, { clinicId, assignedClinicIds })
@@ -49,11 +60,10 @@ export const GET = withClinicFilter(async (req: Request, { clinicId, assignedCli
     const filteredPayments = applyClinicFilter(paymentsQuery, { clinicId, assignedClinicIds })
     if (filteredPayments) paymentsQuery = filteredPayments
 
-    // 4) ad_stats — utm_content별 광고 지표
+    // 4) ad_stats — campaign_id별 광고 지표 + utm_content별 직접 매칭
     let adStatsQuery = supabase
       .from('ad_stats')
-      .select('utm_content, spend_amount, clicks, impressions')
-      .not('utm_content', 'is', null)
+      .select('campaign_id, utm_content, spend_amount, clicks, impressions')
 
     const filteredAdStats = applyClinicFilter(adStatsQuery, { clinicId, assignedClinicIds })
     if (filteredAdStats) adStatsQuery = filteredAdStats
@@ -98,8 +108,10 @@ export const GET = withClinicFilter(async (req: Request, { clinicId, assignedCli
       })
     }
 
-    // utm_content별 리드 집계
+    // utm_content별 리드 집계 + campaign_id 매핑 (inflow_url의 utm_id)
     const contentLeadMap = new Map<string, { leadIds: Set<number>; customerIds: Set<number> }>()
+    const contentCampaignMap = new Map<string, Map<string, number>>() // utm_content → (campaign_id → count)
+
     for (const lead of leads) {
       const raw = lead.utm_content as string
       if (!raw) continue
@@ -110,6 +122,14 @@ export const GET = withClinicFilter(async (req: Request, { clinicId, assignedCli
       const entry = contentLeadMap.get(content)!
       entry.leadIds.add(lead.id)
       if (lead.customer_id) entry.customerIds.add(lead.customer_id)
+
+      // campaign_id 매핑
+      const campId = extractUtmId(lead.inflow_url as string)
+      if (campId) {
+        if (!contentCampaignMap.has(content)) contentCampaignMap.set(content, new Map())
+        const campMap = contentCampaignMap.get(content)!
+        campMap.set(campId, (campMap.get(campId) || 0) + 1)
+      }
     }
 
     // customer_id → utm_content 매핑 (첫 리드 기준)
@@ -137,19 +157,69 @@ export const GET = withClinicFilter(async (req: Request, { clinicId, assignedCli
       entry.revenue += Number(payment.payment_amount) || 0
     }
 
-    // utm_content별 광고 지표 집계
-    const adStatsMap = new Map<string, { spend: number; clicks: number; impressions: number }>()
+    // ad_stats: 1차 utm_content 직접 매칭, 2차 campaign_id별 집계
+    const directUtmStats = new Map<string, { spend: number; clicks: number; impressions: number }>()
+    const campaignStats = new Map<string, { spend: number; clicks: number; impressions: number }>()
+
     for (const row of adStatsData) {
-      const key = (row.utm_content as string).toLowerCase()
-      const existing = adStatsMap.get(key) || { spend: 0, clicks: 0, impressions: 0 }
-      existing.spend += Number(row.spend_amount) || 0
-      existing.clicks += row.clicks || 0
-      existing.impressions += row.impressions || 0
-      adStatsMap.set(key, existing)
+      // 1차: utm_content가 있으면 직접 매칭
+      if (row.utm_content) {
+        const key = (row.utm_content as string).toLowerCase()
+        const existing = directUtmStats.get(key) || { spend: 0, clicks: 0, impressions: 0 }
+        existing.spend += Number(row.spend_amount) || 0
+        existing.clicks += row.clicks || 0
+        existing.impressions += row.impressions || 0
+        directUtmStats.set(key, existing)
+      }
+      // campaign_id별 집계 (2차 폴백용)
+      if (row.campaign_id) {
+        const existing = campaignStats.get(row.campaign_id) || { spend: 0, clicks: 0, impressions: 0 }
+        existing.spend += Number(row.spend_amount) || 0
+        existing.clicks += row.clicks || 0
+        existing.impressions += row.impressions || 0
+        campaignStats.set(row.campaign_id, existing)
+      }
+    }
+
+    // utm_content별 광고 지표 결정
+    function getAdMetrics(utmContent: string): { spend: number; clicks: number; impressions: number } {
+      // 1차: ad_stats utm_content 직접 매칭
+      const direct = directUtmStats.get(utmContent)
+      if (direct && direct.spend > 0) return direct
+
+      // 2차: campaign별 지표를 리드 비율로 배분
+      const campLeads = contentCampaignMap.get(utmContent)
+      if (!campLeads || campLeads.size === 0) return { spend: 0, clicks: 0, impressions: 0 }
+
+      let totalSpend = 0, totalClicks = 0, totalImpressions = 0
+
+      for (const [campId, leadCount] of campLeads) {
+        const campStat = campaignStats.get(campId)
+        if (!campStat) continue
+
+        // 이 campaign의 전체 리드 수 구하기 (모든 utm_content 합산)
+        let campTotalLeads = 0
+        for (const [, cMap] of contentCampaignMap) {
+          campTotalLeads += cMap.get(campId) || 0
+        }
+
+        if (campTotalLeads > 0) {
+          const ratio = leadCount / campTotalLeads
+          totalSpend += campStat.spend * ratio
+          totalClicks += campStat.clicks * ratio
+          totalImpressions += campStat.impressions * ratio
+        }
+      }
+
+      return {
+        spend: Math.round(totalSpend),
+        clicks: Math.round(totalClicks),
+        impressions: Math.round(totalImpressions),
+      }
     }
 
     // 최종 조립: leads + ad_stats 모든 utm_content 포함
-    const allUtmContents = new Set([...contentLeadMap.keys(), ...adStatsMap.keys()])
+    const allUtmContents = new Set([...contentLeadMap.keys(), ...directUtmStats.keys()])
 
     const allCreatives: {
       utm_content: string; name: string; platform: string | null
@@ -163,16 +233,14 @@ export const GET = withClinicFilter(async (req: Request, { clinicId, assignedCli
       const creative = creativeMap.get(utmContent)
       const leadData = contentLeadMap.get(utmContent)
       const paymentData = contentPaymentMap.get(utmContent)
-      const adMetrics = adStatsMap.get(utmContent)
+      const adMetrics = getAdMetrics(utmContent)
 
       const leadCount = leadData?.leadIds.size || 0
       const customerCount = paymentData?.payingCustomers.size || 0
       const revenue = paymentData?.revenue || 0
       const conversionRate = leadCount > 0 ? Math.round((customerCount / leadCount) * 1000) / 10 : 0
 
-      const spend = adMetrics?.spend || 0
-      const clicks = adMetrics?.clicks || 0
-      const impressions = adMetrics?.impressions || 0
+      const { spend, clicks, impressions } = adMetrics
 
       allCreatives.push({
         utm_content: utmContent,

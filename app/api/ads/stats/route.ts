@@ -5,6 +5,13 @@ import { createLogger } from '@/lib/logger'
 
 const logger = createLogger('AdsStats')
 
+// inflow_url에서 utm_id (Meta campaign_id) 추출
+function extractUtmId(inflowUrl: string | null): string | null {
+  if (!inflowUrl) return null
+  const match = inflowUrl.match(/utm_id=(\d+)/)
+  return match?.[1] || null
+}
+
 export const GET = withClinicFilter(async (req: Request, { clinicId, assignedClinicIds }: ClinicContext) => {
   const supabase = serverSupabase()
   const url = new URL(req.url)
@@ -34,63 +41,25 @@ export const GET = withClinicFilter(async (req: Request, { clinicId, assignedCli
       return apiSuccess({ stats: [], campaignLeadCounts: {} })
     }
 
-    // 2) ad_stats 경유: campaign_id별 리드 수 산출
-    let adStatsQuery = supabase
-      .from('ad_stats')
-      .select('campaign_id, utm_content')
-      .not('utm_content', 'is', null)
-      .gte('stat_date', since)
-
-    const filteredAdStats = applyClinicFilter(adStatsQuery, { clinicId, assignedClinicIds })
-    if (filteredAdStats) adStatsQuery = filteredAdStats
-
-    const { data: adStatsData } = await adStatsQuery
-
-    // campaign_id → utm_content Set
-    const campaignUtmMap = new Map<string, Set<string>>()
-    for (const row of adStatsData || []) {
-      if (!row.campaign_id || !row.utm_content) continue
-      if (!campaignUtmMap.has(row.campaign_id)) {
-        campaignUtmMap.set(row.campaign_id, new Set())
-      }
-      campaignUtmMap.get(row.campaign_id)!.add((row.utm_content as string).toLowerCase())
-    }
-
-    // 전체 utm_content 목록으로 leads 조회
-    const allUtmContents = new Set<string>()
-    for (const utmSet of campaignUtmMap.values()) {
-      for (const u of utmSet) allUtmContents.add(u)
-    }
-
+    // 2) campaign_id별 리드 수 산출
+    // leads.inflow_url의 utm_id 파라미터가 Meta campaign_id와 일치
     const campaignLeadCounts: Record<string, number> = {}
 
-    if (allUtmContents.size > 0) {
-      let leadsQuery = supabase
-        .from('leads')
-        .select('utm_content')
-        .not('utm_content', 'is', null)
-        .gte('created_at', since)
+    let leadsQuery = supabase
+      .from('leads')
+      .select('inflow_url')
+      .not('inflow_url', 'is', null)
+      .gte('created_at', since)
 
-      const filteredLeads = applyClinicFilter(leadsQuery, { clinicId, assignedClinicIds })
-      if (filteredLeads) leadsQuery = filteredLeads
+    const filteredLeads = applyClinicFilter(leadsQuery, { clinicId, assignedClinicIds })
+    if (filteredLeads) leadsQuery = filteredLeads
 
-      const { data: leadsData } = await leadsQuery
+    const { data: leadsData } = await leadsQuery
 
-      // utm_content별 리드 수
-      const utmLeadCounts = new Map<string, number>()
-      for (const lead of leadsData || []) {
-        if (!lead.utm_content) continue
-        const key = (lead.utm_content as string).toLowerCase()
-        utmLeadCounts.set(key, (utmLeadCounts.get(key) || 0) + 1)
-      }
-
-      // campaign_id별 리드 수 집계
-      for (const [campaignId, utmSet] of campaignUtmMap) {
-        let total = 0
-        for (const utm of utmSet) {
-          total += utmLeadCounts.get(utm) || 0
-        }
-        if (total > 0) campaignLeadCounts[campaignId] = total
+    for (const lead of leadsData || []) {
+      const campId = extractUtmId(lead.inflow_url as string)
+      if (campId) {
+        campaignLeadCounts[campId] = (campaignLeadCounts[campId] || 0) + 1
       }
     }
 
