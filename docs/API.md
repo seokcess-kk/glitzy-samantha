@@ -205,25 +205,32 @@ Samantha 대시보드의 REST API 엔드포인트 문서입니다.
 
 ### GET /api/ads/stats
 
-광고 캠페인 통계를 조회합니다.
+광고 캠페인 통계 + campaign_id별 리드 수를 조회합니다.
 
 **Query Parameters:**
 - `days`: 조회 일수
 - `clinic_id`
+- `platform`: 매체 필터 (선택)
 
 **Response:**
 ```json
-[
-  {
-    "id": 1,
-    "platform": "Meta",
-    "campaign_name": "캠페인명",
-    "stat_date": "2024-01-15",
-    "spend_amount": 100000,
-    "clicks": 500,
-    "impressions": 10000
+{
+  "stats": [
+    {
+      "id": 1,
+      "platform": "Meta",
+      "campaign_id": "123456",
+      "campaign_name": "캠페인명",
+      "stat_date": "2026-03-15",
+      "spend_amount": 100000,
+      "clicks": 500,
+      "impressions": 10000
+    }
+  ],
+  "campaignLeadCounts": {
+    "123456": 15
   }
-]
+}
 ```
 
 ### POST /api/ads/sync
@@ -342,6 +349,45 @@ Samantha 대시보드의 REST API 엔드포인트 문서입니다.
   ]
 }
 ```
+
+### GET /api/ads/creatives-performance
+
+소재(utm_content)별 광고 지표 + 리드/전환/매출 통합 성과를 조회합니다.
+
+**Query Parameters:**
+- `startDate`, `endDate`, `clinic_id`
+
+**Response:**
+```json
+{
+  "creatives": [
+    {
+      "utm_content": "onda_39",
+      "name": "온다 39만원",
+      "platform": "Meta",
+      "spend": 500000,
+      "clicks": 120,
+      "impressions": 8000,
+      "cpc": 4167,
+      "ctr": 1.5,
+      "cpl": 25000,
+      "leads": 20,
+      "customers": 3,
+      "revenue": 1170000,
+      "conversionRate": 15.0,
+      "registered": true,
+      "file_name": "onda_39.jpg",
+      "file_type": "image/jpeg"
+    }
+  ]
+}
+```
+
+**데이터 소스:**
+- `ad_stats` (utm_content별 spend/clicks/impressions) — Meta ad 레벨 수집
+- `leads` (utm_content별 리드 수)
+- `ad_creatives` (소재 메타데이터 — 수동 등록)
+- `payments` (고객 결제/매출 — 리드 기준 귀속)
 
 ---
 
@@ -683,7 +729,9 @@ agency_staff 계정의 병원 배정 및 메뉴 권한을 수정합니다.
 **참고:**
 - `maxDuration: 300` (5분 타임아웃, Vercel Pro 기준)
 - 해당 clinic의 `clinic_api_configs`에 등록된 매체를 날짜별 순차 동기화
-- 결과는 `ad_campaign_stats`에 upsert (중복 safe)
+- 캠페인 레벨(`ad_campaign_stats`) + ad 레벨(`ad_stats`) 동시 수집
+- ad 레벨은 Meta creative의 `url_tags`/`effective_link`에서 `utm_content` 자동 추출
+- 결과는 upsert (중복 safe)
 
 ---
 

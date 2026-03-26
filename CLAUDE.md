@@ -40,7 +40,7 @@ npm run analyze      # 번들 크기 분석
 | `lib/` | 핵심 유틸리티 (auth, security, logger 등) | `lib/CLAUDE.md` |
 | `lib/services/` | 외부 API 동기화 서비스 | |
 | `components/` | UI 컴포넌트 | `components/CLAUDE.md` |
-| `components/ads/` | 광고 성과 UI (KPI카드, 효율추이, 매체비교, 퍼널, 캠페인, 요일, LP) | |
+| `components/ads/` | 광고 성과 UI (KPI카드, 효율추이, 매체비교, 퍼널, 캠페인, 소재별 성과, 요일, LP) | |
 | `components/attribution/` | 매출 기여 분석 UI (퍼널, CPL/ROAS, 고객 여정) | |
 | `components/medichecker/` | 원고 검수 UI (텍스트 입력, 위반 하이라이트, 진행 표시, 이력) | |
 | `components/erp-documents/` | ERP 문서 UI (견적서/계산서 목록, Sheet 상세) |

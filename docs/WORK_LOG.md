@@ -29,11 +29,11 @@ shadcn/ui 기반 UI/UX 개선 및 기능 개발 작업 기록.
 | Phase 14b: MediChecker UI/UX 감사 | 2026-03-24 | 2컬럼 sticky 레이아웃, 심각도 그룹핑, 컴팩트 카드, A11y 13건 수정 | 완료 | - |
 | Phase 15: ERP 연동 | 2026-03-24 | glitzy-web 견적서/계산서 읽기 전용 프록시, Sheet 상세, 탭 UI, 견적 승인/반려 | 완료 | - |
 | 버그 수정 | 2026-03-24 | 대시보드 퍼널 날짜 이중 타임존 버그 수정 (전 단계 0명 표시) | 완료 | - |
-| Phase 16: Backfill + URL Sanitize | 2026-03-26 | 광고 backfill API, sanitizeUrl 도입 (CAPI event_source_url `&` 누락 수정) | 완료 | - |
+| Phase 16: Ad 레벨 수집 + Backfill | 2026-03-26 | ad_stats 테이블, Ad 레벨 수집(fetchMetaAdStats), 소재/캠페인 지표 통합, backfill API, sanitizeUrl | 완료 | - |
 
 ---
 
-## 최신 작업 (Phase 16: Backfill + URL Sanitize)
+## 최신 작업 (Phase 16: Ad 레벨 수집 + Backfill)
 
 | # | 작업 | 핵심 내용 | 날짜 |
 |---|------|----------|------|
