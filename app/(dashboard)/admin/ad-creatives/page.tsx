@@ -76,6 +76,7 @@ const PLATFORM_OPTIONS = [
 ]
 
 const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL || ''
+const ACCEPTED_TYPES = ['image/jpeg', 'image/png', 'image/gif', 'image/webp', 'video/mp4', 'video/webm']
 
 function getCreativeUrl(fileName: string): string {
   return `${SUPABASE_URL}/storage/v1/object/public/creatives/${fileName}`
@@ -100,6 +101,7 @@ export default function AdCreativesPage() {
   })
   const [saving, setSaving] = useState(false)
   const [uploading, setUploading] = useState(false)
+  const [dragOver, setDragOver] = useState(false)
   const [previewUrl, setPreviewUrl] = useState<string | null>(null)
   const [previewType, setPreviewType] = useState<string | null>(null)
   const [viewerOpen, setViewerOpen] = useState(false)
@@ -176,6 +178,29 @@ export default function AdCreativesPage() {
     const file = e.target.files?.[0]
     if (file) handleFileUpload(file)
     if (fileInputRef.current) fileInputRef.current.value = ''
+  }
+
+  const handleDrop = (e: React.DragEvent<HTMLButtonElement>) => {
+    e.preventDefault()
+    setDragOver(false)
+    if (uploading) return
+    const file = e.dataTransfer.files[0]
+    if (!file) return
+    if (!ACCEPTED_TYPES.includes(file.type)) {
+      toast.error('이미지(JPG, PNG, GIF, WebP) 또는 동영상(MP4, WebM)만 업로드 가능합니다.')
+      return
+    }
+    handleFileUpload(file)
+  }
+
+  const handleDragOver = (e: React.DragEvent<HTMLButtonElement>) => {
+    e.preventDefault()
+    if (!uploading) setDragOver(true)
+  }
+
+  const handleDragLeave = (e: React.DragEvent<HTMLButtonElement>) => {
+    e.preventDefault()
+    setDragOver(false)
   }
 
   const clearFile = () => {
@@ -366,11 +391,18 @@ export default function AdCreativesPage() {
                 <button
                   type="button"
                   onClick={() => fileInputRef.current?.click()}
+                  onDrop={handleDrop}
+                  onDragOver={handleDragOver}
+                  onDragLeave={handleDragLeave}
                   disabled={uploading}
-                  className="w-full h-24 border-2 border-dashed border-border dark:border-white/10 rounded-lg flex flex-col items-center justify-center gap-1 text-muted-foreground hover:border-brand-500/50 hover:text-muted-foreground transition-colors"
+                  className={`w-full h-24 border-2 border-dashed rounded-lg flex flex-col items-center justify-center gap-1 transition-colors ${
+                    dragOver
+                      ? 'border-brand-500 bg-brand-500/10 text-brand-400'
+                      : 'border-border dark:border-white/10 text-muted-foreground hover:border-brand-500/50'
+                  }`}
                 >
                   <Upload size={20} />
-                  <span className="text-xs">{uploading ? '업로드 중...' : '클릭하여 파일 선택'}</span>
+                  <span className="text-xs">{uploading ? '업로드 중...' : dragOver ? '여기에 놓으세요' : '클릭 또는 파일을 드래그하세요'}</span>
                   <span className="text-[10px] text-muted-foreground/60">JPG, PNG, GIF, WebP, MP4, WebM (50MB 이하)</span>
                 </button>
               )}
