@@ -1,5 +1,6 @@
 import { serverSupabase } from '@/lib/supabase'
 import { withSuperAdmin, apiError, apiSuccess } from '@/lib/api-middleware'
+import { sanitizeString } from '@/lib/security'
 
 const ALLOWED_TYPES: Record<string, string> = {
   'image/jpeg': '.jpg',
@@ -19,49 +20,48 @@ function sanitizeFileName(raw: string, mimeType: string): string {
   return (safe || 'creative') + ext
 }
 
+// signed URL 발급 — 클라이언트가 Supabase Storage에 직접 업로드
 export const POST = withSuperAdmin(async (req: Request) => {
   try {
-    const formData = await req.formData()
-    const file = formData.get('file') as File | null
+    const { fileName: rawName, fileType, fileSize } = await req.json()
 
-    if (!file) {
-      return apiError('파일이 첨부되지 않았습니다.', 400)
+    if (!rawName || !fileType) {
+      return apiError('fileName과 fileType이 필요합니다.', 400)
     }
 
-    if (!ALLOWED_TYPES[file.type]) {
+    if (!ALLOWED_TYPES[fileType]) {
       return apiError('이미지(JPG, PNG, GIF, WebP) 또는 동영상(MP4, WebM)만 업로드 가능합니다.', 400)
     }
 
-    if (file.size > MAX_SIZE) {
+    if (fileSize && fileSize > MAX_SIZE) {
       return apiError('파일 크기는 50MB 이하여야 합니다.', 400)
     }
 
-    const supabase = serverSupabase()
-    const fileName = `${Date.now()}_${sanitizeFileName(file.name, file.type)}`
-    const buffer = Buffer.from(await file.arrayBuffer())
+    const safeName = sanitizeFileName(sanitizeString(rawName, 200), fileType)
+    const path = `${Date.now()}_${safeName}`
 
-    const { error } = await supabase.storage
+    const supabase = serverSupabase()
+    const { data, error } = await supabase.storage
       .from(BUCKET)
-      .upload(fileName, buffer, {
-        contentType: file.type,
-        upsert: false,
-      })
+      .createSignedUploadUrl(path)
 
     if (error) {
-      return apiError('파일 업로드 실패: ' + error.message, 500)
+      return apiError('업로드 URL 생성 실패: ' + error.message, 500)
     }
 
-    // public URL 생성
     const { data: urlData } = supabase.storage
       .from(BUCKET)
-      .getPublicUrl(fileName)
+      .getPublicUrl(path)
 
     return apiSuccess({
-      fileName,
-      fileType: file.type,
+      signedUrl: data.signedUrl,
+      path,
+      token: data.token,
+      fileName: path,
       publicUrl: urlData.publicUrl,
     })
-  } catch (e: any) {
-    return apiError('파일 업로드 실패: ' + (e.message || String(e)), 500)
+  } catch (e: unknown) {
+    const message = e instanceof Error ? e.message : String(e)
+    return apiError('업로드 URL 생성 실패: ' + message, 500)
   }
 })

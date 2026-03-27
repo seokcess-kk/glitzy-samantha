@@ -142,21 +142,31 @@ export default function AdCreativesPage() {
   const handleFileUpload = async (file: File) => {
     setUploading(true)
     try {
-      const formData = new FormData()
-      formData.append('file', file)
-      const res = await fetch('/api/admin/ad-creatives/upload', { method: 'POST', body: formData })
-      const text = await res.text()
-      let data: any
-      try { data = JSON.parse(text) } catch { throw new Error('서버 응답 오류') }
-      if (!res.ok) throw new Error(data.error || '업로드 실패')
+      // 1) signed URL 발급
+      const urlRes = await fetch('/api/admin/ad-creatives/upload', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ fileName: file.name, fileType: file.type, fileSize: file.size }),
+      })
+      const urlData = await urlRes.json()
+      if (!urlRes.ok) throw new Error(urlData.error || '업로드 URL 생성 실패')
 
-      setForm(f => ({ ...f, file_name: data.fileName, file_type: data.fileType }))
+      // 2) Supabase Storage에 직접 업로드
+      const uploadRes = await fetch(urlData.signedUrl, {
+        method: 'PUT',
+        headers: { 'Content-Type': file.type },
+        body: file,
+      })
+      if (!uploadRes.ok) throw new Error('파일 업로드 실패')
+
+      setForm(f => ({ ...f, file_name: urlData.fileName, file_type: file.type }))
       // 미리보기
       const url = URL.createObjectURL(file)
       setPreviewUrl(url)
       setPreviewType(file.type)
-    } catch (e: any) {
-      toast.error(e.message || '업로드 실패')
+    } catch (e: unknown) {
+      const message = e instanceof Error ? e.message : '업로드 실패'
+      toast.error(message)
     } finally {
       setUploading(false)
     }
