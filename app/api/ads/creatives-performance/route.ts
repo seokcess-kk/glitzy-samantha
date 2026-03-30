@@ -60,10 +60,10 @@ export const GET = withClinicFilter(async (req: Request, { clinicId, assignedCli
     const filteredPayments = applyClinicFilter(paymentsQuery, { clinicId, assignedClinicIds })
     if (filteredPayments) paymentsQuery = filteredPayments
 
-    // 4) ad_stats — campaign_id별 광고 지표 + utm_content별 직접 매칭
+    // 4) ad_stats — campaign_id별 광고 지표 + utm_content별 직접 매칭 + ad_id별 (TikTok/Google)
     let adStatsQuery = supabase
       .from('ad_stats')
-      .select('campaign_id, utm_content, spend_amount, clicks, impressions')
+      .select('ad_id, ad_name, platform, campaign_id, utm_content, spend_amount, clicks, impressions')
 
     const filteredAdStats = applyClinicFilter(adStatsQuery, { clinicId, assignedClinicIds })
     if (filteredAdStats) adStatsQuery = filteredAdStats
@@ -262,6 +262,50 @@ export const GET = withClinicFilter(async (req: Request, { clinicId, assignedCli
         registered: !!creative,
         file_name: creative?.file_name || null,
         file_type: creative?.file_type || null,
+      })
+    }
+
+    // utm_content 없는 ad_stats (TikTok/Google 등) → ad_id 기준으로 별도 표시
+    const adIdStats = new Map<string, { adName: string; platform: string; spend: number; clicks: number; impressions: number }>()
+    for (const row of adStatsData) {
+      if (row.utm_content) continue // utm_content 있는 건 위에서 이미 처리
+      const adId = (row as { ad_id?: string }).ad_id
+      if (!adId) continue
+      const existing = adIdStats.get(adId)
+      if (existing) {
+        existing.spend += Number(row.spend_amount) || 0
+        existing.clicks += row.clicks || 0
+        existing.impressions += row.impressions || 0
+      } else {
+        adIdStats.set(adId, {
+          adName: (row as { ad_name?: string }).ad_name || adId,
+          platform: (row as { platform?: string }).platform || 'Unknown',
+          spend: Number(row.spend_amount) || 0,
+          clicks: row.clicks || 0,
+          impressions: row.impressions || 0,
+        })
+      }
+    }
+
+    for (const [adId, stats] of adIdStats) {
+      if (stats.spend === 0 && stats.clicks === 0 && stats.impressions === 0) continue
+      allCreatives.push({
+        utm_content: adId,
+        name: stats.adName,
+        platform: normalizeChannel(stats.platform),
+        spend: stats.spend,
+        clicks: stats.clicks,
+        impressions: stats.impressions,
+        cpc: stats.clicks > 0 ? Math.round(stats.spend / stats.clicks) : 0,
+        ctr: stats.impressions > 0 ? Math.round((stats.clicks / stats.impressions) * 10000) / 100 : 0,
+        cpl: 0,
+        leads: 0,
+        customers: 0,
+        revenue: 0,
+        conversionRate: 0,
+        registered: false,
+        file_name: null,
+        file_type: null,
       })
     }
 
