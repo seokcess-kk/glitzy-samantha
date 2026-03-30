@@ -42,6 +42,7 @@ export async function fetchTikTokAds(date = new Date(), options?: TikTokAdsOptio
     const url = new URL('https://business-api.tiktok.com/open_api/v1.3/report/integrated/get/')
     url.searchParams.set('advertiser_id', advertiserId)
     url.searchParams.set('report_type', 'BASIC')
+    url.searchParams.set('data_level', 'AUCTION_CAMPAIGN')
     url.searchParams.set('dimensions', JSON.stringify(['campaign_id', 'stat_time_day']))
     url.searchParams.set('metrics', JSON.stringify(['campaign_name', 'spend', 'clicks', 'impressions']))
     url.searchParams.set('start_date', dateStr)
