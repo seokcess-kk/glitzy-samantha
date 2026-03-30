@@ -3,7 +3,6 @@
 import { useMemo } from 'react'
 import {
   MousePointerClick,
-  MessageSquare,
   CalendarCheck,
   Users,
   CreditCard,
@@ -14,7 +13,7 @@ import { StatusBadge } from './status-badge'
 import { getUtmMediumLabel } from '@/lib/utm'
 
 // 여정 이벤트 타입
-type JourneyEventType = 'inflow' | 'chatbot' | 'booking' | 'consultation' | 'payment'
+type JourneyEventType = 'inflow' | 'booking' | 'consultation' | 'payment'
 
 interface JourneyEvent {
   id: string
@@ -29,9 +28,6 @@ interface JourneyEvent {
     utm_content?: string
     leadIndex?: number
     totalLeads?: number
-    // chatbot
-    chatbot_sent?: boolean
-    chatbot_sent_at?: string
     // booking
     booking_datetime?: string
     notes?: string
@@ -50,7 +46,6 @@ const EVENT_CONFIG: Record<JourneyEventType, {
   icon: typeof MousePointerClick
 }> = {
   inflow: { label: '광고 유입', icon: MousePointerClick },
-  chatbot: { label: '챗봇 발송', icon: MessageSquare },
   booking: { label: '예약', icon: CalendarCheck },
   consultation: { label: '상담', icon: Users },
   payment: { label: '결제', icon: CreditCard },
@@ -61,8 +56,6 @@ function getEventColor(event: JourneyEvent): string {
   switch (event.type) {
     case 'inflow':
       return 'bg-brand-500'
-    case 'chatbot':
-      return event.data.chatbot_sent ? 'bg-emerald-500' : 'bg-slate-400 dark:bg-slate-600'
     case 'booking':
       if (event.status === 'cancelled') return 'bg-slate-400 dark:bg-slate-600'
       if (event.status === 'confirmed') return 'bg-blue-500'
@@ -99,13 +92,6 @@ function formatDateTime(dateStr: string | undefined | null): string {
   return `${date.toLocaleDateString('ko', { timeZone: 'Asia/Seoul', month: 'short', day: 'numeric' })} ${date.toLocaleTimeString('ko', { timeZone: 'Asia/Seoul', hour: '2-digit', minute: '2-digit' })}`
 }
 
-function formatTime(dateStr: string | undefined | null): string {
-  if (!dateStr) return '-'
-  const date = toUtc(dateStr)
-  if (isNaN(date.getTime())) return '-'
-  return date.toLocaleTimeString('ko', { timeZone: 'Asia/Seoul', hour: '2-digit', minute: '2-digit' })
-}
-
 // 예약 상태 라벨
 const BOOKING_STATUS_LABELS: Record<string, string> = {
   confirmed: '예약확정',
@@ -140,17 +126,6 @@ function EventDetail({ event }: { event: JourneyEvent }) {
               {event.data.utm_content}
             </p>
           )}
-        </div>
-      )
-
-    case 'chatbot':
-      return (
-        <div className="mt-1">
-          <p className={`text-xs ${event.data.chatbot_sent ? 'text-emerald-600 dark:text-emerald-400' : 'text-muted-foreground'}`}>
-            {event.data.chatbot_sent
-              ? `발송 완료${event.data.chatbot_sent_at ? ` (${formatTime(event.data.chatbot_sent_at)})` : ''}`
-              : '발송 대기 중'}
-          </p>
         </div>
       )
 
@@ -273,17 +248,6 @@ function buildJourneyEvents(
         totalLeads,
       },
     })
-
-    // 챗봇 이벤트 (유입 직후)
-    events.push({
-      id: `chatbot-${l.id}`,
-      type: 'chatbot',
-      date: l.chatbot_sent_at || l.created_at,
-      data: {
-        chatbot_sent: l.chatbot_sent,
-        chatbot_sent_at: l.chatbot_sent_at,
-      },
-    })
   })
 
   // 예약 이벤트
@@ -330,16 +294,15 @@ function buildJourneyEvents(
   // 시간순 정렬 (오래된 것 먼저, 동일 시간이면 타입 순서 유지)
   const typeOrder: Record<JourneyEventType, number> = {
     inflow: 0,
-    chatbot: 1,
-    booking: 2,
-    consultation: 3,
-    payment: 4,
+    booking: 1,
+    consultation: 2,
+    payment: 3,
   }
   return events.sort((a, b) => {
     const toTs = (s: string) => { const t = s.trim(); return (t.endsWith('Z') || /[+-]\d{2}:\d{2}$/.test(t)) ? new Date(t).getTime() : new Date(t + 'Z').getTime() }
     const timeDiff = toTs(a.date) - toTs(b.date)
     if (timeDiff !== 0) return timeDiff
-    // 동일 시간: inflow → chatbot → booking → consultation → payment 순서 보장
+    // 동일 시간: inflow → booking → consultation → payment 순서 보장
     return typeOrder[a.type] - typeOrder[b.type]
   })
 }
