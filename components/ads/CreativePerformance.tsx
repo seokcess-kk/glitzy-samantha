@@ -73,7 +73,7 @@ export default function CreativePerformance({ startDate, endDate }: Props) {
   const [viewerOpen, setViewerOpen] = useState(false)
   const [viewerSrc, setViewerSrc] = useState<string | null>(null)
   const [viewerType, setViewerType] = useState<string | null>(null)
-  const [sortField, setSortField] = useState<SortField>('spend')
+  const [sortField, setSortField] = useState<SortField>('leads')
   const [sortDir, setSortDir] = useState<'asc' | 'desc'>('desc')
 
   const fetchData = useCallback(async () => {
@@ -126,7 +126,12 @@ export default function CreativePerformance({ startDate, endDate }: Props) {
     <>
     <Card variant="glass" className="p-5 md:p-6 mt-6">
       <div className="flex items-center justify-between mb-5 gap-4">
-        <h2 className="font-semibold text-foreground shrink-0">소재별 성과</h2>
+        <div className="flex items-center gap-2">
+          <h2 className="font-semibold text-foreground shrink-0">소재별 성과</h2>
+          {creatives.length > 0 && (
+            <span className="text-xs text-muted-foreground">{creatives.length}건</span>
+          )}
+        </div>
         <span className="text-xs text-muted-foreground">{fmtShort(startDate)} ~ {fmtShort(endDate)}</span>
       </div>
 
@@ -141,9 +146,9 @@ export default function CreativePerformance({ startDate, endDate }: Props) {
           description="광고 소재 관리에서 소재를 등록하고 utm_content가 포함된 리드가 유입되면 성과를 확인할 수 있습니다."
         />
       ) : (
-        <div className="overflow-x-auto">
+        <div className="overflow-auto max-h-[520px]">
           <Table className="min-w-[900px]">
-            <TableHeader>
+            <TableHeader className="sticky top-0 z-10 bg-card">
               <TableRow className="border-b border-border dark:border-white/5 hover:bg-transparent">
                 <TableHead className={`${thBase} w-14 px-2`}>소재</TableHead>
                 <TableHead className={thBase}>소재명</TableHead>
