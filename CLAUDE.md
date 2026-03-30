@@ -272,3 +272,4 @@ npm run analyze      # 번들 크기 분석
 | 2026-03-30 | 외부 API: `GET /api/external/ad-spend` — 병원별 월간 광고 실집행비(매체별) + SMS 발송 건수. `withExternalAuth` 미들웨어 신규 (`EXTERNAL_SERVICE_KEY` Bearer 인증). glitzy-web 결산용 |
 | 2026-03-30 | 광고 성과 UI 개선: (1) 퍼널 수평바→수직 스텝 카드 + 요일별 분석과 2컬럼 배치, flex 높이 밸런스 (2) 소재별 성과 기본 정렬 리드 내림차순, 10건 페이지네이션 + "전체 N건 보기" (3) 캠페인 행 클릭→소재 필터링 (API에 campaign_ids 추가, 클라이언트 필터) (4) LP 섹션 간 mt-6 여백 추가 |
 | 2026-03-30 | 고객 여정 타임라인에서 챗봇 발송 단계 제거: `customer-journey.tsx`에서 chatbot 이벤트 타입·설정·색상·렌더링·빌드 로직 일괄 삭제, 미사용 `MessageSquare` import·`formatTime` 함수 정리 |
+| 2026-03-30 | fix: 고객 상세 모바일 Sheet 헤더 중복 제거 — SheetHeader `sr-only` + CustomerDetail `hideHeader` prop 추가, 닫기 버튼 1개로 통일 |

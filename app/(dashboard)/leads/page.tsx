@@ -98,7 +98,7 @@ function isInDateRange(dateStr: string | undefined, range: DateRange): boolean {
   return true
 }
 
-function CustomerDetail({ lead, onDelete, onClose }: { lead: any; onDelete?: (leadId: number) => void; onClose: () => void }) {
+function CustomerDetail({ lead, onDelete, onClose, hideHeader }: { lead: any; onDelete?: (leadId: number) => void; onClose: () => void; hideHeader?: boolean }) {
   const c = lead.customer
   const payments: any[] = c?.payments || []
   const consultations: any[] = c?.consultations || []
@@ -126,13 +126,15 @@ function CustomerDetail({ lead, onDelete, onClose }: { lead: any; onDelete?: (le
 
   return (
     <div>
-      {/* 닫기 버튼 */}
-      <div className="flex items-center justify-between mb-4">
-        <h3 className="text-sm font-semibold text-muted-foreground">고객 상세</h3>
-        <Button variant="ghost" size="icon" className="h-7 w-7" onClick={onClose}>
-          <X size={14} />
-        </Button>
-      </div>
+      {/* 닫기 버튼 (데스크탑 사이드 패널용) */}
+      {!hideHeader && (
+        <div className="flex items-center justify-between mb-4">
+          <h3 className="text-sm font-semibold text-muted-foreground">고객 상세</h3>
+          <Button variant="ghost" size="icon" className="h-7 w-7" onClick={onClose}>
+            <X size={14} />
+          </Button>
+        </div>
+      )}
 
       {/* 고객 헤더 */}
       <div className="flex items-start gap-3 mb-4">
@@ -608,10 +610,10 @@ function LeadsContent() {
       <div className="md:hidden">
         <Sheet open={!!selected} onOpenChange={(open) => !open && setSelected(null)}>
           <SheetContent side="right" className="w-full sm:max-w-lg overflow-y-auto">
-            <SheetHeader className="mb-4">
-              <SheetTitle className="text-foreground">고객 상세</SheetTitle>
+            <SheetHeader className="sr-only">
+              <SheetTitle>고객 상세</SheetTitle>
             </SheetHeader>
-            {selected && <CustomerDetail lead={selected} onDelete={isSuperAdmin ? handleDeleteLead : undefined} onClose={() => setSelected(null)} />}
+            {selected && <CustomerDetail lead={selected} onDelete={isSuperAdmin ? handleDeleteLead : undefined} onClose={() => setSelected(null)} hideHeader />}
           </SheetContent>
         </Sheet>
       </div>
