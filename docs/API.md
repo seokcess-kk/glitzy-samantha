@@ -1079,6 +1079,46 @@ glitzy-web 외부 API 프록시. 읽기 전용.
 
 매체별 API 키 연결 테스트를 실행합니다.
 
+### GET /api/menu-visibility
+
+인증된 사용자가 시스템 전역 숨김 메뉴 목록을 조회합니다.
+
+**권한**: 인증 필요 (모든 역할)
+
+**응답**:
+```json
+{ "hiddenMenus": ["content", "monitor"] }
+```
+
+### GET /api/admin/menu-settings
+
+슈퍼어드민이 숨김 메뉴 설정을 조회합니다.
+
+**권한**: superadmin
+
+**응답**:
+```json
+{ "hiddenMenus": ["content", "monitor"] }
+```
+
+### PUT /api/admin/menu-settings
+
+슈퍼어드민이 숨김 메뉴 설정을 업데이트합니다.
+
+**권한**: superadmin
+
+**요청**:
+```json
+{ "hiddenMenus": ["content", "monitor"] }
+```
+
+**응답**:
+```json
+{ "hiddenMenus": ["content", "monitor"] }
+```
+
+유효한 메뉴 키: `dashboard`, `campaigns`, `leads`, `patients`, `chatbot`, `ads`, `content`, `monitor`, `press`, `monitoring`, `medichecker`, `erp-documents`
+
 ---
 
 ## 공개 페이지 (인증 불필요)

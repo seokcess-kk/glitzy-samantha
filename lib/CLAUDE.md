@@ -63,6 +63,7 @@
 | `mc_relations` | 법령-시술 온톨로지 관계 (공용) | 8종 관계 타입, 1홉 탐색 |
 | `mc_chunks` | RAG 임베딩 청크 (공용) | pgvector 1536차원, pg_trgm 키워드 |
 | `mc_verification_logs` | 광고 검증 이력 (테넌트) | clinic_id + user_id 추적, violations JSONB |
+| `system_settings` | 시스템 전역 설정 (공용) | key(PK) + value(JSONB). 예: hidden_menus |
 
 ## SMS 발송 (lib/solapi.ts)
 

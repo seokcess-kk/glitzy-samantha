@@ -4,7 +4,7 @@ import { usePathname } from 'next/navigation'
 import { signOut } from 'next-auth/react'
 import { useSession } from 'next-auth/react'
 import { useState, useEffect } from 'react'
-import { LayoutDashboard, Users, BarChart2, LogOut, Activity, Calendar, Film, Link2, Scan, Newspaper, ChevronUp, User, ClipboardList, LucideIcon, Building2, UserCog, FileText, Image as ImageIcon, Megaphone, TrendingUp, Shield, KeyRound, ShieldCheck, Receipt } from 'lucide-react'
+import { LayoutDashboard, Users, BarChart2, LogOut, Activity, Calendar, Film, Link2, Scan, Newspaper, ChevronUp, User, ClipboardList, LucideIcon, Building2, UserCog, FileText, Image as ImageIcon, Megaphone, TrendingUp, Shield, KeyRound, ShieldCheck, Receipt, Settings2 } from 'lucide-react'
 import { useClinic } from './ClinicContext'
 import { Button } from '@/components/ui/button'
 import {
@@ -31,7 +31,7 @@ interface MenuItem {
   icon: LucideIcon
   minRole?: number
   menuKey?: string // agency_staff 메뉴 권한 필터용
-  hidden?: boolean // 미사용 메뉴 숨김
+  hidden?: boolean // 코드 레벨 숨김 (DB 동적 숨김은 hiddenMenuKeys로 처리)
 }
 
 interface MenuGroup {
@@ -67,8 +67,8 @@ const menuGroups: MenuGroup[] = [
     minRole: 2,
     items: [
       { href: '/ads', label: '광고 성과', icon: BarChart2, menuKey: 'ads' },
-      { href: '/content', label: '콘텐츠 분석', icon: Film, menuKey: 'content', hidden: true },
-      { href: '/monitor', label: '콘텐츠 모니터링', icon: Scan, menuKey: 'monitor', hidden: true },
+      { href: '/content', label: '콘텐츠 분석', icon: Film, menuKey: 'content' },
+      { href: '/monitor', label: '콘텐츠 모니터링', icon: Scan, menuKey: 'monitor' },
     ]
   },
   {
@@ -127,8 +127,16 @@ export default function Sidebar({ onClose }: { onClose?: () => void }) {
   // agency_staff 메뉴 권한
   const [menuPermissions, setMenuPermissions] = useState<string[]>([])
   const [menuLoaded, setMenuLoaded] = useState(false)
+  // 시스템 전역 숨김 메뉴
+  const [hiddenMenuKeys, setHiddenMenuKeys] = useState<string[]>([])
 
   useEffect(() => {
+    // 시스템 숨김 메뉴 조회
+    fetch('/api/menu-visibility')
+      .then(r => r.json())
+      .then(d => setHiddenMenuKeys(d.hiddenMenus || []))
+      .catch(() => {/* 실패 시 숨김 없음 */})
+
     if (isAgencyStaff) {
       fetch('/api/my/menu-permissions')
         .then(r => r.json())
@@ -145,6 +153,8 @@ export default function Sidebar({ onClose }: { onClose?: () => void }) {
 
   // 메뉴 필터: agency_staff는 허용된 menuKey만 표시
   const filterMenuItem = (item: MenuItem): boolean => {
+    // 시스템 전역 숨김 (슈퍼어드민도 숨김)
+    if (item.menuKey && hiddenMenuKeys.includes(item.menuKey)) return false
     if (!isAgencyStaff) return true
     if (!item.menuKey) return true
     if (menuPermissions.length === 0 && menuLoaded) return true // 권한 미설정 시 전체 허용
@@ -194,7 +204,6 @@ export default function Sidebar({ onClose }: { onClose?: () => void }) {
       <nav className="flex-1 px-3 py-4 overflow-y-auto">
         {menuGroups.filter(g => userLevel >= (g.minRole || 1)).map((group, groupIndex) => {
           const visibleItems = group.items
-            .filter(item => !item.hidden)
             .filter(item => userLevel >= (item.minRole || 1))
             .filter(filterMenuItem)
           if (visibleItems.length === 0) return null
@@ -305,6 +314,13 @@ export default function Sidebar({ onClose }: { onClose?: () => void }) {
               >
                 <Shield size={17} />
                 로그인 로그
+              </Link>
+              <Link
+                href="/admin/settings" onClick={onClose}
+                className={navLinkClass(pathname === '/admin/settings')}
+              >
+                <Settings2 size={17} />
+                시스템 설정
               </Link>
             </div>
           </>
