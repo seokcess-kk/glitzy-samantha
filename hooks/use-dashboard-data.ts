@@ -149,7 +149,7 @@ export function useFunnelChannelData(clinicId: number | null, startDate: string,
         const customers = Array.isArray(leadsRes.value) ? leadsRes.value : []
         const treatmentMap: Record<string, number> = {}
         for (const customer of customers) {
-          const payments = customer.payments || []
+          const payments = customer.customer?.payments || []
           for (const p of payments) {
             if (p.treatment_name && p.payment_amount) {
               treatmentMap[p.treatment_name] = (treatmentMap[p.treatment_name] || 0) + Number(p.payment_amount)
