@@ -5,6 +5,17 @@ import { normalizeChannel } from '@/lib/channel'
 
 const logger = createLogger('CreativesPerformance')
 
+interface AdStatsRow {
+  ad_id: string | null
+  ad_name: string | null
+  platform: string | null
+  campaign_id: string | null
+  utm_content: string | null
+  spend_amount: number
+  clicks: number
+  impressions: number
+}
+
 // inflow_url에서 utm_id (Meta campaign_id) 추출
 function extractUtmId(inflowUrl: string | null): string | null {
   if (!inflowUrl) return null
@@ -95,7 +106,7 @@ export const GET = withClinicFilter(async (req: Request, { clinicId, assignedCli
     const leads = leadsRes.data || []
     const creatives = creativesRes.data || []
     const payments = paymentsRes.data || []
-    const adStatsData = adStatsRes.data || []
+    const adStatsData: AdStatsRow[] = (adStatsRes.data || []) as AdStatsRow[]
 
     // utm_content → 소재 메타데이터 매핑
     const creativeMap = new Map<string, { name: string; platform: string | null; file_name: string | null; file_type: string | null }>()
@@ -269,17 +280,16 @@ export const GET = withClinicFilter(async (req: Request, { clinicId, assignedCli
     const adIdStats = new Map<string, { adName: string; platform: string; spend: number; clicks: number; impressions: number }>()
     for (const row of adStatsData) {
       if (row.utm_content) continue // utm_content 있는 건 위에서 이미 처리
-      const adId = (row as { ad_id?: string }).ad_id
-      if (!adId) continue
-      const existing = adIdStats.get(adId)
+      if (!row.ad_id) continue
+      const existing = adIdStats.get(row.ad_id)
       if (existing) {
         existing.spend += Number(row.spend_amount) || 0
         existing.clicks += row.clicks || 0
         existing.impressions += row.impressions || 0
       } else {
-        adIdStats.set(adId, {
-          adName: (row as { ad_name?: string }).ad_name || adId,
-          platform: (row as { platform?: string }).platform || 'Unknown',
+        adIdStats.set(row.ad_id, {
+          adName: row.ad_name || row.ad_id,
+          platform: row.platform || 'Unknown',
           spend: Number(row.spend_amount) || 0,
           clicks: row.clicks || 0,
           impressions: row.impressions || 0,

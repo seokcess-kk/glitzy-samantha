@@ -7,31 +7,9 @@ const SERVICE_NAME = 'TikTokAds'
 const logger = createLogger(SERVICE_NAME)
 const BASE_URL = 'https://business-api.tiktok.com/open_api/v1.3/report/integrated/get/'
 
-interface TikTokCampaign {
-  dimensions: {
-    campaign_id: string
-  }
-  metrics: {
-    campaign_name: string
-    spend: string
-    clicks: string
-    impressions: string
-  }
-}
-
-interface TikTokAd {
-  dimensions: {
-    ad_id: string
-    stat_time_day: string
-  }
-  metrics: {
-    ad_name: string
-    campaign_id: string
-    campaign_name: string
-    spend: string
-    clicks: string
-    impressions: string
-  }
+interface TikTokReportRow {
+  dimensions: Record<string, string>
+  metrics: Record<string, string>
 }
 
 export interface TikTokAdsOptions {
@@ -40,6 +18,63 @@ export interface TikTokAdsOptions {
   accessToken?: string
 }
 
+/**
+ * TikTok Report API 페이지네이션 공통 헬퍼
+ * data_level/dimensions/metrics만 다르고 호출 구조는 동일
+ */
+async function fetchTikTokReport(params: {
+  advertiserId: string
+  accessToken: string
+  dataLevel: string
+  dimensions: string[]
+  metrics: string[]
+  dateStr: string
+}): Promise<TikTokReportRow[]> {
+  const allRows: TikTokReportRow[] = []
+  let page = 1
+  const pageSize = 200
+
+  while (true) {
+    const url = new URL(BASE_URL)
+    url.searchParams.set('advertiser_id', params.advertiserId)
+    url.searchParams.set('report_type', 'BASIC')
+    url.searchParams.set('data_level', params.dataLevel)
+    url.searchParams.set('dimensions', JSON.stringify(params.dimensions))
+    url.searchParams.set('metrics', JSON.stringify(params.metrics))
+    url.searchParams.set('start_date', params.dateStr)
+    url.searchParams.set('end_date', params.dateStr)
+    url.searchParams.set('page', String(page))
+    url.searchParams.set('page_size', String(pageSize))
+
+    const { response } = await fetchWithRetry(url.toString(), {
+      headers: { 'Access-Token': params.accessToken },
+      service: SERVICE_NAME,
+      timeout: 30000,
+      retries: 3,
+    })
+
+    if (!response.ok) {
+      throw new Error(`TikTok API error (${params.dataLevel}): ${response.statusText}`)
+    }
+
+    const json = await response.json()
+    if (json.code !== 0) {
+      throw new Error(`TikTok API error: ${json.message || 'Unknown'}`)
+    }
+
+    allRows.push(...(json.data?.list || []))
+
+    const totalPage = json.data?.page_info?.total_page || 1
+    if (page >= totalPage) break
+    page++
+  }
+
+  return allRows
+}
+
+/**
+ * TikTok 캠페인 레벨 수집 → ad_campaign_stats
+ */
 export async function fetchTikTokAds(date = new Date(), options?: TikTokAdsOptions) {
   const dateStr = getKstDateString(date)
   const startTime = Date.now()
@@ -54,56 +89,23 @@ export async function fetchTikTokAds(date = new Date(), options?: TikTokAdsOptio
   const supabase = serverSupabase()
 
   try {
-    // 페이지네이션으로 전체 캠페인 데이터 수집
-    const allCampaigns: TikTokCampaign[] = []
-    let page = 1
-    const pageSize = 200
+    const rows = await fetchTikTokReport({
+      advertiserId,
+      accessToken,
+      dataLevel: 'AUCTION_CAMPAIGN',
+      dimensions: ['campaign_id', 'stat_time_day'],
+      metrics: ['campaign_name', 'spend', 'clicks', 'impressions'],
+      dateStr,
+    })
 
-    while (true) {
-      const url = new URL(BASE_URL)
-      url.searchParams.set('advertiser_id', advertiserId)
-      url.searchParams.set('report_type', 'BASIC')
-      url.searchParams.set('data_level', 'AUCTION_CAMPAIGN')
-      url.searchParams.set('dimensions', JSON.stringify(['campaign_id', 'stat_time_day']))
-      url.searchParams.set('metrics', JSON.stringify(['campaign_name', 'spend', 'clicks', 'impressions']))
-      url.searchParams.set('start_date', dateStr)
-      url.searchParams.set('end_date', dateStr)
-      url.searchParams.set('page', String(page))
-      url.searchParams.set('page_size', String(pageSize))
-
-      const { response } = await fetchWithRetry(url.toString(), {
-        headers: { 'Access-Token': accessToken },
-        service: SERVICE_NAME,
-        timeout: 30000,
-        retries: 3,
-      })
-
-      if (!response.ok) {
-        throw new Error(`TikTok API error: ${response.statusText}`)
-      }
-
-      const json = await response.json()
-      if (json.code !== 0) {
-        throw new Error(`TikTok API error: ${json.message || 'Unknown'}`)
-      }
-
-      const campaigns: TikTokCampaign[] = json.data?.list || []
-      allCampaigns.push(...campaigns)
-
-      const totalPage = json.data?.page_info?.total_page || 1
-      if (page >= totalPage) break
-      page++
-    }
-
-    // 배치 처리
-    if (allCampaigns.length > 0) {
-      const rows = allCampaigns.map((c) => ({
+    if (rows.length > 0) {
+      const dbRows = rows.map((r) => ({
         platform: 'TikTok',
-        campaign_id: c.dimensions.campaign_id,
-        campaign_name: c.metrics.campaign_name,
-        spend_amount: parseFloat(c.metrics.spend || '0'),
-        clicks: parseInt(c.metrics.clicks || '0'),
-        impressions: parseInt(c.metrics.impressions || '0'),
+        campaign_id: r.dimensions.campaign_id,
+        campaign_name: r.metrics.campaign_name,
+        spend_amount: parseFloat(r.metrics.spend || '0'),
+        clicks: parseInt(r.metrics.clicks || '0'),
+        impressions: parseInt(r.metrics.impressions || '0'),
         stat_date: dateStr,
         clinic_id: options?.clinicId || null,
       }))
@@ -113,7 +115,7 @@ export async function fetchTikTokAds(date = new Date(), options?: TikTokAdsOptio
         : 'platform,campaign_id,stat_date'
       const { error } = await supabase
         .from('ad_campaign_stats')
-        .upsert(rows, { onConflict })
+        .upsert(dbRows, { onConflict })
 
       if (error) {
         logger.error('DB upsert error', error, { clinicId: options?.clinicId })
@@ -121,9 +123,9 @@ export async function fetchTikTokAds(date = new Date(), options?: TikTokAdsOptio
     }
 
     const duration = Date.now() - startTime
-    logger.info('Sync completed', { action: 'sync', count: allCampaigns.length, duration, clinicId: options?.clinicId })
+    logger.info('Sync completed', { action: 'sync', count: rows.length, duration, clinicId: options?.clinicId })
 
-    return { platform: 'TikTok', count: allCampaigns.length }
+    return { platform: 'TikTok', count: rows.length }
   } catch (error) {
     const message = error instanceof Error ? error.message : String(error)
     logger.error('Sync failed', error, { action: 'sync', duration: Date.now() - startTime, clinicId: options?.clinicId })
@@ -132,9 +134,7 @@ export async function fetchTikTokAds(date = new Date(), options?: TikTokAdsOptio
 }
 
 /**
- * TikTok Ad 레벨 성과 수집 (소재별 성과용)
- * - data_level=AUCTION_AD → ad_stats 테이블에 저장
- * - 페이지네이션 지원 (page_size=200)
+ * TikTok Ad 레벨 성과 수집 (소재별 성과용) → ad_stats
  */
 export async function fetchTikTokAdStats(date = new Date(), options?: TikTokAdsOptions) {
   const dateStr = getKstDateString(date)
@@ -150,60 +150,27 @@ export async function fetchTikTokAdStats(date = new Date(), options?: TikTokAdsO
   const supabase = serverSupabase()
 
   try {
-    // 페이지네이션으로 전체 ad 레벨 데이터 수집
-    const allAds: TikTokAd[] = []
-    let page = 1
-    const pageSize = 200
+    const rows = await fetchTikTokReport({
+      advertiserId,
+      accessToken,
+      dataLevel: 'AUCTION_AD',
+      dimensions: ['ad_id', 'stat_time_day'],
+      metrics: ['ad_name', 'campaign_id', 'campaign_name', 'spend', 'clicks', 'impressions'],
+      dateStr,
+    })
 
-    while (true) {
-      const url = new URL(BASE_URL)
-      url.searchParams.set('advertiser_id', advertiserId)
-      url.searchParams.set('report_type', 'BASIC')
-      url.searchParams.set('data_level', 'AUCTION_AD')
-      url.searchParams.set('dimensions', JSON.stringify(['ad_id', 'stat_time_day']))
-      url.searchParams.set('metrics', JSON.stringify(['ad_name', 'campaign_id', 'campaign_name', 'spend', 'clicks', 'impressions']))
-      url.searchParams.set('start_date', dateStr)
-      url.searchParams.set('end_date', dateStr)
-      url.searchParams.set('page', String(page))
-      url.searchParams.set('page_size', String(pageSize))
-
-      const { response } = await fetchWithRetry(url.toString(), {
-        headers: { 'Access-Token': accessToken },
-        service: SERVICE_NAME,
-        timeout: 30000,
-        retries: 3,
-      })
-
-      if (!response.ok) {
-        throw new Error(`TikTok API error (ad level): ${response.statusText}`)
-      }
-
-      const json = await response.json()
-      if (json.code !== 0) {
-        throw new Error(`TikTok API error: ${json.message || 'Unknown'}`)
-      }
-
-      const ads: TikTokAd[] = json.data?.list || []
-      allAds.push(...ads)
-
-      const totalPage = json.data?.page_info?.total_page || 1
-      if (page >= totalPage) break
-      page++
-    }
-
-    if (allAds.length === 0) {
+    if (rows.length === 0) {
       return { platform: 'TikTok', count: 0 }
     }
 
-    // ad_stats 테이블에 upsert
-    const rows = allAds.map((a) => ({
+    const dbRows = rows.map((r) => ({
       platform: 'TikTok',
-      ad_id: a.dimensions.ad_id,
-      ad_name: a.metrics.ad_name,
-      campaign_id: a.metrics.campaign_id,
-      spend_amount: parseFloat(a.metrics.spend || '0'),
-      clicks: parseInt(a.metrics.clicks || '0'),
-      impressions: parseInt(a.metrics.impressions || '0'),
+      ad_id: r.dimensions.ad_id,
+      ad_name: r.metrics.ad_name,
+      campaign_id: r.metrics.campaign_id,
+      spend_amount: parseFloat(r.metrics.spend || '0'),
+      clicks: parseInt(r.metrics.clicks || '0'),
+      impressions: parseInt(r.metrics.impressions || '0'),
       stat_date: dateStr,
       clinic_id: options?.clinicId || null,
       utm_content: null,
@@ -214,16 +181,16 @@ export async function fetchTikTokAdStats(date = new Date(), options?: TikTokAdsO
       : 'platform,ad_id,stat_date'
     const { error } = await supabase
       .from('ad_stats')
-      .upsert(rows, { onConflict })
+      .upsert(dbRows, { onConflict })
 
     if (error) {
       logger.error('ad_stats upsert error', error, { clinicId: options?.clinicId })
     }
 
     const duration = Date.now() - startTime
-    logger.info('Ad stats sync completed', { action: 'ad_sync', count: allAds.length, duration, clinicId: options?.clinicId })
+    logger.info('Ad stats sync completed', { action: 'ad_sync', count: rows.length, duration, clinicId: options?.clinicId })
 
-    return { platform: 'TikTok', count: allAds.length }
+    return { platform: 'TikTok', count: rows.length }
   } catch (error) {
     const message = error instanceof Error ? error.message : String(error)
     logger.error('Ad stats sync failed', error, { action: 'ad_sync', duration: Date.now() - startTime, clinicId: options?.clinicId })
