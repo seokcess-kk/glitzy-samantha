@@ -380,7 +380,8 @@ Samantha 대시보드의 REST API 엔드포인트 문서입니다.
       "conversionRate": 15.0,
       "registered": true,
       "file_name": "onda_39.jpg",
-      "file_type": "image/jpeg"
+      "file_type": "image/jpeg",
+      "campaign_ids": ["123456789"]
     }
   ]
 }

@@ -61,7 +61,7 @@ components/
 │   ├── landing-page-trend-chart.tsx      # LP별 일별 추이 차트
 │   ├── ads-overview-tab.tsx        # 성과 개요 탭 레이아웃
 │   ├── ads-campaign-tab.tsx        # 캠페인 분석 탭 레이아웃
-│   └── CreativePerformance.tsx     # 소재별 성과 (광고 지표 + 리드/전환 통합, 13컬럼 정렬)
+│   └── CreativePerformance.tsx     # 소재별 성과 (광고 지표 10컬럼, 캠페인 필터, 10건 페이지네이션)
 │
 ├── medichecker/         # 원고 검수 (MediChecker)
 │   ├── text-input-card.tsx       # 텍스트 입력 + 하이라이트 뷰
@@ -528,7 +528,7 @@ Tab 1: 성과 개요 (AdsOverviewTab)
 Tab 2: 캠페인 분석 (AdsCampaignTab)
   ├─ 매체 필터 버튼
   ├─ CampaignRankingTable — 정렬·검색·CPC 상태·CPL (ad_stats 경유)
-  └─ CreativePerformance — 소재별 성과 (지출/노출/클릭/CPC/CTR/리드/CPL/결제/전환율/매출)
+  └─ CreativePerformance — 소재별 성과 (지출/노출/클릭/CPC/CTR/리드/CPL, 캠페인 필터, 10건 페이지네이션)
 
 Tab 3: 매출 귀속 (AttributionView) — 변경 없음
 ```

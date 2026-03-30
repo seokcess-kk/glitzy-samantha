@@ -270,3 +270,4 @@ npm run analyze      # 번들 크기 분석
 | 2026-03-30 | 시스템 메뉴 토글: `system_settings` 테이블, 슈퍼어드민 설정 페이지(`/admin/settings`), 사이드바 동적 숨김 메뉴 로드. 하드코딩 `hidden` 플래그 → DB 기반 동적 제어로 전환 |
 | 2026-03-30 | 광고 성과 3탭 지표 재배치: (1) 성과 개요: KPI 8→5카드(ROAS/전환율/CAC→매출귀속), 매체비교에 노출/클릭 추가+ROAS/전환율 제거, 퍼널 5→3단계(2-Zone+미니카드), LP분석→캠페인탭 이동, 💡emoji→Lightbulb SVG (2) 캠페인분석: LP분석 추가(mode prop delivery/full), 소재별 13→10컬럼(결제/전환율/매출 제거), StatusDot emoji→CSS도트, LP 1개 조건부 레이아웃 (3) 매출귀속: KPI 3→6카드(ROAS/전환율/CAC 추가), 전환퍼널(리드→예약→결제) 신규, 채널별 매출비중 도넛 신규, ROAS 추이 라인차트 신규(`/api/attribution/roas-trend`), LP 전환 테이블 신규 |
 | 2026-03-30 | 외부 API: `GET /api/external/ad-spend` — 병원별 월간 광고 실집행비(매체별) + SMS 발송 건수. `withExternalAuth` 미들웨어 신규 (`EXTERNAL_SERVICE_KEY` Bearer 인증). glitzy-web 결산용 |
+| 2026-03-30 | 광고 성과 UI 개선: (1) 퍼널 수평바→수직 스텝 카드 + 요일별 분석과 2컬럼 배치, flex 높이 밸런스 (2) 소재별 성과 기본 정렬 리드 내림차순, 10건 페이지네이션 + "전체 N건 보기" (3) 캠페인 행 클릭→소재 필터링 (API에 campaign_ids 추가, 클라이언트 필터) (4) LP 섹션 간 mt-6 여백 추가 |
