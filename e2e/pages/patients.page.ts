@@ -22,7 +22,7 @@ export class PatientsPage {
     this.viewToggleCalendar = page.locator('button:has(.lucide-calendar), button:has-text("캘린더")')
     this.statsCards = page.locator('.glass-card, [class*="glass"]').filter({ has: page.locator('p, span') })
     this.searchInput = page.locator('input[placeholder*="이름 또는 전화번호"]')
-    this.statusFilterButtons = page.locator('button:has-text("전체"), button:has-text("예약확정"), button:has-text("방문완료"), button:has-text("시술확정"), button:has-text("취소"), button:has-text("노쇼")')
+    this.statusFilterButtons = page.locator('button:has-text("전체"), button:has-text("예약확정"), button:has-text("방문완료"), button:has-text("취소"), button:has-text("노쇼")')
     this.bookingCards = page.locator('[class*="glass-card"]').filter({ has: page.locator('button[aria-expanded]') })
     this.calendarGrid = page.locator('[class*="grid-cols-7"]')
     this.loadingSkeleton = page.locator('.animate-pulse, [class*="skeleton"]')

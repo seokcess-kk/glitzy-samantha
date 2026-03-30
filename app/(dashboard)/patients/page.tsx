@@ -43,10 +43,12 @@ import { subDays, startOfDay, endOfDay } from 'date-fns'
 const STATUS_CONFIG: Record<string, { label: string; variant: 'info' | 'success' | 'default' | 'secondary' | 'destructive' }> = {
   confirmed:             { label: '예약확정', variant: 'info' },
   visited:               { label: '방문완료', variant: 'success' },
-  treatment_confirmed:   { label: '시술확정', variant: 'default' },
+  treatment_confirmed:   { label: '시술확정', variant: 'default' },  // 기존 데이터 표시용 (선택 불가)
   cancelled:             { label: '취소',     variant: 'secondary' },
   noshow:                { label: '노쇼',     variant: 'destructive' },
 }
+// 사용자가 선택 가능한 예약 상태 (시술확정 제외)
+const SELECTABLE_STATUSES = ['confirmed', 'visited', 'cancelled', 'noshow'] as const
 
 const DAY_NAMES = ['일', '월', '화', '수', '목', '금', '토']
 // 요일 색상: 일=빨강, 토=파랑, 평일=기본
@@ -122,8 +124,8 @@ function BookingEditForm({ booking, onSave }: { booking: any; onSave: () => void
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
-              {Object.entries(STATUS_CONFIG).map(([k, v]) => (
-                <SelectItem key={k} value={k}>{v.label}</SelectItem>
+              {SELECTABLE_STATUSES.map(k => (
+                <SelectItem key={k} value={k}>{STATUS_CONFIG[k].label}</SelectItem>
               ))}
             </SelectContent>
           </Select>
@@ -242,7 +244,7 @@ function ConsultationSection({ customerId, consultations, onSave }: { customerId
                 <SelectValue placeholder="선택" />
               </SelectTrigger>
               <SelectContent>
-                {['상담대기', '상담중', '방문완료', '시술확정', '노쇼', '취소'].map(s => (
+                {['상담대기', '상담중', '방문완료', '노쇼', '취소'].map(s => (
                   <SelectItem key={s} value={s}>{s}</SelectItem>
                 ))}
               </SelectContent>
@@ -830,9 +832,9 @@ function BookingRow({ booking, onRefresh, isSuperAdmin, clinicId, isOpen, onTogg
               <Badge variant={cfg.variant} className="whitespace-nowrap">{changingStatus ? '변경 중...' : cfg.label}</Badge>
             </SelectTrigger>
             <SelectContent>
-              {Object.entries(STATUS_CONFIG).map(([k, v]) => (
+              {SELECTABLE_STATUSES.map(k => (
                 <SelectItem key={k} value={k}>
-                  <Badge variant={v.variant} className="text-[10px] px-1.5 py-0">{v.label}</Badge>
+                  <Badge variant={STATUS_CONFIG[k].variant} className="text-[10px] px-1.5 py-0">{STATUS_CONFIG[k].label}</Badge>
                 </SelectItem>
               ))}
             </SelectContent>
@@ -1178,7 +1180,7 @@ export default function PatientsPage() {
 
   const stats = useMemo(() => ({
     total: filtered.length,
-    treatmentConfirmed: filtered.filter(b => b.status === 'treatment_confirmed').length,
+    visited: filtered.filter(b => b.status === 'visited').length,
     noshow: filtered.filter(b => b.status === 'noshow').length,
     revenue: filtered.reduce((s, b) => s + (b.customer?.payments || []).reduce((ps: number, p: any) => ps + Number(p.payment_amount), 0), 0),
   }), [filtered])
@@ -1356,7 +1358,7 @@ export default function PatientsPage() {
       <div className="grid grid-cols-2 md:grid-cols-4 gap-3 md:gap-4 mb-6">
         {[
           { label: '전체 예약', value: stats.total, filter: 'all' },
-          { label: '시술확정', value: stats.treatmentConfirmed, filter: 'treatment_confirmed' },
+          { label: '방문완료', value: stats.visited, filter: 'visited' },
           { label: '노쇼', value: stats.noshow, filter: 'noshow' },
           { label: '총 결제액', value: `₩${stats.revenue.toLocaleString()}`, filter: null },
         ].map(({ label, value, filter }) => (
@@ -1403,14 +1405,17 @@ export default function PatientsPage() {
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="all">상태 전체 ({bookings.length})</SelectItem>
-                {Object.entries(STATUS_CONFIG).map(([k, v]) => (
-                  <SelectItem key={k} value={k}>
-                    <span className="flex items-center gap-2">
-                      <Badge variant={v.variant} className="text-[10px] px-1.5 py-0">{v.label}</Badge>
-                      <span className="text-muted-foreground text-xs">{bookings.filter(b => b.status === k).length}</span>
-                    </span>
-                  </SelectItem>
-                ))}
+                {SELECTABLE_STATUSES.map(k => {
+                  const v = STATUS_CONFIG[k]
+                  return (
+                    <SelectItem key={k} value={k}>
+                      <span className="flex items-center gap-2">
+                        <Badge variant={v.variant} className="text-[10px] px-1.5 py-0">{v.label}</Badge>
+                        <span className="text-muted-foreground text-xs">{bookings.filter(b => b.status === k).length}</span>
+                      </span>
+                    </SelectItem>
+                  )
+                })}
               </SelectContent>
             </Select>
             {sourceOptions.length > 0 && (
@@ -1662,10 +1667,10 @@ export default function PatientsPage() {
 
           {/* 범례 */}
           <div className="flex gap-4 mt-4 pt-4 border-t border-border dark:border-white/5 flex-wrap">
-            {Object.entries(STATUS_CONFIG).map(([k, v]) => (
+            {SELECTABLE_STATUSES.map(k => (
               <div key={k} className="flex items-center gap-1.5">
-                <Badge variant={v.variant} className="w-2.5 h-2.5 p-0 rounded-full" />
-                <span className="text-xs text-muted-foreground">{v.label}</span>
+                <Badge variant={STATUS_CONFIG[k].variant} className="w-2.5 h-2.5 p-0 rounded-full" />
+                <span className="text-xs text-muted-foreground">{STATUS_CONFIG[k].label}</span>
               </div>
             ))}
           </div>
@@ -1726,9 +1731,9 @@ export default function PatientsPage() {
                               <Badge variant={c.variant} className="whitespace-nowrap">{c.label}</Badge>
                             </SelectTrigger>
                             <SelectContent>
-                              {Object.entries(STATUS_CONFIG).map(([k, v]) => (
+                              {SELECTABLE_STATUSES.map(k => (
                                 <SelectItem key={k} value={k}>
-                                  <Badge variant={v.variant} className="text-[10px] px-1.5 py-0">{v.label}</Badge>
+                                  <Badge variant={STATUS_CONFIG[k].variant} className="text-[10px] px-1.5 py-0">{STATUS_CONFIG[k].label}</Badge>
                                 </SelectItem>
                               ))}
                             </SelectContent>
