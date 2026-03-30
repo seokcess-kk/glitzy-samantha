@@ -33,8 +33,7 @@ export function ClinicProvider({ children }: { children: ReactNode }) {
         .then(r => r.json())
         .then(d => setClinics(Array.isArray(d) ? d : []))
         .catch(() => {})
-      const saved = localStorage.getItem('mmi_selected_clinic')
-      if (saved) setSelectedClinicIdState(Number(saved))
+      // superadmin은 항상 "전체 병원"으로 시작
     } else if (isAgencyStaff) {
       fetch('/api/my/clinics')
         .then(r => r.json())
