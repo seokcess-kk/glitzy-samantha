@@ -12,12 +12,6 @@ function fmtShort(iso: string) {
   return d.toLocaleDateString('ko', { timeZone: 'Asia/Seoul', month: 'numeric', day: 'numeric' }).replace(/\.$/, '')
 }
 
-function fmtCount(n: number) {
-  if (n >= 10000) return `${(n / 10000).toFixed(1)}만`
-  if (n >= 1000) return `${(n / 1000).toFixed(1)}천`
-  return n.toLocaleString()
-}
-
 interface AdStatsRecord {
   impressions: number
   clicks: number
@@ -176,7 +170,7 @@ export default function AdsFunnel({ startDate, endDate }: Props) {
                   : 'bg-muted/50 dark:bg-white/[0.04] border border-border/50 dark:border-white/[0.06]'
               }`}>
                 <p className="text-xs text-muted-foreground mb-0.5">{step.label}</p>
-                <p className="text-xl font-bold tabular-nums text-foreground">{fmtCount(step.count)}</p>
+                <p className="text-xl font-bold tabular-nums text-foreground">{step.count.toLocaleString()}</p>
               </div>
             </div>
           ))}
