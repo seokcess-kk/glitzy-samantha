@@ -30,26 +30,51 @@ shadcn/ui 기반 UI/UX 개선 및 기능 개발 작업 기록.
 | Phase 15: ERP 연동 | 2026-03-24 | glitzy-web 견적서/계산서 읽기 전용 프록시, Sheet 상세, 탭 UI, 견적 승인/반려 | 완료 | - |
 | 버그 수정 | 2026-03-24 | 대시보드 퍼널 날짜 이중 타임존 버그 수정 (전 단계 0명 표시) | 완료 | - |
 | Phase 16: Ad 레벨 수집 + Backfill | 2026-03-26 | ad_stats 테이블, Ad 레벨 수집(fetchMetaAdStats), 소재/캠페인 지표 통합, backfill API, sanitizeUrl | 완료 | - |
+| Phase 17: 대시보드 재설계 + TikTok + 감사 | 2026-03-27~30 | KST 감사, TikTok ad 레벨, 대시보드 4섹션, 메뉴 토글, 광고 3탭 재배치, 외부 API | 완료 | - |
+| Phase 18: 예약 캘린더 DnD + UX | 2026-04-01 | @dnd-kit 드래그앤드롭, 미래 날짜 허용, 도트 표시, 10분 슬롯, 시간 구분선 | 완료 | - |
+| 버그 수정 | 2026-03-30~04-01 | 랜딩페이지 Storage upsert, privacy/terms 미인증 접근, 탭 타이틀, 로그인 링크 | 완료 | - |
 
 ---
 
-## 최신 작업 (Phase 16: Ad 레벨 수집 + Backfill)
+## 최신 작업 (Phase 18: 예약 캘린더 DnD + UX)
 
 | # | 작업 | 핵심 내용 | 날짜 |
 |---|------|----------|------|
-| P31-1 | Backfill API | `POST /api/admin/backfill-ads` — CRON_SECRET 인증, 최대 90일, 날짜별 syncClinic 순차 실행, JSON 파싱/타입/형식 검증, try-catch | 03-26 |
-| P31-2 | sanitizeUrl 도입 | `lib/security.ts`에 `sanitizeUrl()` 추가 — URL 구조 문자(`&?=#`) 보존, `<>'"` 제거, `javascript:/data:` 스킴 차단 | 03-26 |
-| P31-3 | URL sanitize 일괄 교체 | `sanitizeString→sanitizeUrl` 교체: webhook lead (inflow_url, CAPI event_source_url), UTM templates (base_url), monitoring keywords (url) — 총 6곳 | 03-26 |
-| P31-4 | ad_stats 마이그레이션 | `ad_stats` 테이블 신규 — ad 레벨 일별 성과 (clinic_id, ad_id, utm_content, spend/clicks/impressions) | 03-26 |
-| P31-5 | Ad 레벨 수집 | `fetchMetaAdStats()` — insights?level=ad 페이지네이션, url_tags/effective_link→utm_content 자동 추출, DB 캐시 | 03-26 |
-| P31-6 | 소재별 성과 통합 | creatives-performance API에 ad_stats 4번째 쿼리 추가, 지출/노출/클릭/CPC/CTR/CPL 13컬럼 + 정렬 | 03-26 |
-| P31-7 | 캠페인 CPL | ads/stats API에 campaignLeadCounts 추가 (inflow_url utm_id→campaign_id 매칭), campaign-ranking-table CPL 실제 값 표시 | 03-26 |
-| P31-8 | 소재 광고 지표 폴백 | creatives-performance utm_id→campaign_id→리드 비율 배분 (ads_read 권한 없이 동작), campTotalLeads 사전 계산 | 03-26 |
-| P31-9 | 날짜 표시 통일 | CreativePerformance "최근 N일" → "M.D ~ M.D" 형식 통일 (parentDays→startDate/endDate prop 변경) | 03-26 |
+| P33-1 | 미래 날짜 허용 | DateRangePicker `allowFuture` prop 추가, 예약/결제 관리에서 미래 날짜 선택 가능 | 04-01 |
+| P33-2 | 예약 도트 표시 | DateRangePicker `bookedDates` prop + `modifiers` 활용, 예약 있는 날짜에 도트 표시 | 04-01 |
+| P33-3 | 드래그앤드롭 | `@dnd-kit/core` 도입, DraggableBooking/DroppableCell 컴포넌트, 월간/주간/일간 뷰 드래그→날짜/시간 변경 | 04-01 |
+| P33-4 | 드래그 제약 | cancelled/noshow 상태 드래그 비활성화, 확인 다이얼로그, DragOverlay 디자인 | 04-01 |
+| P33-5 | 일간 뷰 개선 | 10분 단위 슬롯(10:00~19:50), 현재 시간 빨간 구분선+자동 스크롤 | 04-01 |
+| P33-6 | 전체 예약 표시 | 월간/주간 뷰 slice 제한 제거, 취소/노쇼 취소선+투명도 시각 구분 | 04-01 |
 
 ---
 
-## 이전 최신 작업 (Phase 15: ERP 연동)
+## 이전 최신 작업 (Phase 17: 대시보드 재설계 + TikTok + 감사)
+
+| # | 작업 | 핵심 내용 | 날짜 |
+|---|------|----------|------|
+| P32-1 | KST 타임존 감사 | `split('T')[0]`/`toISOString().slice(0,7)` 패턴 전체 제거, KST 변환 일괄 적용 (5곳) | 03-30 |
+| P32-2 | TikTok ad 레벨 | `fetchTikTokAdStats` + `fetchTikTokReport` 공통 헬퍼, ad_stats 저장, 소재별 성과 TikTok 표시 | 03-30 |
+| P32-3 | 대시보드 재설계 | KPI 5카드, 퍼널 3단계+인사이트, RecentLeads 8건, ChannelTable 정렬(clicks/impressions/ctr) | 03-30 |
+| P32-4 | 시스템 메뉴 토글 | `system_settings` 테이블, `/admin/settings` 페이지, 사이드바 동적 숨김 | 03-30 |
+| P32-5 | 광고 성과 3탭 재배치 | 성과 개요 KPI 5카드+퍼널 3단계, 캠페인에 LP분석 이동, 매출귀속 KPI 6카드+4신규 섹션 | 03-30 |
+| P32-6 | 외부 API | `GET /api/external/ad-spend` — 월간 광고비+SMS, `withExternalAuth` 미들웨어 | 03-30 |
+| P32-7 | 광고 UI 개선 | 퍼널 수직 스텝 카드, 소재 10건 페이지네이션, 캠페인→소재 필터링 | 03-30 |
+| P32-8 | 순위 모니터링 | "함께많이찾는" 카테고리 추가 (DB CHECK, API, UI 3페이지) | 03-27 |
+
+---
+
+## 이전 작업 (Phase 16: Ad 레벨 수집 + Backfill)
+
+| # | 작업 | 핵심 내용 | 날짜 |
+|---|------|----------|------|
+| P31-1 | Backfill API | `POST /api/admin/backfill-ads` — CRON_SECRET 인증, 최대 90일 | 03-26 |
+| P31-2 | sanitizeUrl 도입 | `lib/security.ts`에 `sanitizeUrl()` — URL `&` 보존 | 03-26 |
+| P31-3 | ad_stats + Ad 수집 | `ad_stats` 테이블, `fetchMetaAdStats()`, 소재/캠페인 지표 통합, CPL | 03-26 |
+
+---
+
+## 이전 작업 (Phase 15: ERP 연동)
 
 | # | 작업 | 핵심 내용 | 날짜 |
 |---|------|----------|------|
