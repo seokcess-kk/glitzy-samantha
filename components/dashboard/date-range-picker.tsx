@@ -13,6 +13,7 @@ interface DateRangePickerProps {
   dateRange: DateRange
   onDateRangeChange: (range: DateRange) => void
   allowFuture?: boolean
+  bookedDates?: Date[]
 }
 
 const PRESETS = [
@@ -24,7 +25,7 @@ const PRESETS = [
   { label: '90일', days: 90 },
 ]
 
-export function DateRangePicker({ dateRange, onDateRangeChange, allowFuture = false }: DateRangePickerProps) {
+export function DateRangePicker({ dateRange, onDateRangeChange, allowFuture = false, bookedDates }: DateRangePickerProps) {
   const [open, setOpen] = useState(false)
 
   const handlePreset = (days: number) => {
@@ -101,6 +102,10 @@ export function DateRangePicker({ dateRange, onDateRangeChange, allowFuture = fa
           onSelect={handleCalendarSelect}
           numberOfMonths={2}
           disabled={allowFuture ? undefined : { after: new Date() }}
+          {...(bookedDates?.length ? {
+            modifiers: { booked: bookedDates },
+            modifiersClassNames: { booked: 'rdp-booked-day' },
+          } : {})}
         />
       </PopoverContent>
     </Popover>

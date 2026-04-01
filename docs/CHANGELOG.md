@@ -46,3 +46,7 @@
 | 2026-03-30 | 고객 여정 타임라인에서 챗봇 발송 단계 제거 |
 | 2026-03-30 | fix: 고객 상세 모바일 Sheet 헤더 중복 제거 — SheetHeader `sr-only` + CustomerDetail `hideHeader` prop 추가 |
 | 2026-03-30 | CLAUDE.md 재설계: 200줄 이내 압축, 변경 이력 `docs/CHANGELOG.md` 분리, 디렉토리 구조 압축, 팀 가이드 추가 |
+| 2026-04-01 | 예약/결제 관리 DateRangePicker 미래 날짜 선택 허용 (`allowFuture` prop) |
+| 2026-04-01 | 예약/결제 관리 DateRangePicker 예약 날짜 도트 표시 (`bookedDates` prop, `modifiers` 활용) |
+| 2026-04-01 | 예약/결제 관리 캘린더 드래그앤드롭: `@dnd-kit/core` 도입, 월간/주간/일간 뷰에서 예약 카드 드래그→날짜/시간 변경 (확인 다이얼로그, cancelled/noshow 드래그 비활성화) |
+| 2026-04-01 | 캘린더 UX 개선: 일간 뷰 10분 단위 슬롯(10:00~19:50), 현재 시간 빨간 구분선+자동 스크롤, 월간/주간 뷰 전체 예약 표시(slice 제한 제거), 취소/노쇼 취소선+투명도 시각 구분, DragOverlay/확인 다이얼로그 디자인 개선 |

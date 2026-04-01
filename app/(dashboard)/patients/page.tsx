@@ -1,9 +1,11 @@
 'use client'
-import { useState, useEffect, useCallback, useMemo } from 'react'
+import { useState, useEffect, useCallback, useMemo, useRef } from 'react'
 import { Search, Plus, ChevronDown, ChevronUp, Check, AlertCircle, Calendar, List, ChevronLeft, ChevronRight, Clock, Phone, Edit2, Trash2, X, Settings } from 'lucide-react'
 import { useSession } from 'next-auth/react'
 import { useClinic } from '@/components/ClinicContext'
 import { toast } from 'sonner'
+import { DndContext, DragOverlay, PointerSensor, TouchSensor, useSensor, useSensors } from '@dnd-kit/core'
+import type { DragEndEvent, DragStartEvent } from '@dnd-kit/core'
 import { Card } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
@@ -33,8 +35,20 @@ import {
   DialogFooter,
 } from '@/components/ui/dialog'
 import { Textarea } from '@/components/ui/textarea'
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog'
 import { PageHeader, ChannelBadge, SortSelect } from '@/components/common'
 import { DateRangePicker } from '@/components/dashboard/date-range-picker'
+import { DraggableBooking } from '@/components/patients/draggable-booking'
+import { DroppableCell } from '@/components/patients/droppable-cell'
 import { formatDate, formatDateTime, formatTime, toUtcDate } from '@/lib/date'
 import { DateRange } from 'react-day-picker'
 import { startOfDay, startOfMonth, endOfDay } from 'date-fns'
@@ -971,7 +985,12 @@ function BookingRow({ booking, onRefresh, isSuperAdmin, clinicId, isOpen, onTogg
   )
 }
 
-// 일간 뷰 컴포넌트
+// 일간 뷰 컴포넌트 (10분 단위 슬롯)
+const DAY_START_HOUR = 10
+const DAY_END_HOUR = 20
+const SLOTS_PER_HOUR = 6
+const TOTAL_DAY_SLOTS = (DAY_END_HOUR - DAY_START_HOUR) * SLOTS_PER_HOUR
+
 function DayView({ currentMonth, bookingsByDate, todayKey, selectedDate, onSelectDate }: {
   currentMonth: Date
   bookingsByDate: Record<string, any[]>
@@ -979,40 +998,88 @@ function DayView({ currentMonth, bookingsByDate, todayKey, selectedDate, onSelec
   selectedDate: string | null
   onSelectDate: (date: string | null) => void
 }) {
+  const nowLineRef = useRef<HTMLDivElement>(null)
   const dateKey = currentMonth.toLocaleDateString('en-CA', { timeZone: 'Asia/Seoul' })
+  const isToday = dateKey === todayKey
   const dayBookings = bookingsByDate[dateKey] || []
-  const byHour: Record<number, any[]> = {}
+
+  // 현재 시간 슬롯 인덱스 (오늘인 경우만)
+  const nowSlotIndex = useMemo(() => {
+    if (!isToday) return -1
+    const now = new Date()
+    const h = Number(now.toLocaleString('en-GB', { timeZone: 'Asia/Seoul', hour: '2-digit', hour12: false }).replace(/\D/g, '')) % 24
+    const m = Number(now.toLocaleString('en-GB', { timeZone: 'Asia/Seoul', minute: '2-digit' }).replace(/\D/g, ''))
+    const idx = (h - DAY_START_HOUR) * SLOTS_PER_HOUR + Math.floor(m / 10)
+    return (idx >= 0 && idx < TOTAL_DAY_SLOTS) ? idx : -1
+  }, [isToday])
+
+  // 자동 스크롤: 오늘 진입 시 현재 시간 위치로
+  useEffect(() => {
+    if (nowSlotIndex >= 0 && nowLineRef.current) {
+      nowLineRef.current.scrollIntoView({ behavior: 'smooth', block: 'center' })
+    }
+  }, [nowSlotIndex])
+
+  // 10분 단위 슬롯 그룹핑
+  const bySlot: Record<number, any[]> = {}
   for (const b of dayBookings) {
-    const h = Number(toUtcDate(b.booking_datetime).toLocaleString('en-GB', { timeZone: 'Asia/Seoul', hour: '2-digit', hour12: false }).replace(/\D/g, '')) % 24
-    if (!byHour[h]) byHour[h] = []
-    byHour[h].push(b)
+    const dt = toUtcDate(b.booking_datetime)
+    const h = Number(dt.toLocaleString('en-GB', { timeZone: 'Asia/Seoul', hour: '2-digit', hour12: false }).replace(/\D/g, '')) % 24
+    const m = Number(dt.toLocaleString('en-GB', { timeZone: 'Asia/Seoul', minute: '2-digit' }).replace(/\D/g, ''))
+    const slotIndex = (h - DAY_START_HOUR) * SLOTS_PER_HOUR + Math.floor(m / 10)
+    if (slotIndex < 0 || slotIndex >= TOTAL_DAY_SLOTS) continue
+    if (!bySlot[slotIndex]) bySlot[slotIndex] = []
+    bySlot[slotIndex].push(b)
   }
+
   return (
     <div className="space-y-0">
-      {Array.from({ length: 15 }, (_, i) => i + 8).map(hour => {
-        const hourBookings = byHour[hour] || []
+      {Array.from({ length: TOTAL_DAY_SLOTS }, (_, i) => {
+        const hour = DAY_START_HOUR + Math.floor(i / SLOTS_PER_HOUR)
+        const minute = (i % SLOTS_PER_HOUR) * 10
+        const isHourMark = minute === 0
+        const isHalfHour = minute === 30
+        const slotBookings = bySlot[i] || []
+
+        const isNowSlot = i === nowSlotIndex
+
         return (
-          <div key={hour} className="flex border-t border-border dark:border-white/5 min-h-[48px]">
-            <div className="w-16 shrink-0 py-2 text-xs text-muted-foreground text-right pr-3">
-              {String(hour).padStart(2, '0')}:00
+          <div
+            key={i}
+            ref={isNowSlot ? nowLineRef : undefined}
+            className={`flex relative ${
+              isHourMark ? 'border-t border-border dark:border-white/10 min-h-[36px]' :
+              isHalfHour ? 'border-t border-border/40 dark:border-white/5 min-h-[24px]' :
+              'border-t border-border/15 dark:border-white/[0.02] min-h-[24px]'
+            }`}
+          >
+            {isNowSlot && (
+              <div className="absolute top-0 left-12 right-0 flex items-center z-10 pointer-events-none">
+                <div className="w-2 h-2 rounded-full bg-red-500 -ml-1 shrink-0" />
+                <div className="flex-1 h-[2px] bg-red-500" />
+              </div>
+            )}
+            <div className={`w-14 shrink-0 py-0.5 text-right pr-2 ${isHourMark ? 'text-[11px] text-muted-foreground' : 'text-[10px] text-muted-foreground/40'}`}>
+              {isHourMark
+                ? `${String(hour).padStart(2, '0')}:00`
+                : isHalfHour
+                  ? `:30`
+                  : `:${String(minute).padStart(2, '0')}`}
             </div>
-            <div className="flex-1 py-1.5 space-y-1">
-              {hourBookings.map((b: any) => {
+            <DroppableCell
+              id={`day-${dateKey}-${hour}-${minute}`}
+              dateKey={dateKey}
+              hour={hour}
+              minute={minute}
+              className="flex-1 py-0.5 space-y-0.5"
+            >
+              {slotBookings.map((b: any) => {
                 const c = STATUS_CONFIG[b.status] || { label: b.status, variant: 'secondary' as const }
                 return (
-                  <button
-                    key={b.id}
-                    onClick={() => onSelectDate(selectedDate === dateKey ? null : dateKey)}
-                    className="flex items-center gap-2 w-full text-left px-3 py-1.5 rounded-lg bg-brand-500/10 hover:bg-brand-500/20 transition-colors"
-                  >
-                    <Badge variant={c.variant} className="text-[10px] px-1.5 py-0 shrink-0">{c.label}</Badge>
-                    <span className="text-xs font-medium text-foreground truncate">{b.customer?.name}</span>
-                    <span className="text-[10px] text-muted-foreground">{formatTime(b.booking_datetime)}</span>
-                    <span className="text-[10px] text-muted-foreground ml-auto truncate">{b.customer?.phone_number}</span>
-                  </button>
+                  <DraggableBooking key={b.id} booking={b} variant="day" statusConfig={c} />
                 )
               })}
-            </div>
+            </DroppableCell>
           </div>
         )
       })}
@@ -1046,6 +1113,73 @@ export default function PatientsPage() {
   })
   const [creating, setCreating] = useState(false)
   const [openBookingId, setOpenBookingId] = useState<number | null>(null)
+
+  // 드래그앤드롭 상태
+  const [draggedBooking, setDraggedBooking] = useState<any>(null)
+  const [dndConfirm, setDndConfirm] = useState<{ booking: any; targetDateKey: string; targetHour?: number; targetMinute?: number; selectedTime: string } | null>(null)
+  const sensors = useSensors(
+    useSensor(PointerSensor, { activationConstraint: { distance: 8 } }),
+    useSensor(TouchSensor, { activationConstraint: { delay: 200, tolerance: 5 } }),
+  )
+
+  const handleDragStart = (event: DragStartEvent) => {
+    setDraggedBooking(event.active.data.current?.booking || null)
+  }
+
+  const handleDragEnd = (event: DragEndEvent) => {
+    setDraggedBooking(null)
+    const { active, over } = event
+    if (!over) return
+
+    const booking = active.data.current?.booking
+    const targetDateKey = over.data.current?.dateKey as string
+    const targetHour = over.data.current?.hour as number | undefined
+    const targetMinute = over.data.current?.minute as number | undefined
+    if (!booking || !targetDateKey) return
+
+    const dt = toUtcDate(booking.booking_datetime)
+    const currentDateKey = dt.toLocaleDateString('en-CA', { timeZone: 'Asia/Seoul' })
+    const currentHour = Number(dt.toLocaleString('en-GB', { timeZone: 'Asia/Seoul', hour: '2-digit', hour12: false }).replace(/\D/g, '')) % 24
+    const currentMinute = Number(dt.toLocaleString('en-GB', { timeZone: 'Asia/Seoul', minute: '2-digit' }).replace(/\D/g, ''))
+
+    // 같은 위치 드롭 감지
+    const sameDate = targetDateKey === currentDateKey
+    const sameTime = targetHour === undefined || (targetHour === currentHour && (targetMinute === undefined || targetMinute === Math.floor(currentMinute / 10) * 10))
+    if (sameDate && sameTime) return
+
+    // 기존 시간을 초기값으로 세팅 (일간 뷰에서 드롭한 슬롯이 있으면 해당 시간 사용)
+    const currentTime = dt.toLocaleString('en-GB', {
+      timeZone: 'Asia/Seoul', hour: '2-digit', minute: '2-digit', hour12: false,
+    })
+    const initialTime = (targetHour !== undefined && targetMinute !== undefined)
+      ? `${String(targetHour).padStart(2, '0')}:${String(targetMinute).padStart(2, '0')}`
+      : targetHour !== undefined
+        ? `${String(targetHour).padStart(2, '0')}:00`
+        : currentTime
+
+    setDndConfirm({ booking, targetDateKey, targetHour, targetMinute, selectedTime: initialTime })
+  }
+
+  const executeDndMove = async () => {
+    if (!dndConfirm) return
+    const { booking, targetDateKey, selectedTime } = dndConfirm
+    setDndConfirm(null)
+
+    const newDatetime = new Date(`${targetDateKey}T${selectedTime}:00+09:00`).toISOString()
+
+    try {
+      const res = await fetch('/api/bookings', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ id: booking.id, booking_datetime: newDatetime }),
+      })
+      if (!res.ok) throw new Error()
+      toast.success('예약 일정이 변경되었습니다.')
+      fetchBookings()
+    } catch {
+      toast.error('예약 일정 변경에 실패했습니다.')
+    }
+  }
 
   const initCreateForm = () => {
     const now = new Date()
@@ -1204,6 +1338,16 @@ export default function PatientsPage() {
       return matchStatus && matchSource && matchPayment
     })
   }, [bookings, statusFilter, sourceFilter, paymentFilter])
+
+  const bookedDates = useMemo(() => {
+    const dateSet = new Set<string>()
+    for (const b of bookings) {
+      if (b.booking_datetime) {
+        dateSet.add(toUtcDate(b.booking_datetime).toLocaleDateString('en-CA', { timeZone: 'Asia/Seoul' }))
+      }
+    }
+    return Array.from(dateSet).map(d => new Date(d + 'T00:00:00+09:00'))
+  }, [bookings])
 
   const year = currentMonth.getFullYear()
   const month = currentMonth.getMonth()
@@ -1393,7 +1537,7 @@ export default function PatientsPage() {
                 </button>
               )}
             </Card>
-            <DateRangePicker dateRange={dateRange} onDateRangeChange={setDateRange} allowFuture />
+            <DateRangePicker dateRange={dateRange} onDateRangeChange={setDateRange} allowFuture bookedDates={bookedDates} />
             <Select value={statusFilter} onValueChange={setStatusFilter}>
               <SelectTrigger className="w-auto min-w-[120px] h-9 bg-card border-border dark:border-white/10 text-xs">
                 <SelectValue>
@@ -1506,6 +1650,7 @@ export default function PatientsPage() {
           )}
         </>
       ) : (
+        <DndContext sensors={sensors} onDragStart={handleDragStart} onDragEnd={handleDragEnd}>
         <div className="flex flex-col lg:flex-row gap-3">
           {/* 좌측: 캘린더 */}
           <Card variant="glass" className="p-6 flex-1 min-w-0">
@@ -1575,10 +1720,12 @@ export default function PatientsPage() {
                   const isToday = todayKey === dateKey
                   const isSelected = selectedDate === dateKey
                   return (
-                    <button
+                    <DroppableCell
                       key={dayNum}
+                      id={`month-${dateKey}`}
+                      dateKey={dateKey}
                       onClick={() => setSelectedDate(isSelected ? null : dateKey)}
-                      className={`min-h-[60px] sm:min-h-[80px] rounded-xl p-1.5 sm:p-2 border transition-all text-left ${
+                      className={`min-h-[60px] rounded-xl p-1.5 sm:p-2 border transition-all text-left cursor-pointer ${
                         isSelected ? 'border-brand-500 bg-brand-500/10 ring-1 ring-brand-500/30' :
                         isToday ? 'border-brand-500/40 bg-brand-500/5' :
                         'border-border dark:border-white/5 hover:bg-muted dark:hover:bg-white/[0.03]'
@@ -1591,19 +1738,14 @@ export default function PatientsPage() {
                         )}
                       </div>
                       <div className="space-y-0.5">
-                        {dayBookings.slice(0, 3).map((b: any) => {
+                        {dayBookings.map((b: any) => {
                           const c = STATUS_CONFIG[b.status] || { label: b.status, variant: 'secondary' as const }
                           return (
-                            <div key={b.id} className="text-[10px] truncate">
-                              <Badge variant={c.variant} className="text-[10px] px-1 py-0">
-                                {formatTime(b.booking_datetime)} {b.customer?.name}
-                              </Badge>
-                            </div>
+                            <DraggableBooking key={b.id} booking={b} variant="month" statusConfig={c} />
                           )
                         })}
-                        {dayBookings.length > 3 && <p className="text-[10px] text-brand-400 pl-1">+{dayBookings.length - 3}건</p>}
                       </div>
-                    </button>
+                    </DroppableCell>
                   )
                 })}
               </div>
@@ -1619,10 +1761,12 @@ export default function PatientsPage() {
                 const isToday = todayKey === dateKey
                 const isSelected = selectedDate === dateKey
                 return (
-                  <button
+                  <DroppableCell
                     key={i}
+                    id={`week-${dateKey}`}
+                    dateKey={dateKey}
                     onClick={() => setSelectedDate(isSelected ? null : dateKey)}
-                    className={`rounded-xl p-3 border transition-all text-left min-h-[200px] flex flex-col ${
+                    className={`rounded-xl p-3 border transition-all text-left min-h-[200px] flex flex-col cursor-pointer ${
                       isSelected ? 'border-brand-500 bg-brand-500/10 ring-1 ring-brand-500/30' :
                       isToday ? 'border-brand-500/40 bg-brand-500/5' :
                       'border-border dark:border-white/5 hover:bg-muted dark:hover:bg-white/[0.03]'
@@ -1635,20 +1779,15 @@ export default function PatientsPage() {
                         <span className="text-[10px] text-muted-foreground">{dayBookings.length}건</span>
                       )}
                     </div>
-                    <div className="space-y-1 flex-1 overflow-hidden">
-                      {dayBookings.slice(0, 6).map((b: any) => {
+                    <div className="space-y-1 flex-1 overflow-y-auto">
+                      {dayBookings.map((b: any) => {
                         const c = STATUS_CONFIG[b.status] || { label: b.status, variant: 'secondary' as const }
                         return (
-                          <div key={b.id} className="text-[10px] truncate">
-                            <Badge variant={c.variant} className="text-[10px] px-1 py-0 w-full justify-start">
-                              {formatTime(b.booking_datetime)} {b.customer?.name}
-                            </Badge>
-                          </div>
+                          <DraggableBooking key={b.id} booking={b} variant="week" statusConfig={c} />
                         )
                       })}
-                      {dayBookings.length > 6 && <p className="text-[10px] text-brand-400 text-center">+{dayBookings.length - 6}건</p>}
                     </div>
-                  </button>
+                  </DroppableCell>
                 )
               })}
             </div>
@@ -1758,7 +1897,105 @@ export default function PatientsPage() {
           </Card>
         )}
         </div>
+        <DragOverlay dropAnimation={{
+          duration: 200,
+          easing: 'cubic-bezier(0.25, 0.1, 0.25, 1)',
+        }}>
+          {draggedBooking && (
+            <div className="rounded-xl bg-card border border-brand-500/50 px-3 py-2 shadow-xl shadow-brand-500/10 backdrop-blur-sm min-w-[140px] animate-fade-in-up" style={{ animationDuration: '150ms' }}>
+              <div className="flex items-center gap-2 mb-1">
+                <div className="w-5 h-5 rounded-full bg-brand-600/20 flex items-center justify-center text-brand-400 font-bold text-[9px] shrink-0">
+                  {draggedBooking.customer?.name?.[0] || '?'}
+                </div>
+                <span className="text-xs font-medium text-foreground truncate">{draggedBooking.customer?.name}</span>
+              </div>
+              <div className="flex items-center gap-1.5">
+                <Badge variant={(STATUS_CONFIG[draggedBooking.status] || { variant: 'secondary' }).variant} className="text-[10px] px-1.5 py-0">
+                  {(STATUS_CONFIG[draggedBooking.status] || { label: draggedBooking.status }).label}
+                </Badge>
+                <span className="text-[10px] text-muted-foreground">{formatTime(draggedBooking.booking_datetime)}</span>
+              </div>
+            </div>
+          )}
+        </DragOverlay>
+        </DndContext>
       )}
+
+      {/* 드래그앤드롭 확인 다이얼로그 */}
+      <AlertDialog open={!!dndConfirm} onOpenChange={open => { if (!open) setDndConfirm(null) }}>
+        <AlertDialogContent className="max-w-sm">
+          <AlertDialogHeader>
+            <AlertDialogTitle className="flex items-center gap-2">
+              <Calendar size={16} className="text-brand-400" />
+              예약 일정 변경
+            </AlertDialogTitle>
+            <AlertDialogDescription asChild>
+              <div className="space-y-3 pt-1">
+                {dndConfirm && (
+                  <>
+                    {/* 고객 정보 */}
+                    <div className="flex items-center gap-2">
+                      <div className="w-7 h-7 rounded-full bg-brand-600/20 flex items-center justify-center text-brand-400 font-bold text-xs shrink-0">
+                        {dndConfirm.booking.customer?.name?.[0] || '?'}
+                      </div>
+                      <span className="text-sm font-medium text-foreground">{dndConfirm.booking.customer?.name || '이름 없음'}</span>
+                      <Badge variant={(STATUS_CONFIG[dndConfirm.booking.status] || { variant: 'secondary' }).variant} className="text-[10px] ml-auto">
+                        {(STATUS_CONFIG[dndConfirm.booking.status] || { label: dndConfirm.booking.status }).label}
+                      </Badge>
+                    </div>
+                    {/* 변경 전 → 후 시각 비교 */}
+                    <div className="flex items-center gap-3 rounded-xl bg-muted/50 dark:bg-white/[0.03] border border-border dark:border-white/5 p-3">
+                      <div className="flex-1 text-center">
+                        <p className="text-[10px] text-muted-foreground mb-0.5">변경 전</p>
+                        <p className="text-sm font-semibold text-foreground">
+                          {new Date(toUtcDate(dndConfirm.booking.booking_datetime).toLocaleDateString('en-CA', { timeZone: 'Asia/Seoul' }) + 'T00:00:00+09:00')
+                            .toLocaleDateString('ko', { timeZone: 'Asia/Seoul', month: 'short', day: 'numeric' })}
+                        </p>
+                        <p className="text-xs text-muted-foreground">
+                          {formatTime(dndConfirm.booking.booking_datetime)}
+                        </p>
+                      </div>
+                      <div className="flex flex-col items-center gap-0.5 text-brand-400">
+                        <ChevronRight size={16} />
+                      </div>
+                      <div className="flex-1 text-center">
+                        <p className="text-[10px] text-muted-foreground mb-0.5">변경 후</p>
+                        <p className="text-sm font-semibold text-brand-400">
+                          {new Date(dndConfirm.targetDateKey + 'T00:00:00+09:00')
+                            .toLocaleDateString('ko', { timeZone: 'Asia/Seoul', month: 'short', day: 'numeric' })}
+                        </p>
+                        {dndConfirm.targetMinute !== undefined ? (
+                          <p className="text-xs text-brand-400 mt-1">{dndConfirm.selectedTime}</p>
+                        ) : (
+                          <div className="mt-1" onClick={e => e.stopPropagation()}>
+                            <Select
+                              value={dndConfirm.selectedTime}
+                              onValueChange={v => setDndConfirm(prev => prev ? { ...prev, selectedTime: v } : null)}
+                            >
+                              <SelectTrigger className="h-7 w-[80px] mx-auto text-xs border-brand-500/30 bg-brand-500/5 text-brand-400 focus:ring-brand-500/30">
+                                <SelectValue />
+                              </SelectTrigger>
+                              <SelectContent className="max-h-60">
+                                {TIME_OPTIONS.map(val => (
+                                  <SelectItem key={val} value={val}>{val}</SelectItem>
+                                ))}
+                              </SelectContent>
+                            </Select>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  </>
+                )}
+              </div>
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>취소</AlertDialogCancel>
+            <AlertDialogAction onClick={executeDndMove}>변경</AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </>
   )
 }

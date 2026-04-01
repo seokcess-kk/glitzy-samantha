@@ -166,19 +166,8 @@ npm run analyze      # 번들 크기 분석
 
 | 날짜 | 내용 |
 |------|------|
+| 2026-04-01 | 캘린더 UX 개선: 일간 10분 슬롯, 현재 시간 구분선, 전체 예약 표시, 취소/노쇼 취소선 시각 구분 |
+| 2026-04-01 | 예약/결제 관리 캘린더 드래그앤드롭 (`@dnd-kit/core`), DateRangePicker 도트 표시, 미래 날짜 허용 |
 | 2026-03-30 | CLAUDE.md 재설계: 200줄 이내 압축, 변경 이력 분리, 디렉토리 구조 압축 |
 | 2026-03-30 | 대시보드 재설계, 광고 성과 3탭 지표 재배치, 시스템 메뉴 토글, 외부 API |
 | 2026-03-30 | TikTok Ads 연동, KST 타임존 전체 감사, 고객 상세 Sheet 수정 |
-| 2026-03-27 | 순위 모니터링 "함께많이찾는" 카테고리 추가 |
-| 2026-03-27 | TikTok OAuth2 연동: 인증 시작/콜백, CSRF state DB 검증, access_token 자동 갱신 |
-| 2026-03-24 | MediChecker UI/UX 감사: 2컬럼 레이아웃, 심각도 그룹핑, 컴팩트 카드, A11y 13건 수정, getRiskLevel 유틸 추출 |
-| 2026-03-24 | 검증 규칙에 '문서 업데이트 필수' 단계 추가 — 코드 리뷰 완료 후 관련 문서(CLAUDE.md, API.md, COMPONENTS.md 등) 반드시 업데이트 |
-| 2026-03-24 | MediChecker Phase 2: logActivity 연동 + 이력 상세 보기 |
-| 2026-03-24 | MediChecker Phase 3: agency_staff 메뉴 권한에 `medichecker` 항목 추가 (MENU_OPTIONS) |
-| 2026-03-24 | ERP 연동: glitzy-web 견적서/계산서 읽기 전용 프록시 (erpClient, API 2개, UI 2컴포넌트, Sheet 상세) |
-| 2026-03-24 | ERP Phase 2: 견적서 승인/반려 (PATCH API, erpClient method/body 확장, Sheet 내 승인/반려 버튼, 반려 사유 다이얼로그) |
-| 2026-03-24 | fix: 대시보드 퍼널 API `applyDateFilter` 날짜 이중 타임존 버그 수정 (전 단계 0명 표시) |
-| 2026-03-26 | 광고 backfill API (`/api/admin/backfill-ads`): 특정 병원의 과거 광고 데이터 일괄 수집 (최대 90일, CRON_SECRET 인증) |
-| 2026-03-26 | `sanitizeUrl()` 도입: URL용 sanitize 함수 추가 (`&` 보존, 위험 스킴 차단). `sanitizeString`이 URL의 `&`를 제거하여 CAPI event_source_url/DB inflow_url 깨지는 버그 수정 (6곳 교체) |
-| 2026-03-26 | Ad 레벨 수집: `ad_stats` 테이블, `fetchMetaAdStats()` (페이지네이션+url_tags/effective_link→utm_content), 소재별 성과에 광고 지표(지출/노출/클릭/CPC/CTR/CPL) 통합, 캠페인 CPL ad_stats 경유 매칭 |
-| 2026-03-26 | StatsCard 동적 폰트 크기: 값 길이에 따라 폰트 자동 축소 (`getValueSizeClass`), `truncate` 제거 → `break-all` 적용. 좁은 카드에서 금액 잘림 방지 |

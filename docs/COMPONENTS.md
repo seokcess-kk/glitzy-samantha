@@ -439,10 +439,18 @@ const [dateRange, setDateRange] = useState<DateRange>({
 |------|------|-------------|
 | `dateRange` | `DateRange` | `{ from?: Date, to?: Date }` |
 | `onDateRangeChange` | `(range: DateRange) => void` | 범위 변경 콜백 |
+| `allowFuture?` | `boolean` | 미래 날짜 선택 허용 (기본 `false`) |
+| `bookedDates?` | `Date[]` | 예약 있는 날짜에 도트 표시 |
 
 **트리거 표시:** `📅 2026.03.01 ~ 2026.03.26` (시작일/종료일 명시)
 **팝오버 상단:** 시작일/종료일 라벨 + `yyyy.MM.dd (eee)` 포맷으로 선택 상태 표시
 **사용 페이지:** 대시보드, 광고 성과, 언론보도, 캠페인 리드, 환자/예약 (5곳)
+
+### 예약 캘린더 DnD 컴포넌트
+
+**DraggableBooking** (`components/patients/draggable-booking.tsx`): `@dnd-kit/core` 기반 드래그 가능한 예약 카드. `month`/`week`/`day` variant 지원. cancelled/noshow 상태는 드래그 비활성화.
+
+**DroppableCell** (`components/patients/droppable-cell.tsx`): 드롭 가능한 날짜/시간 셀. `dateKey`와 선택적 `hour` 데이터 전달. 드래그 hover 시 하이라이트 표시.
 
 ---
 
