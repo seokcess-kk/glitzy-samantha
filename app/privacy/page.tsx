@@ -125,7 +125,7 @@ export default function PrivacyPolicyPage() {
             <h2 className="text-lg font-semibold text-foreground mb-3">8. 개인정보 보호책임자</h2>
             <ul className="list-none space-y-1">
               <li><span className="text-foreground font-medium">담당부서:</span> 개인정보보호팀</li>
-              <li><span className="text-foreground font-medium">이메일:</span> privacy@glitzy.co.kr</li>
+              <li><span className="text-foreground font-medium">이메일:</span> inner@glitzy.co.kr</li>
             </ul>
           </section>
 
