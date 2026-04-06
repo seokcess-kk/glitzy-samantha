@@ -8,8 +8,16 @@ const logger = createLogger('LandingPageUpload')
 // 파일명 안전하게 정제 (ASCII만 허용 — Supabase Storage는 non-ASCII 거부)
 function sanitizeFileName(raw: string): string {
   const ext = '.html'
-  const nameOnly = raw.replace(/\.html?$/i, '').replace(/[^a-zA-Z0-9_-]/g, '_').replace(/_{2,}/g, '_')
-  return (nameOnly || 'upload') + ext
+  const nameOnly = raw
+    .replace(/\.html?$/i, '')
+    .replace(/[^a-zA-Z0-9_-]/g, '_')
+    .replace(/_{2,}/g, '_')
+    .replace(/^_+|_+$/g, '')
+  // ASCII 부분이 없는 경우 (한글 등) → 타임스탬프 기반 파일명 생성
+  if (!nameOnly) {
+    return `lp_${Date.now().toString(36)}${ext}`
+  }
+  return nameOnly + ext
 }
 
 export const POST = withSuperAdmin(async (req: Request) => {
