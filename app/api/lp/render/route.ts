@@ -187,8 +187,10 @@ export async function GET(req: NextRequest) {
     return _origFetch.call(this, url, opts).then(function(res) {
       if (isLeadWebhook && res.ok) {
         var lpData = window.__LP_DATA__ || {};
-        // 이벤트 없이 데이터만 push — GTM form_submit 트리거에서 변수로 참조
+        // GTM 커스텀 이벤트 — Meta Pixel, GA4 전환 태그 트리거용
+        // GA4 Enhanced Measurement의 폼 추적은 비활성화 필요 (중복 방지)
         window.dataLayer.push({
+          event: 'form_submit',
           lead_event_id: eventId,
           landing_page_id: lpData.landingPageId || null,
           clinic_id: lpData.clinicId || null,
