@@ -1,7 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { serverSupabase } from '@/lib/supabase'
+import { createLogger } from '@/lib/logger'
 import fs from 'fs'
 import path from 'path'
+
+const logger = createLogger('LPRender')
 
 export async function GET(req: NextRequest) {
   const { searchParams } = new URL(req.url)
@@ -26,12 +29,20 @@ export async function GET(req: NextRequest) {
   // HTML 파일 읽기 (Supabase Storage 우선, public/landing/ fallback)
   let htmlContent: string | null = null
 
-  // 1. Supabase Storage에서 시도
-  const { data: storageData } = await supabase.storage
-    .from('landing-pages')
-    .download(landingPage.file_name)
-  if (storageData) {
-    htmlContent = await storageData.text()
+  // 1. Supabase Storage에서 시도 — signedUrl + no-store로 캐시 완전 우회
+  try {
+    const { data: signedUrlData } = await supabase.storage
+      .from('landing-pages')
+      .createSignedUrl(landingPage.file_name, 60)
+
+    if (signedUrlData?.signedUrl) {
+      const res = await fetch(signedUrlData.signedUrl, { cache: 'no-store' })
+      if (res.ok) {
+        htmlContent = await res.text()
+      }
+    }
+  } catch (err) {
+    logger.error('Storage signedUrl/fetch 실패', err, { fileName: landingPage.file_name })
   }
 
   // 2. fallback: public/landing/ 로컬 파일
@@ -39,6 +50,7 @@ export async function GET(req: NextRequest) {
     const htmlPath = path.join(process.cwd(), 'public', 'landing', landingPage.file_name)
     if (fs.existsSync(htmlPath)) {
       htmlContent = fs.readFileSync(htmlPath, 'utf-8')
+      logger.warn('Storage 파일 없음, 로컬 fallback 사용', { fileName: landingPage.file_name })
     }
   }
 
