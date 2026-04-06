@@ -113,6 +113,12 @@ export const PUT = withSuperAdmin(async (req: Request, { user }: AuthContext) =>
       .single()
 
     if (error) return apiError(error.message, 500)
+
+    // DB 업데이트 성공 후 기존 Storage 파일 정리 (file_name이 변경��� 경우)
+    if (file_name && file_name !== existing.file_name && /^[a-zA-Z0-9_.-]+$/.test(existing.file_name)) {
+      await supabase.storage.from('landing-pages').remove([existing.file_name]).catch(() => {})
+    }
+
     return apiSuccess(data)
   } catch (err) {
     logger.error('랜딩페이지 수정 실패', err)

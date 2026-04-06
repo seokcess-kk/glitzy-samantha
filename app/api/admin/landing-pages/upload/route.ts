@@ -69,11 +69,6 @@ export const POST = withSuperAdmin(async (req: Request) => {
       return apiError(`파일 업로드 실패: ${error.message}`, 500)
     }
 
-    // 수정 모드: 기존 파일이 새 파일과 다르면 삭제
-    if (overwrite && overwrite !== fileName && /^[a-zA-Z0-9_.-]+$/.test(overwrite)) {
-      await supabase.storage.from(BUCKET).remove([overwrite])
-    }
-
     return apiSuccess({ fileName, originalFileName: file.name })
   } catch (error) {
     logger.error('랜딩페이지 업로드 처리 오류', error)
