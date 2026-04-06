@@ -135,6 +135,13 @@ export const DELETE = withSuperAdmin(async (req: Request, { user }: AuthContext)
 
     const supabase = serverSupabase()
 
+    // 삭제 전 file_name 조회 (Storage 파일 삭제용)
+    const { data: existing } = await supabase
+      .from('landing_pages')
+      .select('file_name')
+      .eq('id', lpId)
+      .single()
+
     await archiveBeforeDelete(supabase, 'landing_pages', lpId, user.id)
     const { error } = await supabase
       .from('landing_pages')
@@ -142,6 +149,19 @@ export const DELETE = withSuperAdmin(async (req: Request, { user }: AuthContext)
       .eq('id', lpId)
 
     if (error) return apiError(error.message, 500)
+
+    // DB 삭제 성공 후 Storage 파일 삭제 (같은 파일을 쓰는 다른 랜딩페이지가 없을 때만)
+    if (existing?.file_name) {
+      const { count } = await supabase
+        .from('landing_pages')
+        .select('id', { count: 'exact', head: true })
+        .eq('file_name', existing.file_name)
+
+      if (count === 0) {
+        await supabase.storage.from('landing-pages').remove([existing.file_name]).catch(() => {})
+      }
+    }
+
     return apiSuccess({ deleted: true })
   } catch (err) {
     logger.error('랜딩페이지 삭제 실패', err)
