@@ -218,6 +218,7 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
     status: 200,
     headers: {
       'Content-Type': 'text/html; charset=utf-8',
+      'Cache-Control': 'no-store, no-cache, must-revalidate',
     },
   })
 }

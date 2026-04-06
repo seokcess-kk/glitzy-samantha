@@ -157,7 +157,7 @@ export const DELETE = withSuperAdmin(async (req: Request, { user }: AuthContext)
         .select('id', { count: 'exact', head: true })
         .eq('file_name', existing.file_name)
 
-      if (count === 0) {
+      if (!count) {
         await supabase.storage.from('landing-pages').remove([existing.file_name]).catch(() => {})
       }
     }
