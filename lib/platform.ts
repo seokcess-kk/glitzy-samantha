@@ -121,6 +121,18 @@ export const CREATIVE_PLATFORMS = [
 
 export type CreativePlatform = (typeof CREATIVE_PLATFORMS)[number]['value']
 
+// ═══ 플랫폼별 UTM 기본값 (소재 등록 시 자동 매핑) ═══
+
+export const PLATFORM_UTM_DEFAULTS: Record<string, { source: string; mediums: { value: string; label: string }[] }> = {
+  meta:    { source: 'meta',    mediums: [{ value: 'cpc', label: 'CPC (유료 광고)' }, { value: 'social', label: 'Social (소셜)' }] },
+  google:  { source: 'google',  mediums: [{ value: 'cpc', label: 'CPC (검색)' }, { value: 'display', label: 'Display (GDN)' }, { value: 'video', label: 'Video (YouTube)' }, { value: 'pmax', label: 'PMax' }, { value: 'demand_gen', label: 'Demand Gen' }] },
+  naver:   { source: 'naver',   mediums: [{ value: 'cpc', label: 'CPC (검색 광고)' }, { value: 'display', label: 'Display (GFA)' }] },
+  kakao:   { source: 'kakao',   mediums: [{ value: 'cpc', label: 'CPC (키워드)' }, { value: 'display', label: 'Display (모먼트)' }] },
+  tiktok:  { source: 'tiktok',  mediums: [{ value: 'cpc', label: 'CPC (유료 광고)' }, { value: 'short', label: 'Short (숏폼)' }] },
+  youtube: { source: 'youtube', mediums: [{ value: 'video', label: 'Video (영상 광고)' }, { value: 'short', label: 'Short (쇼츠)' }] },
+  dable:   { source: 'dable',   mediums: [{ value: 'native', label: 'Native (네이티브)' }] },
+}
+
 // ═══ 유틸 함수 ═══
 
 export function isApiPlatform(value: unknown): value is ApiPlatform {
@@ -131,8 +143,14 @@ export function isSyncEnabled(platform: ApiPlatform): boolean {
   return SYNC_ENABLED_PLATFORMS.includes(platform)
 }
 
-/** 소재 등록용 platform → ApiPlatform 변환 */
+/** 소재 등록용 platform → ApiPlatform 변환 (예: 'meta' → 'meta_ads') */
 export function creativeToApiPlatform(platform: string): ApiPlatform | null {
   const found = CREATIVE_PLATFORMS.find(p => p.value === platform)
   return found?.apiPlatform ?? null
+}
+
+/** DB의 ApiPlatform → 소재 등록용 platform 변환 (예: 'meta_ads' → 'meta') */
+export function apiToCreativePlatform(apiPlatform: string): string {
+  const found = CREATIVE_PLATFORMS.find(p => p.apiPlatform === apiPlatform)
+  return found?.value ?? apiPlatform
 }

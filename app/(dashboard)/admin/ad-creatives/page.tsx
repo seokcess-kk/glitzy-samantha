@@ -65,7 +65,7 @@ interface AdCreative {
   landing_page?: { id: number; name: string; file_name: string } | null
 }
 
-import { CREATIVE_PLATFORMS } from '@/lib/platform'
+import { CREATIVE_PLATFORMS, PLATFORM_UTM_DEFAULTS, apiToCreativePlatform } from '@/lib/platform'
 
 const PLATFORM_OPTIONS = CREATIVE_PLATFORMS.map(p => ({ value: p.value, label: p.label }))
 
@@ -251,6 +251,7 @@ export default function AdCreativesPage() {
   }
 
   const openFormWith = (creative: AdCreative, nameOverride?: string, utmContentOverride?: string) => {
+    const creativePlatform = creative.platform ? apiToCreativePlatform(creative.platform) : ''
     setForm({
       name: nameOverride ?? creative.name,
       description: creative.description || '',
@@ -259,7 +260,7 @@ export default function AdCreativesPage() {
       utm_medium: creative.utm_medium || '',
       utm_campaign: creative.utm_campaign || '',
       utm_term: creative.utm_term || '',
-      platform: creative.platform || '',
+      platform: creativePlatform,
       clinic_id: String(creative.clinic_id),
       landing_page_id: creative.landing_page_id ? String(creative.landing_page_id) : '',
       is_active: creative.is_active,
@@ -342,6 +343,8 @@ export default function AdCreativesPage() {
   }
 
   if (user?.role !== 'superadmin') return null
+
+  const utmDefaults = form.platform && form.platform !== 'none' ? PLATFORM_UTM_DEFAULTS[form.platform] : null
 
   return (
     <>
@@ -446,7 +449,20 @@ export default function AdCreativesPage() {
               </div>
               <div className="space-y-2">
                 <Label className="text-xs text-muted-foreground">광고 플랫폼</Label>
-                <Select value={form.platform} onValueChange={v => setForm(f => ({ ...f, platform: v }))}>
+                <Select value={form.platform} onValueChange={v => {
+                  const defaults = PLATFORM_UTM_DEFAULTS[v]
+                  if (defaults) {
+                    setForm(f => ({
+                      ...f,
+                      platform: v,
+                      utm_source: defaults.source,
+                      utm_medium: defaults.mediums[0]?.value || '',
+                    }))
+                  } else {
+                    // 미지정/기타 선택 시 기존 source/medium 유지 (수기 입력 전환)
+                    setForm(f => ({ ...f, platform: v }))
+                  }
+                }}>
                   <SelectTrigger>
                     <SelectValue placeholder="선택 (선택사항)" />
                   </SelectTrigger>
@@ -462,25 +478,49 @@ export default function AdCreativesPage() {
 
             {/* UTM 파라미터 섹션 */}
             <div className="border-t border-border dark:border-white/10 pt-4 mt-4">
-              <p className="text-xs text-muted-foreground mb-3">UTM 파라미터 (선택사항 - UTM 생성기에서 자동 적용)</p>
+              <p className="text-xs text-muted-foreground mb-3">
+                UTM 파라미터 {utmDefaults ? '(플랫폼 기준 자동 설정)' : '(선택사항 - 직접 입력)'}
+              </p>
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">
                   <Label className="text-xs text-muted-foreground">UTM Source</Label>
-                  <Input
-                    type="text"
-                    value={form.utm_source}
-                    onChange={e => setForm(f => ({ ...f, utm_source: e.target.value }))}
-                    placeholder="예: meta, google, naver"
-                  />
+                  {utmDefaults ? (
+                    <Input
+                      type="text"
+                      value={form.utm_source}
+                      readOnly
+                      className="bg-muted/50 cursor-not-allowed"
+                    />
+                  ) : (
+                    <Input
+                      type="text"
+                      value={form.utm_source}
+                      onChange={e => setForm(f => ({ ...f, utm_source: e.target.value }))}
+                      placeholder="예: meta, google, naver"
+                    />
+                  )}
                 </div>
                 <div className="space-y-2">
                   <Label className="text-xs text-muted-foreground">UTM Medium</Label>
-                  <Input
-                    type="text"
-                    value={form.utm_medium}
-                    onChange={e => setForm(f => ({ ...f, utm_medium: e.target.value }))}
-                    placeholder="예: cpc, display, social"
-                  />
+                  {utmDefaults ? (
+                    <Select value={form.utm_medium} onValueChange={v => setForm(f => ({ ...f, utm_medium: v }))}>
+                      <SelectTrigger>
+                        <SelectValue placeholder="선택" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {utmDefaults.mediums.map(m => (
+                          <SelectItem key={m.value} value={m.value}>{m.label}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  ) : (
+                    <Input
+                      type="text"
+                      value={form.utm_medium}
+                      onChange={e => setForm(f => ({ ...f, utm_medium: e.target.value }))}
+                      placeholder="예: cpc, display, social"
+                    />
+                  )}
                 </div>
               </div>
               <div className="grid grid-cols-2 gap-4 mt-3">
@@ -638,7 +678,7 @@ export default function AdCreativesPage() {
                       </TableCell>
                       <TableCell>
                         <div className="text-muted-foreground text-xs">
-                          {PLATFORM_OPTIONS.find(p => p.value === creative.platform)?.label || '-'}
+                          {PLATFORM_OPTIONS.find(p => p.value === creative.platform || p.value === apiToCreativePlatform(creative.platform || ''))?.label || creative.platform || '-'}
                         </div>
                         <div className="text-muted-foreground text-xs mt-0.5">{creative.clinic?.name || '-'}</div>
                       </TableCell>
