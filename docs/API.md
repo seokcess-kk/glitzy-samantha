@@ -180,6 +180,23 @@ Samantha 대시보드의 REST API 엔드포인트 문서입니다.
 }
 ```
 
+### GET /api/dashboard/treatment-revenue
+
+시술별 매출 비중을 조회합니다. `payments` 테이블에서 `payment_date` 기준으로 직접 집계합니다 (KPI 매출과 동일 기준).
+
+**Query Parameters:**
+- `startDate` (required): 시작일
+- `endDate` (required): 종료일
+- `clinic_id`
+
+**Response:**
+```json
+[
+  { "name": "보톡스", "amount": 5000000 },
+  { "name": "필러", "amount": 3000000 }
+]
+```
+
 ### GET /api/dashboard/trend
 
 주별 트렌드 데이터를 조회합니다. 광고비와 리드 수를 KST 기준 주 단위로 집계합니다.

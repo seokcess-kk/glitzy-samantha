@@ -133,34 +133,19 @@ export function useFunnelChannelData(clinicId: number | null, startDate: string,
     setLoading(true)
     try {
       const qs = buildQs({ startDate, endDate, clinic_id: clinicId })
-      const leadsQs = buildQs({ startDate, endDate, clinic_id: clinicId, limit: '200' })
 
-      const [funnelRes, channelRes, leadsRes] = await Promise.allSettled([
+      const [funnelRes, channelRes, treatmentRes] = await Promise.allSettled([
         fetch(`/api/dashboard/funnel${qs}`).then(r => r.json()),
         fetch(`/api/dashboard/channel${qs}`).then(r => r.json()),
-        fetch(`/api/leads${leadsQs}`).then(r => r.json()),
+        fetch(`/api/dashboard/treatment-revenue${qs}`).then(r => r.json()),
       ])
 
       if (funnelRes.status === 'fulfilled') setFunnel(funnelRes.value)
       if (channelRes.status === 'fulfilled') setChannel(Array.isArray(channelRes.value) ? channelRes.value : [])
 
-      // 시술별 매출 집계 (매출액 기준)
-      if (leadsRes.status === 'fulfilled') {
-        const customers = Array.isArray(leadsRes.value) ? leadsRes.value : []
-        const treatmentMap: Record<string, number> = {}
-        for (const customer of customers) {
-          const payments = customer.customer?.payments || []
-          for (const p of payments) {
-            if (p.treatment_name && p.payment_amount) {
-              treatmentMap[p.treatment_name] = (treatmentMap[p.treatment_name] || 0) + Number(p.payment_amount)
-            }
-          }
-        }
-        setTreatmentData(
-          Object.entries(treatmentMap)
-            .map(([name, amount]) => ({ name, amount }))
-            .sort((a, b) => b.amount - a.amount)
-        )
+      // 시술별 매출 (payments 테이블 직접 조회 — KPI 매출과 동일 기준)
+      if (treatmentRes.status === 'fulfilled') {
+        setTreatmentData(Array.isArray(treatmentRes.value) ? treatmentRes.value : [])
       }
     } finally {
       setLoading(false)
