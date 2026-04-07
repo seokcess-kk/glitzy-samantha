@@ -54,19 +54,29 @@ interface PlatformPreset {
 }
 
 const PLATFORM_PRESETS: Record<string, PlatformPreset> = {
-  meta:              { source: 'meta',      medium: 'cpc',     label: 'Meta',            group: '광고 매체' },
-  google:            { source: 'google',    medium: 'cpc',     label: 'Google Ads',      group: '광고 매체' },
-  naver_sa:          { source: 'naver',     medium: 'cpc',     label: '네이버 SA',         group: '광고 매체' },
-  naver_da:          { source: 'naver',     medium: 'display', label: '네이버 DA',         group: '광고 매체' },
-  kakao:             { source: 'kakao',     medium: 'cpc',     label: '카카오 모먼트',       group: '광고 매체' },
-  dable:             { source: 'dable',     medium: 'native',  label: 'Dable',             group: '광고 매체' },
-  youtube:           { source: 'youtube',   medium: 'video',   label: '유튜브',            group: '콘텐츠 매체' },
-  youtube_shorts:    { source: 'youtube',   medium: 'short',   label: '유튜브 쇼츠',        group: '콘텐츠 매체' },
-  instagram_feed:    { source: 'instagram', medium: 'social',  label: '인스타그램 피드',     group: '콘텐츠 매체' },
-  instagram_reels:   { source: 'instagram', medium: 'short',   label: '인스타그램 릴스',     group: '콘텐츠 매체' },
-  tiktok:            { source: 'tiktok',    medium: 'short',   label: '틱톡',              group: '콘텐츠 매체' },
-  naver_blog:        { source: 'naver',     medium: 'blog',    label: '네이버 블로그',       group: '콘텐츠 매체' },
-  custom:            { source: '',          medium: '',        label: '직접 입력',          group: '기타' },
+  // 광고 매체 — source: 플랫폼+매체유형, medium: 과금 방식
+  meta_feed:         { source: 'meta_feed',         medium: 'cpc',     label: 'Meta Feed',           group: '광고 매체' },
+  meta_reels:        { source: 'meta_reels',        medium: 'cpc',     label: 'Meta Reels',          group: '광고 매체' },
+  google_search:     { source: 'google_search',     medium: 'cpc',     label: 'Google 검색',          group: '광고 매체' },
+  google_gdn:        { source: 'google_gdn',        medium: 'cpc',     label: 'Google GDN',          group: '광고 매체' },
+  google_pmax:       { source: 'google_pmax',       medium: 'cpc',     label: 'Google PMax',         group: '광고 매체' },
+  google_demand_gen: { source: 'google_demand_gen', medium: 'cpc',     label: 'Google Demand Gen',   group: '광고 매체' },
+  google_youtube:    { source: 'google_youtube',    medium: 'cpv',     label: 'Google YouTube',      group: '광고 매체' },
+  naver_sa:          { source: 'naver_sa',          medium: 'cpc',     label: '네이버 SA',             group: '광고 매체' },
+  naver_gfa:         { source: 'naver_gfa',         medium: 'cpc',     label: '네이버 GFA',            group: '광고 매체' },
+  kakao_moment:      { source: 'kakao_moment',      medium: 'cpc',     label: '카카오 모먼트',          group: '광고 매체' },
+  kakao_keyword:     { source: 'kakao_keyword',     medium: 'cpc',     label: '카카오 키워드',          group: '광고 매체' },
+  tiktok_feed:       { source: 'tiktok_feed',       medium: 'cpc',     label: 'TikTok In-Feed',      group: '광고 매체' },
+  dable_native:      { source: 'dable_native',      medium: 'cpc',     label: 'Dable Native',        group: '광고 매체' },
+  // 콘텐츠 매체
+  youtube_video:     { source: 'youtube_video',     medium: 'video',   label: '유튜브 영상',           group: '콘텐츠 매체' },
+  youtube_shorts:    { source: 'youtube_shorts',    medium: 'short',   label: '유튜브 Shorts',        group: '콘텐츠 매체' },
+  instagram_feed:    { source: 'instagram_feed',    medium: 'social',  label: '인스타그램 피드',        group: '콘텐츠 매체' },
+  instagram_reels:   { source: 'instagram_reels',   medium: 'short',   label: '인스타그램 릴스',        group: '콘텐츠 매체' },
+  tiktok_content:    { source: 'tiktok_content',    medium: 'short',   label: '틱톡 콘텐츠',           group: '콘텐츠 매체' },
+  naver_blog:        { source: 'naver_blog',        medium: 'blog',    label: '네이버 블로그',          group: '콘텐츠 매체' },
+  // 기타
+  custom:            { source: '',                  medium: '',        label: '직접 입력',             group: '기타' },
 }
 
 const GROUPS = ['광고 매체', '콘텐츠 매체', '기타']

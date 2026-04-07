@@ -1,5 +1,6 @@
 import { serverSupabase } from '@/lib/supabase'
 import { withClinicFilter, ClinicContext, applyClinicFilter, applyDateRange, apiSuccess } from '@/lib/api-middleware'
+import { normalizeChannel } from '@/lib/channel'
 
 
 /**
@@ -223,13 +224,3 @@ function buildFunnel(
   }
 }
 
-function normalizeChannel(source: string | null | undefined): string {
-  if (!source) return 'Unknown'
-  const normalized = source.toLowerCase().trim()
-  const channelMap: Record<string, string> = {
-    'meta': 'Meta', 'facebook': 'Meta', 'google': 'Google',
-    'youtube': 'YouTube', 'tiktok': 'TikTok', 'naver': 'Naver',
-    'kakao': 'Kakao', 'instagram': 'Instagram', 'phone': 'Phone',
-  }
-  return channelMap[normalized] || source
-}

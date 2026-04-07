@@ -65,7 +65,7 @@ interface AdCreative {
   landing_page?: { id: number; name: string; file_name: string } | null
 }
 
-import { CREATIVE_PLATFORMS, PLATFORM_UTM_DEFAULTS, apiToCreativePlatform } from '@/lib/platform'
+import { CREATIVE_PLATFORMS, PLATFORM_UTM_SOURCES, apiToCreativePlatform } from '@/lib/platform'
 
 const PLATFORM_OPTIONS = CREATIVE_PLATFORMS.map(p => ({ value: p.value, label: p.label }))
 
@@ -344,7 +344,7 @@ export default function AdCreativesPage() {
 
   if (user?.role !== 'superadmin') return null
 
-  const utmDefaults = form.platform && form.platform !== 'none' ? PLATFORM_UTM_DEFAULTS[form.platform] : null
+  const utmSources = form.platform && form.platform !== 'none' ? PLATFORM_UTM_SOURCES[form.platform] : null
 
   return (
     <>
@@ -450,16 +450,14 @@ export default function AdCreativesPage() {
               <div className="space-y-2">
                 <Label className="text-xs text-muted-foreground">광고 플랫폼</Label>
                 <Select value={form.platform} onValueChange={v => {
-                  const defaults = PLATFORM_UTM_DEFAULTS[v]
-                  if (defaults) {
+                  const sources = PLATFORM_UTM_SOURCES[v]
+                  if (sources?.length) {
                     setForm(f => ({
                       ...f,
                       platform: v,
-                      utm_source: defaults.source,
-                      utm_medium: defaults.mediums[0]?.value || '',
+                      utm_source: sources[0].value,
                     }))
                   } else {
-                    // 미지정/기타 선택 시 기존 source/medium 유지 (수기 입력 전환)
                     setForm(f => ({ ...f, platform: v }))
                   }
                 }}>
@@ -479,48 +477,39 @@ export default function AdCreativesPage() {
             {/* UTM 파라미터 섹션 */}
             <div className="border-t border-border dark:border-white/10 pt-4 mt-4">
               <p className="text-xs text-muted-foreground mb-3">
-                UTM 파라미터 {utmDefaults ? '(플랫폼 기준 자동 설정)' : '(선택사항 - 직접 입력)'}
+                UTM 파라미터 {utmSources ? '(플랫폼 기준 자동 설정)' : '(선택사항 - 직접 입력)'}
               </p>
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">
-                  <Label className="text-xs text-muted-foreground">UTM Source</Label>
-                  {utmDefaults ? (
-                    <Input
-                      type="text"
-                      value={form.utm_source}
-                      readOnly
-                      className="bg-muted/50 cursor-not-allowed"
-                    />
-                  ) : (
-                    <Input
-                      type="text"
-                      value={form.utm_source}
-                      onChange={e => setForm(f => ({ ...f, utm_source: e.target.value }))}
-                      placeholder="예: meta, google, naver"
-                    />
-                  )}
-                </div>
-                <div className="space-y-2">
-                  <Label className="text-xs text-muted-foreground">UTM Medium</Label>
-                  {utmDefaults ? (
-                    <Select value={form.utm_medium} onValueChange={v => setForm(f => ({ ...f, utm_medium: v }))}>
+                  <Label className="text-xs text-muted-foreground">UTM Source (유입경로)</Label>
+                  {utmSources ? (
+                    <Select value={form.utm_source} onValueChange={v => setForm(f => ({ ...f, utm_source: v }))}>
                       <SelectTrigger>
-                        <SelectValue placeholder="선택" />
+                        <SelectValue placeholder="매체 유형 선택" />
                       </SelectTrigger>
                       <SelectContent>
-                        {utmDefaults.mediums.map(m => (
-                          <SelectItem key={m.value} value={m.value}>{m.label}</SelectItem>
+                        {utmSources.map(s => (
+                          <SelectItem key={s.value} value={s.value}>{s.label}</SelectItem>
                         ))}
                       </SelectContent>
                     </Select>
                   ) : (
                     <Input
                       type="text"
-                      value={form.utm_medium}
-                      onChange={e => setForm(f => ({ ...f, utm_medium: e.target.value }))}
-                      placeholder="예: cpc, display, social"
+                      value={form.utm_source}
+                      onChange={e => setForm(f => ({ ...f, utm_source: e.target.value }))}
+                      placeholder="예: google_search, meta_feed"
                     />
                   )}
+                </div>
+                <div className="space-y-2">
+                  <Label className="text-xs text-muted-foreground">UTM Medium (과금 방식)</Label>
+                  <Input
+                    type="text"
+                    value={form.utm_medium}
+                    onChange={e => setForm(f => ({ ...f, utm_medium: e.target.value }))}
+                    placeholder="예: cpc, cpm, cpv"
+                  />
                 </div>
               </div>
               <div className="grid grid-cols-2 gap-4 mt-3">

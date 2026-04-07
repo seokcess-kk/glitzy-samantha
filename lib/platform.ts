@@ -121,16 +121,70 @@ export const CREATIVE_PLATFORMS = [
 
 export type CreativePlatform = (typeof CREATIVE_PLATFORMS)[number]['value']
 
-// ═══ 플랫폼별 UTM 기본값 (소재 등록 시 자동 매핑) ═══
+// ═══ 플랫폼별 UTM Source 옵션 (플랫폼+매체유형 조합) ═══
+// Source = 트래픽 출처 (플랫폼+매체유형), Medium = 과금 방식 (수기 입력)
 
-export const PLATFORM_UTM_DEFAULTS: Record<string, { source: string; mediums: { value: string; label: string }[] }> = {
-  meta:    { source: 'meta',    mediums: [{ value: 'cpc', label: 'CPC (유료 광고)' }, { value: 'social', label: 'Social (소셜)' }] },
-  google:  { source: 'google',  mediums: [{ value: 'cpc', label: 'CPC (검색)' }, { value: 'display', label: 'Display (GDN)' }, { value: 'video', label: 'Video (YouTube)' }, { value: 'pmax', label: 'PMax' }, { value: 'demand_gen', label: 'Demand Gen' }] },
-  naver:   { source: 'naver',   mediums: [{ value: 'cpc', label: 'CPC (검색 광고)' }, { value: 'display', label: 'Display (GFA)' }] },
-  kakao:   { source: 'kakao',   mediums: [{ value: 'cpc', label: 'CPC (키워드)' }, { value: 'display', label: 'Display (모먼트)' }] },
-  tiktok:  { source: 'tiktok',  mediums: [{ value: 'cpc', label: 'CPC (유료 광고)' }, { value: 'short', label: 'Short (숏폼)' }] },
-  youtube: { source: 'youtube', mediums: [{ value: 'video', label: 'Video (영상 광고)' }, { value: 'short', label: 'Short (쇼츠)' }] },
-  dable:   { source: 'dable',   mediums: [{ value: 'native', label: 'Native (네이티브)' }] },
+export interface UtmSourceOption {
+  value: string
+  label: string
+}
+
+export const PLATFORM_UTM_SOURCES: Record<string, UtmSourceOption[]> = {
+  meta:    [
+    { value: 'meta_feed', label: 'Meta Feed' },
+    { value: 'meta_reels', label: 'Meta Reels' },
+    { value: 'meta_stories', label: 'Meta Stories' },
+    { value: 'meta_audience', label: 'Meta Audience Network' },
+  ],
+  google:  [
+    { value: 'google_search', label: 'Google 검색' },
+    { value: 'google_gdn', label: 'Google GDN' },
+    { value: 'google_pmax', label: 'Google PMax' },
+    { value: 'google_demand_gen', label: 'Google Demand Gen' },
+    { value: 'google_youtube', label: 'Google YouTube' },
+  ],
+  naver:   [
+    { value: 'naver_sa', label: '네이버 검색광고 (SA)' },
+    { value: 'naver_gfa', label: '네이버 GFA' },
+    { value: 'naver_brand', label: '네이버 브랜드검색' },
+  ],
+  kakao:   [
+    { value: 'kakao_moment', label: '카카오 모먼트' },
+    { value: 'kakao_keyword', label: '카카오 키워드' },
+    { value: 'kakao_bizboard', label: '카카오 비즈보드' },
+  ],
+  tiktok:  [
+    { value: 'tiktok_feed', label: 'TikTok In-Feed' },
+    { value: 'tiktok_topview', label: 'TikTok TopView' },
+  ],
+  youtube: [
+    { value: 'youtube_video', label: 'YouTube 영상광고' },
+    { value: 'youtube_shorts', label: 'YouTube Shorts' },
+  ],
+  dable:   [
+    { value: 'dable_native', label: 'Dable Native' },
+  ],
+}
+
+/** UTM source 값 → 사람이 읽을 수 있는 라벨 변환 */
+export function getSourceLabel(source: string): string {
+  for (const sources of Object.values(PLATFORM_UTM_SOURCES)) {
+    const found = sources.find(s => s.value === source)
+    if (found) return found.label
+  }
+  return source
+}
+
+/** UTM source 값 → 플랫폼 채널명 추출 (집계용, 예: 'google_search' → 'Google') */
+export function sourceToChannel(source: string): string {
+  if (!source) return 'Unknown'
+  const prefix = source.split('_')[0]?.toLowerCase()
+  const channelMap: Record<string, string> = {
+    meta: 'Meta', google: 'Google', naver: 'Naver', kakao: 'Kakao',
+    tiktok: 'TikTok', youtube: 'YouTube', dable: 'Dable',
+    facebook: 'Meta', fb: 'Meta', ig: 'Instagram', instagram: 'Instagram',
+  }
+  return channelMap[prefix] || source
 }
 
 // ═══ 유틸 함수 ═══
