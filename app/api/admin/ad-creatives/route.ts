@@ -3,6 +3,7 @@ import { withSuperAdmin, apiError, apiSuccess } from '@/lib/api-middleware'
 import { sanitizeString, parseId } from '@/lib/security'
 import { buildUtmUrl } from '@/lib/utm'
 import { createLogger } from '@/lib/logger'
+import { creativeToApiPlatform } from '@/lib/platform'
 
 const logger = createLogger('AdCreatives')
 
@@ -120,7 +121,7 @@ export const POST = withSuperAdmin(async (req: Request) => {
       utm_medium: utm_medium ? sanitizeString(utm_medium, 100) : null,
       utm_campaign: utm_campaign ? sanitizeString(utm_campaign, 100) : null,
       utm_term: utm_term ? sanitizeString(utm_term, 100) : null,
-      platform: platform ? sanitizeString(platform, 50) : null,
+      platform: platform ? (creativeToApiPlatform(platform) || sanitizeString(platform, 50)) : null,
       clinic_id: validClinicId,
       landing_page_id: validLandingPageId,
       is_active: is_active !== false,

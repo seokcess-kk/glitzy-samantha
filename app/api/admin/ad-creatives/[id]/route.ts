@@ -4,6 +4,7 @@ import { sanitizeString, parseId } from '@/lib/security'
 import { buildUtmUrl } from '@/lib/utm'
 import { createLogger } from '@/lib/logger'
 import { archiveBeforeDelete } from '@/lib/archive'
+import { creativeToApiPlatform } from '@/lib/platform'
 
 const logger = createLogger('AdCreatives')
 
@@ -128,7 +129,7 @@ export const PUT = withSuperAdmin(async (req: Request) => {
   if (utm_medium !== undefined) updateData.utm_medium = utm_medium ? sanitizeString(utm_medium, 100) : null
   if (utm_campaign !== undefined) updateData.utm_campaign = utm_campaign ? sanitizeString(utm_campaign, 100) : null
   if (utm_term !== undefined) updateData.utm_term = utm_term ? sanitizeString(utm_term, 100) : null
-  if (platform !== undefined) updateData.platform = platform ? sanitizeString(platform, 50) : null
+  if (platform !== undefined) updateData.platform = platform ? (creativeToApiPlatform(platform) || sanitizeString(platform, 50)) : null
   if (validClinicId !== undefined) updateData.clinic_id = validClinicId
   if (validLandingPageId !== undefined) updateData.landing_page_id = validLandingPageId
   if (is_active !== undefined) updateData.is_active = is_active
