@@ -6,10 +6,12 @@ const BUCKET = 'landing-pages'
 const logger = createLogger('LandingPageUpload')
 
 // 파일명 안전하게 정제 (ASCII만 허용 — Supabase Storage는 non-ASCII 거부)
+// 타임스탬프 suffix로 파일명 충돌 방지
 // 예: '신사세레아의원.html' → 'lp_20260406_143522.html'
-// 예: 'serea_promo.html' → 'serea_promo.html'
+// 예: 'serea_promo.html' → 'serea_promo_1712534400.html'
 function sanitizeFileName(raw: string): string {
   const ext = '.html'
+  const ts = Math.floor(Date.now() / 1000)
   const nameOnly = raw
     .replace(/\.html?$/i, '')
     .replace(/[^a-zA-Z0-9_-]/g, '_')
@@ -18,10 +20,10 @@ function sanitizeFileName(raw: string): string {
   // ASCII 부분이 없는 경우 (한글 등) → 날짜+시간 기반 파일명 생성
   if (!nameOnly) {
     const now = new Date()
-    const ts = now.toISOString().replace(/[-:T]/g, '').slice(0, 15) // 20260406T143522 → 20260406143522
-    return `lp_${ts.slice(0, 8)}_${ts.slice(8)}${ext}`
+    const isoTs = now.toISOString().replace(/[-:T]/g, '').slice(0, 15)
+    return `lp_${isoTs.slice(0, 8)}_${isoTs.slice(8)}${ext}`
   }
-  return nameOnly + ext
+  return `${nameOnly}_${ts}${ext}`
 }
 
 export const POST = withSuperAdmin(async (req: Request) => {
@@ -43,10 +45,10 @@ export const POST = withSuperAdmin(async (req: Request) => {
     }
 
     const supabase = serverSupabase()
-    let fileName = sanitizeFileName(file.name)
+    // 기존 LP 수정 시 동일 파일명으로 덮어쓰기, 신규는 타임스탬프 suffix로 충돌 방지
+    const fileName = overwrite || sanitizeFileName(file.name)
     const content = await file.arrayBuffer()
 
-    // 동일 파일명이 있으면 내용 덮어쓰기 (upsert)
     const { error } = await supabase.storage
       .from(BUCKET)
       .upload(fileName, Buffer.from(content), {
