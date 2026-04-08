@@ -1,5 +1,6 @@
 import { serverSupabase } from '@/lib/supabase'
 import { withClinicFilter, ClinicContext, apiError, apiSuccess, applyClinicFilter, applyDateRange } from '@/lib/api-middleware'
+import { getKstDateString } from '@/lib/date'
 
 /**
  * 랜딩 페이지별 성과 통계 API
@@ -19,25 +20,33 @@ export const GET = withClinicFilter(async (req: Request, { clinicId, assignedCli
 
   const ctx = { clinicId, assignedClinicIds }
 
+  // DATE 컬럼(payment_date)용 KST 날짜 문자열 변환
+  const statStart = startDate ? getKstDateString(new Date(startDate)) : null
+  const statEnd = endDate ? getKstDateString(new Date(endDate)) : null
+
   // 1. 리드 조회 (landing_page_id 있는 것만)
   let leadsQuery = supabase
     .from('leads')
     .select('id, customer_id, landing_page_id, utm_source, utm_campaign, created_at')
     .not('landing_page_id', 'is', null)
+    .limit(5000)
   leadsQuery = applyClinicFilter(leadsQuery, ctx)!
   leadsQuery = applyDateRange(leadsQuery, 'created_at', startDate, endDate)
 
-  // 2. 결제 데이터
+  // 2. 결제 데이터 — payment_date(DATE 컬럼)는 KST 날짜 문자열로 비교
   let paymentsQuery = supabase
     .from('payments')
     .select('customer_id, payment_amount')
+    .limit(5000)
   paymentsQuery = applyClinicFilter(paymentsQuery, ctx)!
-  paymentsQuery = applyDateRange(paymentsQuery, 'payment_date', startDate, endDate)
+  if (statStart) paymentsQuery = paymentsQuery.gte('payment_date', statStart)
+  if (statEnd) paymentsQuery = paymentsQuery.lte('payment_date', statEnd)
 
   // 3. 예약 데이터
   let bookingsQuery = supabase
     .from('bookings')
     .select('customer_id, status')
+    .limit(5000)
   bookingsQuery = applyClinicFilter(bookingsQuery, ctx)!
   bookingsQuery = applyDateRange(bookingsQuery, 'created_at', startDate, endDate)
 

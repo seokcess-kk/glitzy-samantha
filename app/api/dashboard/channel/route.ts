@@ -2,6 +2,7 @@ import { serverSupabase } from '@/lib/supabase'
 import { withClinicFilter, ClinicContext, applyClinicFilter, applyDateRange, apiSuccess } from '@/lib/api-middleware'
 import { normalizeChannel } from '@/lib/channel'
 import { sourceToChannel, getSourceLabel } from '@/lib/platform'
+import { getKstDateString } from '@/lib/date'
 
 /**
  * 채널별 KPI 분석 API
@@ -20,26 +21,34 @@ export const GET = withClinicFilter(async (req: Request, { clinicId, assignedCli
 
   const ctx = { clinicId, assignedClinicIds }
 
+  // DATE 컬럼(stat_date, payment_date)용 KST 날짜 문자열 변환
+  const statStart = startDate ? getKstDateString(new Date(startDate)) : null
+  const statEnd = endDate ? getKstDateString(new Date(endDate)) : null
+
   // 1. 리드 데이터 조회 (utm_source 포함)
   let leadsQuery = supabase
     .from('leads')
     .select('id, customer_id, utm_source, created_at')
+    .limit(5000)
   leadsQuery = applyClinicFilter(leadsQuery, ctx)!
   leadsQuery = applyDateRange(leadsQuery, 'created_at', startDate, endDate)
 
-  // 2. 광고 지출 데이터
+  // 2. 광고 지출 데이터 — stat_date(DATE 컬럼)는 KST 날짜 문자열로 비교
   let adStatsQuery = supabase
     .from('ad_campaign_stats')
     .select('platform, spend_amount, clicks, impressions, stat_date')
   adStatsQuery = applyClinicFilter(adStatsQuery, ctx)!
-  adStatsQuery = applyDateRange(adStatsQuery, 'stat_date', startDate, endDate)
+  if (statStart) adStatsQuery = adStatsQuery.gte('stat_date', statStart)
+  if (statEnd) adStatsQuery = adStatsQuery.lte('stat_date', statEnd)
 
-  // 3. 결제 데이터 (customer_id로 리드와 연결)
+  // 3. 결제 데이터 — payment_date(DATE 컬럼)는 KST 날짜 문자열로 비교
   let paymentsQuery = supabase
     .from('payments')
     .select('payment_amount, customer_id, payment_date')
+    .limit(5000)
   paymentsQuery = applyClinicFilter(paymentsQuery, ctx)!
-  paymentsQuery = applyDateRange(paymentsQuery, 'payment_date', startDate, endDate)
+  if (statStart) paymentsQuery = paymentsQuery.gte('payment_date', statStart)
+  if (statEnd) paymentsQuery = paymentsQuery.lte('payment_date', statEnd)
 
   const [leadsRes, adStatsRes, paymentsRes] = await Promise.all([
     leadsQuery,

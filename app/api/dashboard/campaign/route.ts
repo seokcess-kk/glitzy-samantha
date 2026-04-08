@@ -1,6 +1,7 @@
 import { serverSupabase } from '@/lib/supabase'
 import { withClinicFilter, ClinicContext, applyClinicFilter, applyDateRange, apiSuccess } from '@/lib/api-middleware'
 import { normalizeChannel } from '@/lib/channel'
+import { getKstDateString } from '@/lib/date'
 
 /**
  * 캠페인별 KPI 분석 API
@@ -20,35 +21,44 @@ export const GET = withClinicFilter(async (req: Request, { clinicId, assignedCli
 
   const ctx = { clinicId, assignedClinicIds }
 
+  // DATE 컬럼(stat_date, payment_date)용 KST 날짜 문자열 변환
+  const statStart = startDate ? getKstDateString(new Date(startDate)) : null
+  const statEnd = endDate ? getKstDateString(new Date(endDate)) : null
+
   // 1. 리드 데이터 조회 (utm_source, utm_campaign 포함)
   let leadsQuery = supabase
     .from('leads')
     .select('id, customer_id, utm_source, utm_campaign, utm_content, created_at')
     .not('utm_campaign', 'is', null) // 캠페인이 있는 리드만
+    .limit(5000)
   leadsQuery = applyClinicFilter(leadsQuery, ctx)!
   leadsQuery = applyDateRange(leadsQuery, 'created_at', startDate, endDate)
   if (channel) {
     leadsQuery = leadsQuery.ilike('utm_source', channel)
   }
 
-  // 2. 광고 지출 데이터 (캠페인별)
+  // 2. 광고 지출 데이터 (캠페인별) — stat_date(DATE 컬럼)는 KST 날짜 문자열로 비교
   let adStatsQuery = supabase
     .from('ad_campaign_stats')
     .select('campaign_name, campaign_id, platform, spend_amount, clicks, impressions, stat_date')
   adStatsQuery = applyClinicFilter(adStatsQuery, ctx)!
-  adStatsQuery = applyDateRange(adStatsQuery, 'stat_date', startDate, endDate)
+  if (statStart) adStatsQuery = adStatsQuery.gte('stat_date', statStart)
+  if (statEnd) adStatsQuery = adStatsQuery.lte('stat_date', statEnd)
 
-  // 3. 결제 데이터
+  // 3. 결제 데이터 — payment_date(DATE 컬럼)는 KST 날짜 문자열로 비교
   let paymentsQuery = supabase
     .from('payments')
     .select('payment_amount, customer_id, payment_date')
+    .limit(5000)
   paymentsQuery = applyClinicFilter(paymentsQuery, ctx)!
-  paymentsQuery = applyDateRange(paymentsQuery, 'payment_date', startDate, endDate)
+  if (statStart) paymentsQuery = paymentsQuery.gte('payment_date', statStart)
+  if (statEnd) paymentsQuery = paymentsQuery.lte('payment_date', statEnd)
 
   // 4. 예약 데이터 (전환율 계산용)
   let bookingsQuery = supabase
     .from('bookings')
     .select('id, customer_id, status, created_at')
+    .limit(5000)
   bookingsQuery = applyClinicFilter(bookingsQuery, ctx)!
   bookingsQuery = applyDateRange(bookingsQuery, 'created_at', startDate, endDate)
 
