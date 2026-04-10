@@ -1,7 +1,7 @@
 import { serverSupabase } from '@/lib/supabase'
-import { withClinicFilter, ClinicContext, applyClinicFilter, applyDateRange, apiSuccess } from '@/lib/api-middleware'
+import { withClinicFilter, ClinicContext, applyClinicFilter, apiSuccess } from '@/lib/api-middleware'
 import { normalizeChannel } from '@/lib/channel'
-import { sourceToChannel, getSourceLabel } from '@/lib/platform'
+import { sourceToChannel } from '@/lib/platform'
 import { getKstDateString } from '@/lib/date'
 
 /**
@@ -65,95 +65,63 @@ export const GET = withClinicFilter(async (req: Request, { clinicId, assignedCli
     paymentsQuery,
   ])
 
-  // 채널별 리드 집계 — source 원본 기준 세분화
-  const leadsBySource: Record<string, Set<number>> = {}
-  const customerToSource: Map<number, string> = new Map()
+  // 채널별 리드 집계 — 플랫폼 단위 통합 (Meta, Google 등)
+  const leadsByChannel: Record<string, Set<number>> = {}
+  const customerToChannel: Map<number, string> = new Map()
 
   for (const lead of leadsRes.data || []) {
-    const rawSource = lead.utm_source || 'Unknown'
-    // getSourceLabel로 매칭되면 세분화 source, 아니면 normalizeChannel로 폴백
-    const source = getSourceLabel(rawSource) !== rawSource ? rawSource : normalizeChannel(rawSource)
+    const channel = normalizeChannel(lead.utm_source)
 
-    if (!leadsBySource[source]) {
-      leadsBySource[source] = new Set()
+    if (!leadsByChannel[channel]) {
+      leadsByChannel[channel] = new Set()
     }
-    leadsBySource[source].add(lead.id)
+    leadsByChannel[channel].add(lead.id)
 
-    if (!customerToSource.has(lead.customer_id)) {
-      customerToSource.set(lead.customer_id, source)
+    if (!customerToChannel.has(lead.customer_id)) {
+      customerToChannel.set(lead.customer_id, channel)
     }
   }
 
   // 광고 지출/클릭/노출 — 플랫폼 레벨 집계 (ad_campaign_stats.platform 기준)
-  const spendByPlatform: Record<string, number> = {}
-  const clicksByPlatform: Record<string, number> = {}
-  const impressionsByPlatform: Record<string, number> = {}
+  const spendByChannel: Record<string, number> = {}
+  const clicksByChannel: Record<string, number> = {}
+  const impressionsByChannel: Record<string, number> = {}
   for (const row of adStatsRes.data || []) {
-    const platform = sourceToChannel(row.platform) // meta_ads → Meta
-    spendByPlatform[platform] = (spendByPlatform[platform] || 0) + Number(row.spend_amount)
-    clicksByPlatform[platform] = (clicksByPlatform[platform] || 0) + Number(row.clicks || 0)
-    impressionsByPlatform[platform] = (impressionsByPlatform[platform] || 0) + Number(row.impressions || 0)
+    const channel = sourceToChannel(row.platform) // meta_ads → Meta
+    spendByChannel[channel] = (spendByChannel[channel] || 0) + Number(row.spend_amount)
+    clicksByChannel[channel] = (clicksByChannel[channel] || 0) + Number(row.clicks || 0)
+    impressionsByChannel[channel] = (impressionsByChannel[channel] || 0) + Number(row.impressions || 0)
   }
 
   // 채널별 매출 집계
-  const revenueBySource: Record<string, number> = {}
-  const payingCustomersBySource: Record<string, Set<number>> = {}
+  const revenueByChannel: Record<string, number> = {}
+  const payingCustomersByChannel: Record<string, Set<number>> = {}
 
   for (const payment of paymentsRes.data || []) {
-    const source = customerToSource.get(payment.customer_id) || 'Unknown'
-    revenueBySource[source] = (revenueBySource[source] || 0) + Number(payment.payment_amount)
+    const channel = customerToChannel.get(payment.customer_id) || 'Unknown'
+    revenueByChannel[channel] = (revenueByChannel[channel] || 0) + Number(payment.payment_amount)
 
-    if (!payingCustomersBySource[source]) {
-      payingCustomersBySource[source] = new Set()
+    if (!payingCustomersByChannel[channel]) {
+      payingCustomersByChannel[channel] = new Set()
     }
-    payingCustomersBySource[source].add(payment.customer_id)
+    payingCustomersByChannel[channel].add(payment.customer_id)
   }
 
-  // 리드 기준 source 목록만 사용 (광고비만 있고 리드 0건인 플랫폼 행은 제외)
-  const allSources = Object.keys(leadsBySource)
+  // 결과 생성 — 플랫폼 단위로 광고비 직접 매칭 (안분 불필요)
+  const allChannels = Object.keys(leadsByChannel)
 
-  // 세분화 source별 광고비 배분: 같은 플랫폼 내 리드 비율로 안분
-  // 예: Google 광고비 100만, google_search 리드 8건, google_gdn 리드 2건 → 80만 / 20만
-  const spendBySource: Record<string, number> = {}
-  const clicksBySource: Record<string, number> = {}
-  const impressionsBySource: Record<string, number> = {}
-
-  // 플랫폼별 세분화 source 그룹핑
-  const sourcesByPlatform: Record<string, string[]> = {}
-  for (const source of allSources) {
-    const platform = sourceToChannel(source)
-    if (!sourcesByPlatform[platform]) sourcesByPlatform[platform] = []
-    sourcesByPlatform[platform].push(source)
-  }
-
-  for (const [platform, sources] of Object.entries(sourcesByPlatform)) {
-    const totalPlatformSpend = spendByPlatform[platform] || 0
-    const totalPlatformClicks = clicksByPlatform[platform] || 0
-    const totalPlatformImpressions = impressionsByPlatform[platform] || 0
-    const totalLeads = sources.reduce((sum, s) => sum + (leadsBySource[s]?.size || 0), 0)
-
-    for (const source of sources) {
-      const sourceLeads = leadsBySource[source]?.size || 0
-      const ratio = totalLeads > 0 ? sourceLeads / totalLeads : 0
-      spendBySource[source] = Math.round(totalPlatformSpend * ratio)
-      clicksBySource[source] = Math.round(totalPlatformClicks * ratio)
-      impressionsBySource[source] = Math.round(totalPlatformImpressions * ratio)
-    }
-  }
-
-  // 결과 생성
-  const result = allSources
-    .filter(source => source !== 'Unknown' || leadsBySource[source]?.size > 0)
-    .map(source => {
-      const leads = leadsBySource[source]?.size || 0
-      const spend = spendBySource[source] || 0
-      const revenue = revenueBySource[source] || 0
-      const payingCustomers = payingCustomersBySource[source]?.size || 0
-      const clicks = clicksBySource[source] || 0
-      const impressions = impressionsBySource[source] || 0
+  const result = allChannels
+    .filter(ch => ch !== 'Unknown' || leadsByChannel[ch]?.size > 0)
+    .map(ch => {
+      const leads = leadsByChannel[ch]?.size || 0
+      const spend = spendByChannel[ch] || 0
+      const revenue = revenueByChannel[ch] || 0
+      const payingCustomers = payingCustomersByChannel[ch]?.size || 0
+      const clicks = clicksByChannel[ch] || 0
+      const impressions = impressionsByChannel[ch] || 0
 
       return {
-        channel: source,
+        channel: ch,
         leads,
         spend,
         revenue,
