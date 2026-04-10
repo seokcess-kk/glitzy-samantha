@@ -1,6 +1,5 @@
 import { Badge, type BadgeProps } from '@/components/ui/badge'
 import { normalizeChannel } from '@/lib/channel'
-import { getSourceLabel } from '@/lib/platform'
 
 type ChannelVariant = NonNullable<BadgeProps['variant']>
 
@@ -20,22 +19,11 @@ const getChannelVariant = (channel: string): ChannelVariant => {
   return 'secondary'
 }
 
-/**
- * source 값 → 라벨 변환
- * 세분화 source(google_search)는 getSourceLabel()로 표시,
- * 기존 값(Meta, Google, phone 등)은 normalizeChannel()로 폴백
- */
-function resolveLabel(channel: string): string {
-  const sourceLabel = getSourceLabel(channel)
-  // getSourceLabel이 원본을 그대로 반환하면 매칭 안 된 것 → normalizeChannel 폴백
-  if (sourceLabel !== channel) return sourceLabel
-  return normalizeChannel(channel)
-}
-
 export function ChannelBadge({ channel, className }: ChannelBadgeProps) {
+  const label = normalizeChannel(channel)
   return (
     <Badge variant={getChannelVariant(channel)} className={className}>
-      {resolveLabel(channel)}
+      {label}
     </Badge>
   )
 }

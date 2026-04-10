@@ -1,6 +1,7 @@
 import { serverSupabase } from '@/lib/supabase'
 import { withClinicFilter, ClinicContext, applyClinicFilter, apiError, apiSuccess } from '@/lib/api-middleware'
 import { getKstDateString, getKstDayStartISO, getKstDayEndISO } from '@/lib/date'
+import { normalizeChannel } from '@/lib/channel'
 
 /**
  * 캠페인별 리드 목록 API
@@ -102,7 +103,7 @@ export const GET = withClinicFilter(async (req: Request, { clinicId, assignedCli
       }
     }
     const stat = campaignMap[name]
-    const ch = lead.utm_source || 'Unknown'
+    const ch = normalizeChannel(lead.utm_source)
     stat.channels[ch] = (stat.channels[ch] || 0) + 1
     stat.lead_count++
     if (lead.chatbot_sent) stat.chatbot_sent_count++
