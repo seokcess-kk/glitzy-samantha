@@ -242,7 +242,7 @@ export async function GET(req: NextRequest) {
                 } catch(e) {
                   window.location.href = lpData.redirectUrl;
                 }
-              }, 1200);
+              }, 600);
             }
           }, 50);
         }
