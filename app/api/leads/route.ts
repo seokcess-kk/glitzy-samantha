@@ -8,7 +8,13 @@ import { getKstDateString } from '@/lib/date'
  * - 각 고객의 모든 유입(leads) 이력 포함
  * - startDate 파라미터로 기간 필터링 가능
  */
-export const GET = withClinicFilter(async (req: Request, { clinicId, assignedClinicIds }: ClinicContext) => {
+export const GET = withClinicFilter(async (req: Request, { user, clinicId, assignedClinicIds }: ClinicContext) => {
+  if (user.role === 'demo_viewer') {
+    const { demoLeads } = await import('@/lib/demo/fixtures/extras')
+    const url = new URL(req.url)
+    return apiSuccess(demoLeads(clinicId, url.searchParams.get('startDate'), url.searchParams.get('endDate')))
+  }
+
   const supabase = serverSupabase()
   const url = new URL(req.url)
   const startDate = url.searchParams.get('startDate')

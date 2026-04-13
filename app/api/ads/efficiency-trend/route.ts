@@ -15,7 +15,13 @@ interface DayEntry {
   ctr: number
 }
 
-export const GET = withClinicFilter(async (req: Request, { clinicId, assignedClinicIds }: ClinicContext) => {
+export const GET = withClinicFilter(async (req: Request, { user, clinicId, assignedClinicIds }: ClinicContext) => {
+  if (user.role === 'demo_viewer') {
+    const { demoEfficiencyTrend } = await import('@/lib/demo/fixtures/aggregates')
+    const url = new URL(req.url)
+    return apiSuccess(demoEfficiencyTrend(clinicId, url.searchParams.get('startDate'), url.searchParams.get('endDate')))
+  }
+
   const supabase = serverSupabase()
   const url = new URL(req.url)
 

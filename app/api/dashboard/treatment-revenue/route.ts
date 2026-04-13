@@ -5,8 +5,14 @@ import { createLogger } from '@/lib/logger'
 
 const logger = createLogger('TreatmentRevenue')
 
-export const GET = withClinicFilter(async (req: Request, { clinicId, assignedClinicIds }: ClinicContext) => {
+export const GET = withClinicFilter(async (req: Request, { user, clinicId, assignedClinicIds }: ClinicContext) => {
   try {
+    if (user.role === 'demo_viewer') {
+      const { demoTreatmentRevenue } = await import('@/lib/demo/fixtures/aggregates')
+      const url = new URL(req.url)
+      return apiSuccess(demoTreatmentRevenue(clinicId, url.searchParams.get('startDate'), url.searchParams.get('endDate')))
+    }
+
     if (assignedClinicIds !== null && assignedClinicIds.length === 0) {
       return apiSuccess([])
     }

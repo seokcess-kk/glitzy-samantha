@@ -53,3 +53,4 @@
 | 2026-04-07 | fix: 시술별 매출 비중 KPI 매출 불일치 수정 — leads 간접 조회(200건 제한)에서 payments 직접 조회로 변경 (`/api/dashboard/treatment-revenue` 신규) |
 | 2026-04-07 | feat: 광고 플랫폼 2계층 구조 도입 — `lib/platform.ts` 중앙 상수, campaign_type 컬럼 추가, platform 값 `meta_ads` 형식 통일, Naver/Kakao/Dable 신규 플랫폼 API 설정 UI |
 | 2026-04-13 | feat: 랜딩페이지 제출 후 리다이렉트 URL 설정 — `landing_pages.redirect_url` 컬럼 추가, 관리 페이지 입력란, `/api/lp/render`에서 `__LP_DATA__.redirectUrl` 주입 후 폼 제출 성공 시 `location.href` 이동 (HTML 파일 무수정) |
+| 2026-04-13 | feat: Demo 모드 (`demo_viewer` role) — 영업/영상 촬영용 실데이터 무결성 보장 샌드박스. 4겹 방어(role / 화이트리스트 미들웨어 / API 래퍼 / 핸들러 분기), `/demo/enter?key=<DEMO_ACCESS_KEY>` 진입 + `/demo/exit` 퇴장, `lib/demo/fixtures/` (병원 6개 × 12개월 deterministic 광고 데이터 + 에피소드), 18개 GET API fixture 분기, 모든 Write 405 차단, Cron/동기화 접근 불가, `DemoBadge` UI, `scripts/seed-demo-user.ts` |

@@ -45,6 +45,7 @@ const ROLE_LEVEL: Record<string, number> = {
   agency_staff: 2,
   clinic_admin: 2,
   superadmin: 3,
+  demo_viewer: 3,
 }
 
 // 그룹별 메뉴 구조
@@ -119,6 +120,7 @@ export default function Sidebar({ onClose }: { onClose?: () => void }) {
   const isSuperAdmin = userRole === 'superadmin'
   const isClinicAdmin = userRole === 'clinic_admin'
   const isAgencyStaff = userRole === 'agency_staff'
+  const isDemoViewer = userRole === 'demo_viewer'
 
   const [pwDialogOpen, setPwDialogOpen] = useState(false)
   const { selectedClinicId, setSelectedClinicId, clinics } = useClinic()
@@ -175,8 +177,8 @@ export default function Sidebar({ onClose }: { onClose?: () => void }) {
         <ThemeToggle />
       </div>
 
-      {/* 슈퍼어드민 / agency_staff: 클리닉 스위처 */}
-      {(isSuperAdmin || isAgencyStaff) && (
+      {/* 슈퍼어드민 / agency_staff / demo_viewer: 클리닉 스위처 */}
+      {(isSuperAdmin || isAgencyStaff || isDemoViewer) && (
         <div className="px-3 py-3 border-b border-border">
           <p className="text-[10px] text-muted-foreground uppercase tracking-widest mb-2 px-1">병원 선택</p>
           <Select
@@ -187,7 +189,7 @@ export default function Sidebar({ onClose }: { onClose?: () => void }) {
               <SelectValue placeholder="전체 병원" />
             </SelectTrigger>
             <SelectContent>
-              {isSuperAdmin && <SelectItem value="all">전체 병원</SelectItem>}
+              {(isSuperAdmin || isDemoViewer) && <SelectItem value="all">전체 병원</SelectItem>}
               {clinics.map(c => (
                 <SelectItem key={c.id} value={String(c.id)}>{c.name}</SelectItem>
               ))}

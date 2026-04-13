@@ -12,12 +12,18 @@ function extractUtmId(inflowUrl: string | null): string | null {
   return match?.[1] || null
 }
 
-export const GET = withClinicFilter(async (req: Request, { clinicId, assignedClinicIds }: ClinicContext) => {
-  const supabase = serverSupabase()
+export const GET = withClinicFilter(async (req: Request, { user, clinicId, assignedClinicIds }: ClinicContext) => {
   const url = new URL(req.url)
   const daysParam = Number(url.searchParams.get('days') || 30)
   const days = Number.isFinite(daysParam) && daysParam > 0 ? daysParam : 30
   const platform = url.searchParams.get('platform')
+
+  if (user.role === 'demo_viewer') {
+    const { demoAdStats } = await import('@/lib/demo/fixtures/aggregates')
+    return apiSuccess(demoAdStats(clinicId, days, platform))
+  }
+
+  const supabase = serverSupabase()
 
   const sinceDate = new Date(Date.now() - days * 24 * 60 * 60 * 1000)
   const since = getKstDateString(sinceDate)

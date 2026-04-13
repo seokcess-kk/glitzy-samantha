@@ -13,6 +13,7 @@ import { logActivity } from '@/lib/activity-log'
 export async function PUT(req: Request, { params }: { params: { id: string } }) {
   const user = await getSessionUser()
   if (!user) return apiError('Unauthorized', 401)
+  if (user.role === 'demo_viewer') return apiError('demo mode: read-only', 405)
 
   const customerId = parseId(params.id)
   if (!customerId) {

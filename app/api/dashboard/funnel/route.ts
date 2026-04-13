@@ -8,12 +8,18 @@ import { getKstDateString } from '@/lib/date'
  * 퍼널 분석 API
  * Phase 2: Lead → Booking → Visit → Payment 전환율 분석
  */
-export const GET = withClinicFilter(async (req: Request, { clinicId, assignedClinicIds }: ClinicContext) => {
-  const supabase = serverSupabase()
+export const GET = withClinicFilter(async (req: Request, { user, clinicId, assignedClinicIds }: ClinicContext) => {
   const url = new URL(req.url)
   const startParam = url.searchParams.get('startDate')
   const endParam = url.searchParams.get('endDate')
   const groupBy = url.searchParams.get('groupBy') || 'total' // total | channel | campaign
+
+  if (user.role === 'demo_viewer') {
+    const { demoFunnel } = await import('@/lib/demo/fixtures/aggregates')
+    return apiSuccess(demoFunnel(clinicId, startParam, endParam, groupBy))
+  }
+
+  const supabase = serverSupabase()
 
   // agency_staff 배정 병원 0개 → 빈 결과
   if (assignedClinicIds !== null && assignedClinicIds.length === 0) {

@@ -15,7 +15,13 @@ interface DayChannelEntry {
  * 채널별 일별 ROAS 추이 API
  * GET /api/attribution/roas-trend?startDate=YYYY-MM-DD&endDate=YYYY-MM-DD
  */
-export const GET = withClinicFilter(async (req: Request, { clinicId, assignedClinicIds }: ClinicContext) => {
+export const GET = withClinicFilter(async (req: Request, { user, clinicId, assignedClinicIds }: ClinicContext) => {
+  if (user.role === 'demo_viewer') {
+    const { demoAttributionRoasTrend } = await import('@/lib/demo/fixtures/extras')
+    const url = new URL(req.url)
+    return apiSuccess(demoAttributionRoasTrend(clinicId, url.searchParams.get('startDate'), url.searchParams.get('endDate')))
+  }
+
   const supabase = serverSupabase()
   const url = new URL(req.url)
 

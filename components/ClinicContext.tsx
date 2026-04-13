@@ -23,17 +23,18 @@ export function ClinicProvider({ children }: { children: ReactNode }) {
   const user = session?.user
   const isSuperAdmin = user?.role === 'superadmin'
   const isAgencyStaff = user?.role === 'agency_staff'
+  const isDemoViewer = user?.role === 'demo_viewer'
 
   const [selectedClinicId, setSelectedClinicIdState] = useState<number | null>(null)
   const [clinics, setClinics] = useState<any[]>([])
 
   useEffect(() => {
-    if (isSuperAdmin) {
+    if (isSuperAdmin || isDemoViewer) {
       fetch('/api/admin/clinics')
         .then(r => r.json())
         .then(d => setClinics(Array.isArray(d) ? d : []))
         .catch(() => {})
-      // superadmin은 항상 "전체 병원"으로 시작
+      // superadmin/demo_viewer는 항상 "전체 병원"으로 시작
     } else if (isAgencyStaff) {
       fetch('/api/my/clinics')
         .then(r => r.json())
@@ -54,7 +55,7 @@ export function ClinicProvider({ children }: { children: ReactNode }) {
     } else if (user?.clinic_id) {
       setSelectedClinicIdState(user.clinic_id)
     }
-  }, [isSuperAdmin, isAgencyStaff, user?.clinic_id])
+  }, [isSuperAdmin, isAgencyStaff, isDemoViewer, user?.clinic_id])
 
   const setSelectedClinicId = (id: number | null) => {
     setSelectedClinicIdState(id)

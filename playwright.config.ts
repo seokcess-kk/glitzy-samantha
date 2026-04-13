@@ -34,13 +34,19 @@ export default defineConfig({
         storageState: '.auth/superadmin.json',
       },
       dependencies: ['setup'],
-      testIgnore: /(auth|landing-page)\.spec\.ts/,
+      testIgnore: /(auth|landing-page|demo)\.spec\.ts/,
     },
     // 인증 없이 실행하는 테스트 (로그인, 랜딩페이지 등)
     {
       name: 'chromium-no-auth',
       use: { ...devices['Desktop Chrome'] },
       testMatch: /(auth|landing-page)\.spec\.ts/,
+    },
+    // Demo mode 테스트 — 자체 쿠키 발급, storageState 미사용
+    {
+      name: 'demo',
+      use: { ...devices['Desktop Chrome'] },
+      testMatch: /demo\.spec\.ts/,
     },
   ],
   webServer: {

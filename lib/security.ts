@@ -129,7 +129,7 @@ export function parseId(value: unknown): number | null {
 export interface SessionUser {
   id: string
   username: string
-  role: 'superadmin' | 'clinic_admin' | 'clinic_staff' | 'agency_staff'
+  role: 'superadmin' | 'clinic_admin' | 'clinic_staff' | 'agency_staff' | 'demo_viewer'
   clinic_id: number | null
   password_version: number
 }

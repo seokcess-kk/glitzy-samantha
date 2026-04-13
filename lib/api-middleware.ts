@@ -12,6 +12,7 @@ import { authOptions } from './auth'
 import { getClinicId } from './session'
 import { SessionUser } from './security'
 import { serverSupabase } from './supabase'
+import { assertDemoApiAllowed } from './demo/guard'
 
 // AuthUser를 SessionUser의 별칭으로 export (하위 호환성)
 export type AuthUser = SessionUser
@@ -87,6 +88,8 @@ export function withAuth(handler: AuthHandler) {
   return async (req: Request): Promise<NextResponse> => {
     const user = await getAuthUser()
     if (!user) return UNAUTHORIZED()
+    const demoBlock = assertDemoApiAllowed(user.role, req)
+    if (demoBlock) return demoBlock
     return handler(req, { user })
   }
 }
@@ -102,6 +105,8 @@ export function withClinicFilter(handler: ClinicHandler) {
   return async (req: Request): Promise<NextResponse> => {
     const user = await getAuthUser()
     if (!user) return UNAUTHORIZED()
+    const demoBlock = assertDemoApiAllowed(user.role, req)
+    if (demoBlock) return demoBlock
 
     const clinicId = await getClinicId(req.url)
 
@@ -123,6 +128,10 @@ export function withSuperAdmin(handler: SuperAdminHandler) {
   return async (req: Request): Promise<NextResponse> => {
     const user = await getAuthUser()
     if (!user) return UNAUTHORIZED()
+    const demoBlock = assertDemoApiAllowed(user.role, req)
+    if (demoBlock) return demoBlock
+    // demo_viewer는 화이트리스트 통과 시 핸들러로 진입 — 핸들러가 fixture 분기 필수
+    if (user.role === 'demo_viewer') return handler(req, { user })
     if (user.role !== 'superadmin') return FORBIDDEN_SUPERADMIN()
     return handler(req, { user })
   }
@@ -137,6 +146,8 @@ export function withClinicAdmin(handler: ClinicAdminHandler) {
   return async (req: Request): Promise<NextResponse> => {
     const user = await getAuthUser()
     if (!user) return UNAUTHORIZED()
+    const demoBlock = assertDemoApiAllowed(user.role, req)
+    if (demoBlock) return demoBlock
     if (user.role !== 'superadmin' && user.role !== 'clinic_admin') return FORBIDDEN_CLINIC_ADMIN()
 
     const clinicId = await getClinicId(req.url)

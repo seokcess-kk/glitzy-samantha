@@ -32,7 +32,13 @@ function extractUtmId(inflowUrl: string | null): string | null {
  * 1차: ad_stats.utm_content 직접 매칭 (url_tags/effective_link 설정된 경우)
  * 2차: leads.inflow_url의 utm_id → campaign_id → ad_stats 캠페인별 집계 → 리드 비율 배분
  */
-export const GET = withClinicFilter(async (req: Request, { clinicId, assignedClinicIds }: ClinicContext) => {
+export const GET = withClinicFilter(async (req: Request, { user, clinicId, assignedClinicIds }: ClinicContext) => {
+  if (user.role === 'demo_viewer') {
+    const { demoCreativesPerformance } = await import('@/lib/demo/fixtures/extras')
+    const url = new URL(req.url)
+    return apiSuccess(demoCreativesPerformance(clinicId, url.searchParams.get('startDate'), url.searchParams.get('endDate')))
+  }
+
   const supabase = serverSupabase()
   const url = new URL(req.url)
   const startDate = url.searchParams.get('startDate')

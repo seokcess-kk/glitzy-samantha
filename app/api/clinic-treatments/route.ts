@@ -10,7 +10,12 @@ import { sanitizeString, parseId } from '@/lib/security'
  * DELETE: 시술 삭제 (clinic_admin 이상)
  */
 
-export const GET = withClinicFilter(async (req: Request, { clinicId }: ClinicContext) => {
+export const GET = withClinicFilter(async (req: Request, { user, clinicId }: ClinicContext) => {
+  if (user.role === 'demo_viewer') {
+    const { demoClinicTreatments } = await import('@/lib/demo/fixtures/extras')
+    return apiSuccess(demoClinicTreatments(clinicId))
+  }
+
   if (!clinicId) return apiSuccess([])
 
   const supabase = serverSupabase()

@@ -16,6 +16,22 @@ export async function getClinicId(url?: string): Promise<number | null> {
 
   const user = session.user as { role: string; clinic_id: number | null }
 
+  // demo_viewer: 쿼리 파라미터만 파싱하고 DB 검증 스킵 (fixture ID는 실 clinics 테이블에 없음)
+  if (user.role === 'demo_viewer') {
+    if (url) {
+      try {
+        const clinicIdParam = new URL(url).searchParams.get('clinic_id')
+        if (clinicIdParam) {
+          const clinicId = parseInt(clinicIdParam, 10)
+          if (!isNaN(clinicId) && clinicId >= 1) return clinicId
+        }
+      } catch {
+        return null
+      }
+    }
+    return null
+  }
+
   if (user.role === 'superadmin') {
     if (url) {
       try {

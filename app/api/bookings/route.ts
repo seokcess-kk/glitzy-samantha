@@ -16,10 +16,23 @@ import { createLogger } from '@/lib/logger'
 
 const logger = createLogger('Bookings')
 
+// demo_viewer는 bookings의 어떤 write도 수행 불가. GET은 fixture 반환.
+// POST/PUT/PATCH/DELETE 상단에 동일한 차단 블록이 삽입됨.
+async function blockDemoWrite(user: { role?: string }): Promise<Response | null> {
+  if (user.role === 'demo_viewer') return new Response('demo mode: read-only', { status: 405 })
+  return null
+}
+
 export async function GET(req: Request) {
   try {
     const user = await getSessionUser()
     if (!user) return apiError('Unauthorized', 401)
+
+    if (user.role === 'demo_viewer') {
+      const { demoBookings } = await import('@/lib/demo/fixtures/extras')
+      const clinicId = await getClinicId(req.url)
+      return apiSuccess(demoBookings(clinicId))
+    }
 
     const supabase = serverSupabase()
     const clinicId = await getClinicId(req.url)
@@ -45,6 +58,8 @@ export async function POST(req: Request) {
   try {
     const user = await getSessionUser()
     if (!user) return apiError('Unauthorized', 401)
+    const blocked = await blockDemoWrite(user)
+    if (blocked) return blocked
 
     const supabase = serverSupabase()
     const clinicId = await getClinicId(req.url)
@@ -115,6 +130,8 @@ export async function PUT(req: Request) {
   try {
     const user = await getSessionUser()
     if (!user) return apiError('Unauthorized', 401)
+    const blocked = await blockDemoWrite(user)
+    if (blocked) return blocked
 
     const body = await req.json()
     const { id, status, notes, booking_datetime } = body
@@ -176,6 +193,8 @@ export async function PATCH(req: Request) {
   try {
     const user = await getSessionUser()
     if (!user) return apiError('Unauthorized', 401)
+    const blocked = await blockDemoWrite(user)
+    if (blocked) return blocked
 
     const body = await req.json()
     const { id, status } = body
