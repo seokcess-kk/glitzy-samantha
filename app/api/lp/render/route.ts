@@ -199,8 +199,15 @@ export async function GET(req: NextRequest) {
           clinic_name: lpData.clinicName || ''
         });
         // 리드 제출 성공 후 지정된 URL로 이동 (관리자 설정)
+        // 500ms 지연: GA4/Meta Pixel 전환 태그의 HTTP 요청 전송 여유 확보
         if (lpData.redirectUrl) {
-          setTimeout(function() { window.location.href = lpData.redirectUrl; }, 1500);
+          setTimeout(function() {
+            try {
+              (window.top || window).location.href = lpData.redirectUrl;
+            } catch(e) {
+              window.location.href = lpData.redirectUrl;
+            }
+          }, 500);
         }
       }
       return res;
