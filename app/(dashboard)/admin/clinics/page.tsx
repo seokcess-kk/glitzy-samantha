@@ -21,6 +21,7 @@ import {
 import {
   Dialog,
   DialogContent,
+  DialogDescription,
   DialogHeader,
   DialogTitle,
   DialogFooter,
@@ -334,6 +335,7 @@ export default function ClinicsPage() {
         <DialogContent className="max-w-lg">
           <DialogHeader>
             <DialogTitle>신규 병원 등록</DialogTitle>
+            <DialogDescription>병원 정보를 입력하고 glitzy-web 거래처를 연결합니다.</DialogDescription>
           </DialogHeader>
           <div className="space-y-4 py-4">
             <div className="space-y-2">
@@ -505,6 +507,7 @@ export default function ClinicsPage() {
         <DialogContent>
           <DialogHeader>
             <DialogTitle>리드 알림 설정 - {notifyTarget?.name}</DialogTitle>
+            <DialogDescription>새 리드 유입 시 알림 문자를 발송할 연락처를 설정합니다.</DialogDescription>
           </DialogHeader>
           <div className="space-y-4 py-4">
             <p className="text-xs text-muted-foreground">
@@ -565,11 +568,9 @@ export default function ClinicsPage() {
         <DialogContent>
           <DialogHeader>
             <DialogTitle>ERP 거래처 연결 - {erpLinkTarget?.name}</DialogTitle>
+            <DialogDescription>glitzy-web에 등록된 거래처를 선택하여 이 병원과 연결합니다.</DialogDescription>
           </DialogHeader>
           <div className="space-y-4 py-4">
-            <p className="text-xs text-muted-foreground">
-              glitzy-web에 등록된 거래처를 선택하여 이 병원과 연결합니다.
-            </p>
             {selectedErpClient ? (
               <div className="flex items-center gap-2 bg-brand-600/10 text-brand-600 rounded-md px-3 py-2 text-sm">
                 <Link2 size={14} />
