@@ -388,7 +388,14 @@ export default function ClinicsPage() {
                             <button
                               key={item.id}
                               type="button"
-                              onClick={() => { setSelectedErpClient(item); setErpFilter('') }}
+                              onClick={() => {
+                                setSelectedErpClient(item)
+                                setErpFilter('')
+                                setForm(f => ({
+                                  name: f.name || item.name,
+                                  slug: f.slug || `erp-${(item.id as string).slice(0, 8)}`,
+                                }))
+                              }}
                               className="w-full text-left px-3 py-2 text-sm hover:bg-muted/50 transition-colors flex justify-between border-b border-border last:border-b-0"
                             >
                               <span>{item.name}</span>
