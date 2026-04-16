@@ -1,5 +1,5 @@
 'use client'
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback, useRef } from 'react'
 import { Plus, Building2, Bell, Pencil, X, Settings2, Link2 } from 'lucide-react'
 import { useSession } from 'next-auth/react'
 import { useRouter } from 'next/navigation'
@@ -60,11 +60,13 @@ export default function ClinicsPage() {
   const [apiConfigTarget, setApiConfigTarget] = useState<{ id: number; name: string } | null>(null)
   const [apiConfigSummaries, setApiConfigSummaries] = useState<Record<number, ApiConfigSummary[]>>({})
   // ERP 거래처 연결
-  const [erpOption, setErpOption] = useState<'none' | 'create' | 'link'>('none')
+  type ErpLinkMode = 'select' | 'create' | 'later'
+  const [erpLinkMode, setErpLinkMode] = useState<ErpLinkMode>('select')
   const [erpClients, setErpClients] = useState<any[]>([])
   const [erpClientsLoading, setErpClientsLoading] = useState(false)
-  const [erpFilter, setErpFilter] = useState('')
   const [selectedErpClient, setSelectedErpClient] = useState<any>(null)
+  const [erpCreateData, setErpCreateData] = useState({ business_number: '', contact_name: '', contact_phone: '', contact_email: '' })
+  const erpClientsLoadedRef = useRef(false)
   const [erpLinkDialogOpen, setErpLinkDialogOpen] = useState(false)
   const [erpLinkTarget, setErpLinkTarget] = useState<any>(null)
   const [erpLinkSaving, setErpLinkSaving] = useState(false)
@@ -118,38 +120,56 @@ export default function ClinicsPage() {
   const erpDisplayName = (c: any) => c.branch_name ? `${c.name} (${c.branch_name})` : c.name
 
   const loadErpClients = useCallback(async () => {
-    if (erpClients.length > 0) return
+    if (erpClientsLoadedRef.current) return
     setErpClientsLoading(true)
     try {
-      const res = await fetch('/api/admin/erp-clients?limit=100')
-      const json = await res.json()
-      const items = json?.data?.data || json?.data || []
-      setErpClients(Array.isArray(items) ? items : [])
+      const all: any[] = []
+      let page = 1
+      while (true) {
+        const res = await fetch(`/api/admin/erp-clients?page=${page}&limit=100`)
+        if (!res.ok) throw new Error()
+        const json = await res.json()
+        const items = json?.data?.data || json?.data || []
+        if (Array.isArray(items)) all.push(...items)
+        const pagination = json?.data?.pagination
+        if (!pagination || page >= pagination.totalPages) break
+        page++
+      }
+      setErpClients(all)
+      erpClientsLoadedRef.current = true
     } catch {
-      toast.error('거래처 목록 로드 실패')
+      toast.error('glitzy-web 거래처 목록을 불러올 수 없습니다.')
     } finally {
       setErpClientsLoading(false)
     }
-  }, [erpClients.length])
+  }, [])
 
-  const filteredErpClients = erpClients.filter((c: any) => {
-    if (!erpFilter) return true
-    const q = erpFilter.toLowerCase()
-    return c.name?.toLowerCase().includes(q) || c.branch_name?.toLowerCase().includes(q)
-  })
+  const resetErpForm = () => {
+    setErpLinkMode('select')
+    setSelectedErpClient(null)
+    setErpCreateData({ business_number: '', contact_name: '', contact_phone: '', contact_email: '' })
+  }
 
   const handleSave = async () => {
     if (!form.name || !form.slug) {
       toast.error('병원명과 슬러그를 입력해주세요.')
       return
     }
+    if (erpLinkMode === 'select' && !selectedErpClient) {
+      toast.error('거래처를 선택해주세요.')
+      return
+    }
     setSaving(true)
     try {
       const payload: Record<string, unknown> = { name: form.name, slug: form.slug }
-      if (erpOption === 'create') {
-        payload.create_erp_client = true
-      } else if (erpOption === 'link' && selectedErpClient) {
+      if (erpLinkMode === 'select' && selectedErpClient) {
         payload.erp_client_id = selectedErpClient.id
+      } else if (erpLinkMode === 'create') {
+        payload.create_erp_client = true
+        if (erpCreateData.business_number) payload.business_number = erpCreateData.business_number
+        if (erpCreateData.contact_name) payload.contact_name = erpCreateData.contact_name
+        if (erpCreateData.contact_phone) payload.contact_phone = erpCreateData.contact_phone
+        if (erpCreateData.contact_email) payload.contact_email = erpCreateData.contact_email
       }
 
       const res = await fetch('/api/admin/clinics', {
@@ -162,9 +182,7 @@ export default function ClinicsPage() {
         throw new Error(err.error)
       }
       setForm({ name: '', slug: '' })
-      setErpOption('none')
-      setErpFilter('')
-      setSelectedErpClient(null)
+      resetErpForm()
       setDialogOpen(false)
       toast.success('병원이 등록되었습니다.')
       fetchClinics()
@@ -177,7 +195,6 @@ export default function ClinicsPage() {
 
   const openErpLinkDialog = (clinic: any) => {
     setErpLinkTarget(clinic)
-    setErpFilter('')
     setSelectedErpClient(null)
     setErpLinkDialogOpen(true)
     loadErpClients()
@@ -314,7 +331,7 @@ export default function ClinicsPage() {
       <PageHeader icon={Building2} title="병원 관리" description="병원 고객사 등록 및 관리" />
 
       <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
-        <DialogContent>
+        <DialogContent className="max-w-lg">
           <DialogHeader>
             <DialogTitle>신규 병원 등록</DialogTitle>
           </DialogHeader>
@@ -338,77 +355,135 @@ export default function ClinicsPage() {
               />
               <p className="text-xs text-muted-foreground">URL에 사용됩니다. 영문 소문자, 숫자, 하이픈만 허용</p>
             </div>
-            <div className="space-y-2">
-              <Label className="text-xs text-muted-foreground">ERP 거래처 연결</Label>
-              <div className="flex gap-2">
-                {([['none', '나중에'], ['create', '새로 생성'], ['link', '기존 연결']] as const).map(([val, label]) => (
-                  <button
-                    key={val}
+
+            {/* glitzy-web 거래처 연결 */}
+            <div className="space-y-3">
+              <Label className="text-xs text-muted-foreground">glitzy-web 거래처 연결</Label>
+              <div className="flex gap-1">
+                {([
+                  { value: 'select' as ErpLinkMode, label: '거래처 선택' },
+                  { value: 'create' as ErpLinkMode, label: '새로 생성' },
+                  { value: 'later' as ErpLinkMode, label: '나중에 연결' },
+                ]).map(opt => (
+                  <Button
+                    key={opt.value}
                     type="button"
-                    onClick={() => { setErpOption(val); setSelectedErpClient(null); setErpFilter(''); if (val === 'link') loadErpClients() }}
-                    className={`px-3 py-1.5 rounded-md text-xs border transition-colors ${
-                      erpOption === val
-                        ? 'border-brand-500 bg-brand-500/10 text-brand-400'
-                        : 'border-border text-muted-foreground hover:text-foreground'
-                    }`}
+                    variant={erpLinkMode === opt.value ? 'default' : 'outline'}
+                    size="sm"
+                    className={erpLinkMode === opt.value ? 'bg-brand-600 hover:bg-brand-700' : ''}
+                    onClick={() => {
+                      setErpLinkMode(opt.value)
+                      setSelectedErpClient(null)
+                      if (opt.value === 'select') loadErpClients()
+                    }}
                   >
-                    {label}
-                  </button>
+                    {opt.label}
+                  </Button>
                 ))}
               </div>
-              {erpOption === 'link' && (
-                <div className="space-y-2 mt-2">
+
+              {/* 거래처 드롭다운 목록 */}
+              {erpLinkMode === 'select' && (
+                <div className="space-y-2 border border-border rounded-lg p-3">
                   {selectedErpClient ? (
-                    <div className="flex items-center gap-2 px-3 py-2 rounded-md bg-emerald-500/10 border border-emerald-500/20">
-                      <Link2 size={12} className="text-emerald-400" />
-                      <span className="text-sm text-emerald-400">{erpDisplayName(selectedErpClient)}</span>
-                      <button type="button" onClick={() => setSelectedErpClient(null)} className="ml-auto text-muted-foreground hover:text-foreground">
+                    <div className="flex items-center gap-2 bg-brand-600/10 text-brand-600 rounded-md px-3 py-2 text-sm">
+                      <Link2 size={14} />
+                      <span className="font-medium">{erpDisplayName(selectedErpClient)}</span>
+                      <button type="button" onClick={() => setSelectedErpClient(null)} className="ml-auto hover:text-red-400">
                         <X size={14} />
                       </button>
                     </div>
+                  ) : erpClientsLoading ? (
+                    <p className="text-xs text-muted-foreground text-center py-3">거래처 목록 불러오는 중...</p>
+                  ) : erpClients.length === 0 ? (
+                    <p className="text-xs text-muted-foreground text-center py-3">등록된 거래처가 없습니다.</p>
                   ) : (
-                    <div>
-                      <div className="mb-2">
-                        <Input
-                          type="text"
-                          value={erpFilter}
-                          onChange={e => setErpFilter(e.target.value)}
-                          placeholder="이름으로 필터..."
-                          className="h-8 text-xs"
-                        />
-                      </div>
-                      <div className="max-h-40 overflow-y-auto border border-border rounded-md">
-                        {erpClientsLoading ? (
-                          <p className="px-3 py-4 text-xs text-muted-foreground text-center">거래처 목록 로딩 중...</p>
-                        ) : filteredErpClients.length === 0 ? (
-                          <p className="px-3 py-4 text-xs text-muted-foreground text-center">
-                            {erpClients.length === 0 ? '등록된 거래처가 없습니다.' : '일치하는 거래처가 없습니다.'}
-                          </p>
-                        ) : (
-                          filteredErpClients.map((item: any) => (
-                            <button
-                              key={item.id}
-                              type="button"
-                              onClick={() => {
-                                setSelectedErpClient(item)
-                                setErpFilter('')
-                                const displayName = erpDisplayName(item)
-                                setForm(f => ({
-                                  name: f.name || displayName,
-                                  slug: f.slug || `erp-${(item.id as string).slice(0, 8)}`,
-                                }))
-                              }}
-                              className="w-full text-left px-3 py-2 text-sm hover:bg-muted/50 transition-colors flex justify-between border-b border-border last:border-b-0"
-                            >
-                              <span>{erpDisplayName(item)}</span>
-                              {item.business_number && <span className="text-xs text-muted-foreground">{item.business_number}</span>}
-                            </button>
-                          ))
+                    <>
+                      <p className="text-xs text-muted-foreground">{erpClients.length}개 거래처</p>
+                      <div className="border border-border rounded-md max-h-48 overflow-y-auto">
+                        {erpClients
+                          .filter((item: any) => !clinics.some((c: any) => c.erp_client_id === item.id))
+                          .map((item: any) => (
+                          <button
+                            key={item.id}
+                            type="button"
+                            onClick={() => {
+                              setSelectedErpClient(item)
+                              const displayName = erpDisplayName(item)
+                              setForm(f => ({
+                                name: f.name || displayName,
+                                slug: f.slug || `erp-${(item.id as string).slice(0, 8)}`,
+                              }))
+                            }}
+                            className="w-full flex items-center justify-between px-3 py-2 hover:bg-muted/50 text-sm text-left border-b border-border last:border-b-0"
+                          >
+                            <span>
+                              {erpDisplayName(item)}
+                              {item.business_number && (
+                                <span className="text-xs text-muted-foreground ml-2">{item.business_number}</span>
+                              )}
+                            </span>
+                          </button>
+                        ))}
+                        {erpClients.filter((item: any) => clinics.some((c: any) => c.erp_client_id === item.id)).length > 0 && (
+                          <div className="px-3 py-2 text-xs text-muted-foreground border-t border-border bg-muted/30">
+                            이미 연결된 거래처 {erpClients.filter((item: any) => clinics.some((c: any) => c.erp_client_id === item.id)).length}개는 숨김 처리됨
+                          </div>
                         )}
                       </div>
-                    </div>
+                    </>
                   )}
                 </div>
+              )}
+
+              {/* 새로 생성 */}
+              {erpLinkMode === 'create' && (
+                <div className="space-y-2 border border-border rounded-lg p-3">
+                  <p className="text-xs text-muted-foreground">병원 저장 시 glitzy-web에 거래처가 동시에 생성됩니다.</p>
+                  <div className="grid grid-cols-2 gap-2">
+                    <div className="space-y-1">
+                      <Label className="text-xs text-muted-foreground">사업자번호</Label>
+                      <Input
+                        type="text"
+                        value={erpCreateData.business_number}
+                        onChange={e => setErpCreateData(d => ({ ...d, business_number: e.target.value }))}
+                        placeholder="선택 입력"
+                      />
+                    </div>
+                    <div className="space-y-1">
+                      <Label className="text-xs text-muted-foreground">담당자명</Label>
+                      <Input
+                        type="text"
+                        value={erpCreateData.contact_name}
+                        onChange={e => setErpCreateData(d => ({ ...d, contact_name: e.target.value }))}
+                        placeholder="선택 입력"
+                      />
+                    </div>
+                    <div className="space-y-1">
+                      <Label className="text-xs text-muted-foreground">연락처</Label>
+                      <Input
+                        type="text"
+                        value={erpCreateData.contact_phone}
+                        onChange={e => setErpCreateData(d => ({ ...d, contact_phone: e.target.value }))}
+                        placeholder="선택 입력"
+                      />
+                    </div>
+                    <div className="space-y-1">
+                      <Label className="text-xs text-muted-foreground">이메일</Label>
+                      <Input
+                        type="email"
+                        value={erpCreateData.contact_email}
+                        onChange={e => setErpCreateData(d => ({ ...d, contact_email: e.target.value }))}
+                        placeholder="선택 입력"
+                      />
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* 나중에 연결 */}
+              {erpLinkMode === 'later' && (
+                <p className="text-xs text-muted-foreground">거래처 없이 생성합니다. 나중에 설정에서 연결할 수 있습니다.</p>
               )}
             </div>
           </div>
@@ -416,7 +491,7 @@ export default function ClinicsPage() {
             <Button variant="ghost" onClick={() => setDialogOpen(false)}>취소</Button>
             <Button
               onClick={handleSave}
-              disabled={saving || (erpOption === 'link' && !selectedErpClient)}
+              disabled={saving || (erpLinkMode === 'select' && !selectedErpClient)}
               className="bg-brand-600 hover:bg-brand-700"
             >
               {saving ? '등록 중...' : '병원 등록'}
@@ -496,43 +571,36 @@ export default function ClinicsPage() {
               glitzy-web에 등록된 거래처를 선택하여 이 병원과 연결합니다.
             </p>
             {selectedErpClient ? (
-              <div className="flex items-center gap-2 px-3 py-2 rounded-md bg-emerald-500/10 border border-emerald-500/20">
-                <Link2 size={12} className="text-emerald-400" />
-                <span className="text-sm text-emerald-400">{erpDisplayName(selectedErpClient)}</span>
-                <button type="button" onClick={() => setSelectedErpClient(null)} className="ml-auto text-muted-foreground hover:text-foreground">
+              <div className="flex items-center gap-2 bg-brand-600/10 text-brand-600 rounded-md px-3 py-2 text-sm">
+                <Link2 size={14} />
+                <span className="font-medium">{erpDisplayName(selectedErpClient)}</span>
+                <button type="button" onClick={() => setSelectedErpClient(null)} className="ml-auto hover:text-red-400">
                   <X size={14} />
                 </button>
               </div>
             ) : (
               <div>
-                <div className="mb-2">
-                  <Input
-                    type="text"
-                    value={erpFilter}
-                    onChange={e => setErpFilter(e.target.value)}
-                    placeholder="이름으로 필터..."
-                    className="h-8 text-xs"
-                  />
-                </div>
                 <div className="max-h-56 overflow-y-auto border border-border rounded-md">
                   {erpClientsLoading ? (
                     <p className="px-3 py-6 text-xs text-muted-foreground text-center">거래처 목록 로딩 중...</p>
-                  ) : filteredErpClients.length === 0 ? (
-                    <p className="px-3 py-6 text-xs text-muted-foreground text-center">
-                      {erpClients.length === 0 ? '등록된 거래처가 없습니다.' : '일치하는 거래처가 없습니다.'}
-                    </p>
+                  ) : erpClients.length === 0 ? (
+                    <p className="px-3 py-6 text-xs text-muted-foreground text-center">등록된 거래처가 없습니다.</p>
                   ) : (
-                    filteredErpClients.map((item: any) => (
-                      <button
-                        key={item.id}
-                        type="button"
-                        onClick={() => { setSelectedErpClient(item); setErpFilter('') }}
-                        className="w-full text-left px-3 py-2.5 text-sm hover:bg-muted/50 transition-colors flex justify-between border-b border-border last:border-b-0"
-                      >
-                        <span>{erpDisplayName(item)}</span>
-                        {item.business_number && <span className="text-xs text-muted-foreground">{item.business_number}</span>}
-                      </button>
-                    ))
+                    <>
+                      {erpClients
+                        .filter((item: any) => !clinics.some((c: any) => c.erp_client_id === item.id))
+                        .map((item: any) => (
+                        <button
+                          key={item.id}
+                          type="button"
+                          onClick={() => setSelectedErpClient(item)}
+                          className="w-full text-left px-3 py-2.5 text-sm hover:bg-muted/50 transition-colors flex justify-between border-b border-border last:border-b-0"
+                        >
+                          <span>{erpDisplayName(item)}</span>
+                          {item.business_number && <span className="text-xs text-muted-foreground">{item.business_number}</span>}
+                        </button>
+                      ))}
+                    </>
                   )}
                 </div>
               </div>
@@ -565,7 +633,7 @@ export default function ClinicsPage() {
       <Card variant="glass" className="p-6">
         <div className="flex items-center justify-between mb-4">
           <h2 className="font-semibold text-foreground">병원 목록 ({clinics.length})</h2>
-          <Button onClick={() => setDialogOpen(true)} size="sm" className="bg-brand-600 hover:bg-brand-700">
+          <Button onClick={() => { setDialogOpen(true); loadErpClients() }} size="sm" className="bg-brand-600 hover:bg-brand-700">
             <Plus size={14} /> 병원 등록
           </Button>
         </div>
