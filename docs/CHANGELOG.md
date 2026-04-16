@@ -54,3 +54,4 @@
 | 2026-04-07 | feat: 광고 플랫폼 2계층 구조 도입 — `lib/platform.ts` 중앙 상수, campaign_type 컬럼 추가, platform 값 `meta_ads` 형식 통일, Naver/Kakao/Dable 신규 플랫폼 API 설정 UI |
 | 2026-04-13 | feat: 랜딩페이지 제출 후 리다이렉트 URL 설정 — `landing_pages.redirect_url` 컬럼 추가, 관리 페이지 입력란, `/api/lp/render`에서 `__LP_DATA__.redirectUrl` 주입 후 폼 제출 성공 시 `location.href` 이동 (HTML 파일 무수정) |
 | 2026-04-13 | feat: Demo 모드 (`demo_viewer` role) — 영업/영상 촬영용 실데이터 무결성 보장 샌드박스. 4겹 방어(role / 화이트리스트 미들웨어 / API 래퍼 / 핸들러 분기), `/demo/enter?key=<DEMO_ACCESS_KEY>` 진입 + `/demo/exit` 퇴장, `lib/demo/fixtures/` (병원 6개 × 12개월 deterministic 광고 데이터 + 에피소드), 18개 GET API fixture 분기, 모든 Write 405 차단, Cron/동기화 접근 불가, `DemoBadge` UI, `scripts/seed-demo-user.ts` |
+| 2026-04-17 | feat: 거래처 양방향 동기화 — `clinics.erp_client_id` 컬럼 추가, webhook 수신 (`/api/webhook/erp-client`), ERP 문서 라우트 `erp_client_id` 기반 조회 전환, 거래처 검색 프록시 (`/api/admin/erp-clients`), 클리닉 생성 시 거래처 동시 생성/연결 옵션, 클리닉 관리 UI 거래처 연결 다이얼로그 |

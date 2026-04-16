@@ -14,6 +14,19 @@ export const PATCH = withClinicFilter(async (req, { user, clinicId }) => {
   if (user.role === 'clinic_staff') return apiError('Forbidden', 403)
   if (!clinicId) return apiError('병원을 선택해주세요.', 400)
 
+  const supabase = serverSupabase()
+  const { data: clinicRow } = await supabase
+    .from('clinics')
+    .select('erp_client_id')
+    .eq('id', clinicId)
+    .single()
+
+  if (!clinicRow?.erp_client_id) {
+    return apiError('ERP 거래처가 연결되지 않은 병원입니다.', 400)
+  }
+
+  const erpClientId = clinicRow.erp_client_id
+
   // URL에서 [id] 추출 — /api/erp-documents/{id}/respond
   const url = new URL(req.url)
   const segments = url.pathname.split('/')
@@ -40,14 +53,13 @@ export const PATCH = withClinicFilter(async (req, { user, clinicId }) => {
 
   try {
     const result = await respondToQuote(
-      clinicId,
+      erpClientId,
       id,
       action as 'approve' | 'reject',
       reason,
     )
 
     // 활동 로그 기록 (non-blocking)
-    const supabase = serverSupabase()
     logActivity(supabase, {
       userId: user.id,
       clinicId,
@@ -59,7 +71,7 @@ export const PATCH = withClinicFilter(async (req, { user, clinicId }) => {
     return apiSuccess(result)
   } catch (err) {
     const message = err instanceof Error ? err.message : 'ERP 처리 실패'
-    logger.error('견적서 응답 실패', err, { clinicId, id, action })
+    logger.error('견적서 응답 실패', err, { clinicId, erpClientId, id, action })
 
     // glitzy-web HTTP 에러 상태 코드를 그대로 전달
     if (message.includes('HTTP 409')) return apiError('이미 처리된 견적서입니다.', 409)

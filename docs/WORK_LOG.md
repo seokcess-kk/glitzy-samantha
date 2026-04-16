@@ -33,18 +33,21 @@ shadcn/ui 기반 UI/UX 개선 및 기능 개발 작업 기록.
 | Phase 17: 대시보드 재설계 + TikTok + 감사 | 2026-03-27~30 | KST 감사, TikTok ad 레벨, 대시보드 4섹션, 메뉴 토글, 광고 3탭 재배치, 외부 API | 완료 | - |
 | Phase 18: 예약 캘린더 DnD + UX | 2026-04-01 | @dnd-kit 드래그앤드롭, 미래 날짜 허용, 도트 표시, 10분 슬롯, 시간 구분선 | 완료 | - |
 | 버그 수정 | 2026-03-30~04-01 | 랜딩페이지 Storage upsert, privacy/terms 미인증 접근, 탭 타이틀, 로그인 링크 | 완료 | - |
+| Phase 19: 거래처 양방향 동기화 | 2026-04-17 | erp_client_id 매핑, webhook 수신, 거래처 검색/생성 프록시, 클리닉 UI 연결 | 완료 | - |
 
 ---
 
-## 최신 작업 (Phase 18: 예약 캘린더 DnD + UX)
+## 최신 작업 (Phase 19: 거래처 양방향 동기화)
 
 | # | 작업 | 핵심 내용 | 날짜 |
 |---|------|----------|------|
-| P33-1 | 미래 날짜 허용 | DateRangePicker `allowFuture` prop 추가, 예약/결제 관리에서 미래 날짜 선택 가능 | 04-01 |
-| P33-2 | 예약 도트 표시 | DateRangePicker `bookedDates` prop + `modifiers` 활용, 예약 있는 날짜에 도트 표시 | 04-01 |
-| P33-3 | 드래그앤드롭 | `@dnd-kit/core` 도입, DraggableBooking/DroppableCell 컴포넌트, 월간/주간/일간 뷰 드래그→날짜/시간 변경 | 04-01 |
-| P33-4 | 드래그 제약 | cancelled/noshow 상태 드래그 비활성화, 확인 다이얼로그, DragOverlay 디자인 | 04-01 |
-| P33-5 | 일간 뷰 개선 | 10분 단위 슬롯(10:00~19:50), 현재 시간 빨간 구분선+자동 스크롤 | 04-01 |
+| P34-1 | DB 마이그레이션 | `clinics.erp_client_id` INTEGER 컬럼 추가, 기존 데이터 1:1 백필 | 04-17 |
+| P34-2 | 서비스 레이어 | `fetchErpClients`, `createErpClient` 함수 + `ERPClient` 타입 추가 | 04-17 |
+| P34-3 | Webhook 수신 | `POST /api/webhook/erp-client` — client.created/updated/deleted 이벤트 처리 (멱등성) | 04-17 |
+| P34-4 | ERP 문서 라우트 | 3개 라우트에서 `clinicId` → `erp_client_id` 조회 후 전달 | 04-17 |
+| P34-5 | 거래처 프록시 | `GET /api/admin/erp-clients` — glitzy-web 거래처 검색 프록시 | 04-17 |
+| P34-6 | 클리닉 API 확장 | POST: 거래처 동시 생성/기존 연결 옵션, PATCH: erp_client_id 수정 | 04-17 |
+| P34-7 | 클리닉 UI | 테이블에 ERP 거래처 컬럼, 생성 다이얼로그 ERP 옵션, 연결 다이얼로그 | 04-17 |
 | P33-6 | 전체 예약 표시 | 월간/주간 뷰 slice 제한 제거, 취소/노쇼 취소선+투명도 시각 구분 | 04-01 |
 
 ---

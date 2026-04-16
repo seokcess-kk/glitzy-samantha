@@ -28,7 +28,7 @@ export interface ERPQuoteItem {
 }
 
 export interface ERPQuoteDetail extends ERPQuote {
-  clients: { id: string; name: string; clinic_id: number } | null
+  clients: { id: string; name: string; clinic_id: string } | null
   quote_items: ERPQuoteItem[]
 }
 
@@ -54,4 +54,27 @@ export interface ERPRespondResult {
   success: boolean
   data?: { id: string; status: ERPQuoteStatus }
   error?: string
+}
+
+// --- 거래처 동기화 ---
+
+export interface ERPClient {
+  id: string
+  name: string
+  business_number: string | null
+  contact_name: string | null
+  contact_phone: string | null
+  contact_email: string | null
+  created_at: string
+}
+
+export interface ERPClientListResponse {
+  success: boolean
+  data: ERPClient[]
+  pagination: ERPPagination
+}
+
+export interface ERPClientCreateResponse {
+  success: boolean
+  data: { id: string; name: string }
 }

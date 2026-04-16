@@ -35,7 +35,7 @@
 
 | 테이블 | 용도 | 비고 |
 |--------|------|------|
-| `clinics` | 병원 고객사 | `notify_phones TEXT[]` 최대 3개 |
+| `clinics` | 병원 고객사 | `notify_phones TEXT[]` 최대 3개, `erp_client_id TEXT` glitzy-web 거래처 UUID 매핑 |
 | `users` | 로그인 계정 | role: superadmin/agency_staff/clinic_admin/clinic_staff |
 | `customers` | 고객 (CDP) | `phone_number`로 식별 |
 | `leads` | 리드/문의 | UTM, `landing_page_id`, `updated_by` |

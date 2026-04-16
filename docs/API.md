@@ -1058,11 +1058,47 @@ data: {"type":"error","error":"에러 메시지"}
 
 ---
 
+## ERP 거래처 동기화 API
+
+glitzy-web 거래처(Client) ↔ Samantha 클리닉(Clinic) 양방향 동기화.
+
+### POST /api/webhook/erp-client
+
+glitzy-web에서 거래처 CUD 이벤트를 수신하는 webhook.
+
+**인증:** `Authorization: Bearer {ERP_SERVICE_KEY}` (NextAuth 불필요)
+
+**Request Body:**
+```json
+{
+  "event": "client.created",
+  "data": { "id": 47, "name": "A렌트카", "business_number": "123-45-67890" },
+  "timestamp": "2026-04-17T09:00:00Z"
+}
+```
+
+| 이벤트 | 동작 |
+|--------|------|
+| `client.created` | 클리닉 자동 생성 (멱등성: 기존 매핑 시 스킵) |
+| `client.updated` | 클리닉명 동기화 |
+| `client.deleted` | 클리닉 비활성화 (is_active=false) |
+
+### GET /api/admin/erp-clients
+
+glitzy-web 거래처 검색 프록시. **권한:** superadmin
+
+**Query Parameters:**
+- `search`: 거래처명 검색
+- `page` (default: 1)
+- `limit` (default: 50)
+
+---
+
 ## ERP 문서 API (견적서/계산서)
 
-glitzy-web 외부 API 프록시. 읽기 전용.
+glitzy-web 외부 API 프록시. `erp_client_id` 기반 조회.
 
-**권한:** clinic_admin 이상 (clinic_staff 차단). clinicId 필수.
+**권한:** clinic_admin 이상 (clinic_staff 차단). clinicId 필수. ERP 미연결 시 400.
 
 ### GET /api/erp-documents
 

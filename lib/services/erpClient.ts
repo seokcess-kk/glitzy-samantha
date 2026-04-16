@@ -2,6 +2,7 @@ import { fetchJSON } from '@/lib/api-client'
 import { createLogger } from '@/lib/logger'
 import type {
   ERPQuote, ERPQuoteDetail, ERPInvoice, ERPPagination, ERPRespondResult,
+  ERPClientListResponse, ERPClientCreateResponse,
 } from '@/types/erp'
 
 const logger = createLogger('ERPClient')
@@ -55,42 +56,68 @@ async function erpFetch<T>(path: string, options?: {
   return result.data as T
 }
 
-export async function fetchQuotes(clinicId: number, params?: {
+export async function fetchQuotes(erpClientId: string, params?: {
   status?: string; page?: number; limit?: number
 }): Promise<ERPListResponse<ERPQuote>> {
-  const sp = new URLSearchParams({ clinic_id: String(clinicId) })
+  const sp = new URLSearchParams({ clinic_id: erpClientId })
   if (params?.status) sp.set('status', params.status)
   if (params?.page) sp.set('page', String(params.page))
   if (params?.limit) sp.set('limit', String(params.limit))
   return erpFetch<ERPListResponse<ERPQuote>>(`/quotes?${sp}`)
 }
 
-export async function fetchQuoteDetail(clinicId: number, id: string): Promise<ERPDetailResponse<ERPQuoteDetail>> {
-  return erpFetch<ERPDetailResponse<ERPQuoteDetail>>(`/quotes/${id}?clinic_id=${clinicId}`)
+export async function fetchQuoteDetail(erpClientId: string, id: string): Promise<ERPDetailResponse<ERPQuoteDetail>> {
+  return erpFetch<ERPDetailResponse<ERPQuoteDetail>>(`/quotes/${id}?clinic_id=${erpClientId}`)
 }
 
-export async function fetchInvoices(clinicId: number, params?: {
+export async function fetchInvoices(erpClientId: string, params?: {
   status?: string; page?: number; limit?: number
 }): Promise<ERPListResponse<ERPInvoice>> {
-  const sp = new URLSearchParams({ clinic_id: String(clinicId) })
+  const sp = new URLSearchParams({ clinic_id: erpClientId })
   if (params?.status) sp.set('status', params.status)
   if (params?.page) sp.set('page', String(params.page))
   if (params?.limit) sp.set('limit', String(params.limit))
   return erpFetch<ERPListResponse<ERPInvoice>>(`/invoices?${sp}`)
 }
 
-export async function fetchInvoiceDetail(clinicId: number, id: string): Promise<ERPDetailResponse<ERPInvoice>> {
-  return erpFetch<ERPDetailResponse<ERPInvoice>>(`/invoices/${id}?clinic_id=${clinicId}`)
+export async function fetchInvoiceDetail(erpClientId: string, id: string): Promise<ERPDetailResponse<ERPInvoice>> {
+  return erpFetch<ERPDetailResponse<ERPInvoice>>(`/invoices/${id}?clinic_id=${erpClientId}`)
 }
 
 export async function respondToQuote(
-  clinicId: number,
+  erpClientId: string,
   quoteId: string,
   action: 'approve' | 'reject',
   reason?: string,
 ): Promise<ERPRespondResult> {
   return erpFetch<ERPRespondResult>(`/quotes/${quoteId}/respond`, {
     method: 'PATCH',
-    body: JSON.stringify({ clinic_id: clinicId, action, reason }),
+    body: JSON.stringify({ clinic_id: erpClientId, action, reason }),
+  })
+}
+
+// --- 거래처 동기화 ---
+
+export async function fetchErpClients(params?: {
+  search?: string; page?: number; limit?: number
+}): Promise<ERPClientListResponse> {
+  const sp = new URLSearchParams()
+  if (params?.search) sp.set('search', params.search)
+  if (params?.page) sp.set('page', String(params.page))
+  if (params?.limit) sp.set('limit', String(params.limit))
+  const qs = sp.toString()
+  return erpFetch<ERPClientListResponse>(`/external/clients${qs ? `?${qs}` : ''}`)
+}
+
+export async function createErpClient(data: {
+  name: string
+  business_number?: string
+  contact_name?: string
+  contact_phone?: string
+  contact_email?: string
+}): Promise<ERPClientCreateResponse> {
+  return erpFetch<ERPClientCreateResponse>('/external/clients', {
+    method: 'POST',
+    body: JSON.stringify({ ...data, source: 'samantha' }),
   })
 }

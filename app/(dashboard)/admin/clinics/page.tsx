@@ -1,6 +1,6 @@
 'use client'
-import { useState, useEffect, useCallback } from 'react'
-import { Plus, Building2, Bell, Pencil, X, Settings2 } from 'lucide-react'
+import { useState, useEffect, useCallback, useRef } from 'react'
+import { Plus, Building2, Bell, Pencil, X, Settings2, Link2, Search } from 'lucide-react'
 import { useSession } from 'next-auth/react'
 import { useRouter } from 'next/navigation'
 import { toast } from 'sonner'
@@ -59,6 +59,16 @@ export default function ClinicsPage() {
   // API 설정
   const [apiConfigTarget, setApiConfigTarget] = useState<{ id: number; name: string } | null>(null)
   const [apiConfigSummaries, setApiConfigSummaries] = useState<Record<number, ApiConfigSummary[]>>({})
+  // ERP 거래처 연결
+  const [erpOption, setErpOption] = useState<'none' | 'create' | 'link'>('none')
+  const [erpSearchQuery, setErpSearchQuery] = useState('')
+  const [erpSearchResults, setErpSearchResults] = useState<any[]>([])
+  const [selectedErpClient, setSelectedErpClient] = useState<any>(null)
+  const [erpSearching, setErpSearching] = useState(false)
+  const [erpLinkDialogOpen, setErpLinkDialogOpen] = useState(false)
+  const [erpLinkTarget, setErpLinkTarget] = useState<any>(null)
+  const [erpLinkSaving, setErpLinkSaving] = useState(false)
+  const erpSearchTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
 
   useEffect(() => {
     if (user && user.role !== 'superadmin') router.replace('/')
@@ -106,6 +116,31 @@ export default function ClinicsPage() {
     }
   }, [clinics, fetchApiConfigSummaries])
 
+  const searchErpClients = useCallback(async (query: string) => {
+    if (!query || query.length < 1) {
+      setErpSearchResults([])
+      return
+    }
+    setErpSearching(true)
+    try {
+      const res = await fetch(`/api/admin/erp-clients?search=${encodeURIComponent(query)}&limit=10`)
+      const json = await res.json()
+      const items = json?.data?.data || json?.data || []
+      setErpSearchResults(Array.isArray(items) ? items : [])
+    } catch {
+      setErpSearchResults([])
+    } finally {
+      setErpSearching(false)
+    }
+  }, [])
+
+  const handleErpSearch = (value: string) => {
+    setErpSearchQuery(value)
+    setSelectedErpClient(null)
+    if (erpSearchTimer.current) clearTimeout(erpSearchTimer.current)
+    erpSearchTimer.current = setTimeout(() => searchErpClients(value), 300)
+  }
+
   const handleSave = async () => {
     if (!form.name || !form.slug) {
       toast.error('병원명과 슬러그를 입력해주세요.')
@@ -113,16 +148,27 @@ export default function ClinicsPage() {
     }
     setSaving(true)
     try {
+      const payload: Record<string, unknown> = { name: form.name, slug: form.slug }
+      if (erpOption === 'create') {
+        payload.create_erp_client = true
+      } else if (erpOption === 'link' && selectedErpClient) {
+        payload.erp_client_id = selectedErpClient.id
+      }
+
       const res = await fetch('/api/admin/clinics', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(form),
+        body: JSON.stringify(payload),
       })
       if (!res.ok) {
         const err = await res.json()
         throw new Error(err.error)
       }
       setForm({ name: '', slug: '' })
+      setErpOption('none')
+      setErpSearchQuery('')
+      setErpSearchResults([])
+      setSelectedErpClient(null)
       setDialogOpen(false)
       toast.success('병원이 등록되었습니다.')
       fetchClinics()
@@ -130,6 +176,37 @@ export default function ClinicsPage() {
       toast.error(e.message || '등록 실패')
     } finally {
       setSaving(false)
+    }
+  }
+
+  const openErpLinkDialog = (clinic: any) => {
+    setErpLinkTarget(clinic)
+    setErpSearchQuery('')
+    setErpSearchResults([])
+    setSelectedErpClient(null)
+    setErpLinkDialogOpen(true)
+  }
+
+  const handleErpLink = async () => {
+    if (!erpLinkTarget || !selectedErpClient) return
+    setErpLinkSaving(true)
+    try {
+      const res = await fetch(`/api/admin/clinics/${erpLinkTarget.id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ erp_client_id: selectedErpClient.id }),
+      })
+      if (!res.ok) {
+        const err = await res.json()
+        throw new Error(err.error)
+      }
+      toast.success('거래처가 연결되었습니다.')
+      setErpLinkDialogOpen(false)
+      fetchClinics()
+    } catch (e: any) {
+      toast.error(e.message || '거래처 연결 실패')
+    } finally {
+      setErpLinkSaving(false)
     }
   }
 
@@ -265,10 +342,72 @@ export default function ClinicsPage() {
               />
               <p className="text-xs text-muted-foreground">URL에 사용됩니다. 영문 소문자, 숫자, 하이픈만 허용</p>
             </div>
+            <div className="space-y-2">
+              <Label className="text-xs text-muted-foreground">ERP 거래처 연결</Label>
+              <div className="flex gap-2">
+                {([['none', '나중에'], ['create', '새로 생성'], ['link', '기존 연결']] as const).map(([val, label]) => (
+                  <button
+                    key={val}
+                    type="button"
+                    onClick={() => { setErpOption(val); setSelectedErpClient(null); setErpSearchQuery(''); setErpSearchResults([]) }}
+                    className={`px-3 py-1.5 rounded-md text-xs border transition-colors ${
+                      erpOption === val
+                        ? 'border-brand-500 bg-brand-500/10 text-brand-400'
+                        : 'border-border text-muted-foreground hover:text-foreground'
+                    }`}
+                  >
+                    {label}
+                  </button>
+                ))}
+              </div>
+              {erpOption === 'link' && (
+                <div className="space-y-2 mt-2">
+                  <div className="relative">
+                    <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
+                    <Input
+                      type="text"
+                      value={erpSearchQuery}
+                      onChange={e => handleErpSearch(e.target.value)}
+                      placeholder="거래처명 검색..."
+                      className="pl-9"
+                    />
+                  </div>
+                  {erpSearching && <p className="text-xs text-muted-foreground">검색 중...</p>}
+                  {erpSearchResults.length > 0 && (
+                    <div className="max-h-40 overflow-y-auto border border-border rounded-md">
+                      {erpSearchResults.map((item: any) => (
+                        <button
+                          key={item.id}
+                          type="button"
+                          onClick={() => { setSelectedErpClient(item); setErpSearchResults([]) }}
+                          className="w-full text-left px-3 py-2 text-sm hover:bg-muted/50 transition-colors flex justify-between"
+                        >
+                          <span>{item.name}</span>
+                          <span className="text-xs text-muted-foreground">#{item.id}</span>
+                        </button>
+                      ))}
+                    </div>
+                  )}
+                  {selectedErpClient && (
+                    <div className="flex items-center gap-2 px-3 py-2 rounded-md bg-emerald-500/10 border border-emerald-500/20">
+                      <Link2 size={12} className="text-emerald-400" />
+                      <span className="text-sm text-emerald-400">{selectedErpClient.name} (#{selectedErpClient.id})</span>
+                      <button type="button" onClick={() => setSelectedErpClient(null)} className="ml-auto text-muted-foreground hover:text-foreground">
+                        <X size={14} />
+                      </button>
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
           </div>
           <DialogFooter>
             <Button variant="ghost" onClick={() => setDialogOpen(false)}>취소</Button>
-            <Button onClick={handleSave} disabled={saving} className="bg-brand-600 hover:bg-brand-700">
+            <Button
+              onClick={handleSave}
+              disabled={saving || (erpOption === 'link' && !selectedErpClient)}
+              className="bg-brand-600 hover:bg-brand-700"
+            >
               {saving ? '등록 중...' : '병원 등록'}
             </Button>
           </DialogFooter>
@@ -335,6 +474,65 @@ export default function ClinicsPage() {
         </DialogContent>
       </Dialog>
 
+      {/* ERP 거래처 연결 다이얼로그 */}
+      <Dialog open={erpLinkDialogOpen} onOpenChange={setErpLinkDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>ERP 거래처 연결 - {erpLinkTarget?.name}</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4 py-4">
+            <p className="text-xs text-muted-foreground">
+              glitzy-web 거래처를 검색하여 이 병원과 연결합니다.
+            </p>
+            <div className="relative">
+              <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
+              <Input
+                type="text"
+                value={erpSearchQuery}
+                onChange={e => handleErpSearch(e.target.value)}
+                placeholder="거래처명 검색..."
+                className="pl-9"
+              />
+            </div>
+            {erpSearching && <p className="text-xs text-muted-foreground">검색 중...</p>}
+            {erpSearchResults.length > 0 && !selectedErpClient && (
+              <div className="max-h-48 overflow-y-auto border border-border rounded-md">
+                {erpSearchResults.map((item: any) => (
+                  <button
+                    key={item.id}
+                    type="button"
+                    onClick={() => { setSelectedErpClient(item); setErpSearchResults([]) }}
+                    className="w-full text-left px-3 py-2 text-sm hover:bg-muted/50 transition-colors flex justify-between"
+                  >
+                    <span>{item.name}</span>
+                    <span className="text-xs text-muted-foreground">#{item.id}</span>
+                  </button>
+                ))}
+              </div>
+            )}
+            {selectedErpClient && (
+              <div className="flex items-center gap-2 px-3 py-2 rounded-md bg-emerald-500/10 border border-emerald-500/20">
+                <Link2 size={12} className="text-emerald-400" />
+                <span className="text-sm text-emerald-400">{selectedErpClient.name} (#{selectedErpClient.id})</span>
+                <button type="button" onClick={() => setSelectedErpClient(null)} className="ml-auto text-muted-foreground hover:text-foreground">
+                  <X size={14} />
+                </button>
+              </div>
+            )}
+          </div>
+          <DialogFooter>
+            <Button variant="ghost" onClick={() => setErpLinkDialogOpen(false)}>취소</Button>
+            <Button
+              onClick={handleErpLink}
+              disabled={erpLinkSaving || !selectedErpClient}
+              className="bg-brand-600 hover:bg-brand-700"
+            >
+              {erpLinkSaving ? '연결 중...' : '거래처 연결'}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
       {/* API 설정 다이얼로그 */}
       {apiConfigTarget && (
         <ClinicApiConfigDialog
@@ -364,6 +562,7 @@ export default function ClinicsPage() {
                 <TableHead className="text-xs text-muted-foreground font-medium">ID</TableHead>
                 <TableHead className="text-xs text-muted-foreground font-medium">병원명</TableHead>
                 <TableHead className="text-xs text-muted-foreground font-medium">슬러그</TableHead>
+                <TableHead className="text-xs text-muted-foreground font-medium">ERP 거래처</TableHead>
                 <TableHead className="text-xs text-muted-foreground font-medium">등록일</TableHead>
                 <TableHead className="text-xs text-muted-foreground font-medium">API 설정</TableHead>
                 <TableHead className="text-xs text-muted-foreground font-medium">리드 알림</TableHead>
@@ -379,6 +578,18 @@ export default function ClinicsPage() {
                     <TableCell className="text-muted-foreground text-xs">#{c.id}</TableCell>
                     <TableCell className="text-foreground font-medium">{c.name}</TableCell>
                     <TableCell className="text-muted-foreground font-mono text-xs">{c.slug}</TableCell>
+                    <TableCell>
+                      {c.erp_client_id ? (
+                        <span className="text-xs text-emerald-400 font-mono">#{c.erp_client_id}</span>
+                      ) : (
+                        <button
+                          onClick={() => openErpLinkDialog(c)}
+                          className="text-xs text-amber-400 hover:text-amber-300 transition-colors"
+                        >
+                          미연결
+                        </button>
+                      )}
+                    </TableCell>
                     <TableCell className="text-muted-foreground text-xs">{formatDate(c.created_at)}</TableCell>
                     <TableCell>
                       <button
