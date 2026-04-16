@@ -1,6 +1,6 @@
 'use client'
 import { useState, useEffect, useCallback } from 'react'
-import { Plus, Building2, Bell, Pencil, X, Settings2, Link2, Search } from 'lucide-react'
+import { Plus, Building2, Bell, Pencil, X, Settings2, Link2 } from 'lucide-react'
 import { useSession } from 'next-auth/react'
 import { useRouter } from 'next/navigation'
 import { toast } from 'sonner'
@@ -65,7 +65,6 @@ export default function ClinicsPage() {
   const [erpClientsLoading, setErpClientsLoading] = useState(false)
   const [erpFilter, setErpFilter] = useState('')
   const [selectedErpClient, setSelectedErpClient] = useState<any>(null)
-  const [erpDropdownOpen, setErpDropdownOpen] = useState(false)
   const [erpLinkDialogOpen, setErpLinkDialogOpen] = useState(false)
   const [erpLinkTarget, setErpLinkTarget] = useState<any>(null)
   const [erpLinkSaving, setErpLinkSaving] = useState(false)
@@ -162,7 +161,6 @@ export default function ClinicsPage() {
       setErpOption('none')
       setErpFilter('')
       setSelectedErpClient(null)
-      setErpDropdownOpen(false)
       setDialogOpen(false)
       toast.success('병원이 등록되었습니다.')
       fetchClinics()
@@ -177,7 +175,6 @@ export default function ClinicsPage() {
     setErpLinkTarget(clinic)
     setErpFilter('')
     setSelectedErpClient(null)
-    setErpDropdownOpen(false)
     setErpLinkDialogOpen(true)
     loadErpClients()
   }
@@ -344,7 +341,7 @@ export default function ClinicsPage() {
                   <button
                     key={val}
                     type="button"
-                    onClick={() => { setErpOption(val); setSelectedErpClient(null); setErpFilter(''); setErpDropdownOpen(false); if (val === 'link') loadErpClients() }}
+                    onClick={() => { setErpOption(val); setSelectedErpClient(null); setErpFilter(''); if (val === 'link') loadErpClients() }}
                     className={`px-3 py-1.5 rounded-md text-xs border transition-colors ${
                       erpOption === val
                         ? 'border-brand-500 bg-brand-500/10 text-brand-400'
@@ -361,55 +358,45 @@ export default function ClinicsPage() {
                     <div className="flex items-center gap-2 px-3 py-2 rounded-md bg-emerald-500/10 border border-emerald-500/20">
                       <Link2 size={12} className="text-emerald-400" />
                       <span className="text-sm text-emerald-400">{selectedErpClient.name}</span>
-                      <button type="button" onClick={() => { setSelectedErpClient(null); setErpDropdownOpen(true) }} className="ml-auto text-muted-foreground hover:text-foreground">
+                      {selectedErpClient.business_number && (
+                        <span className="text-xs text-muted-foreground">({selectedErpClient.business_number})</span>
+                      )}
+                      <button type="button" onClick={() => setSelectedErpClient(null)} className="ml-auto text-muted-foreground hover:text-foreground">
                         <X size={14} />
                       </button>
                     </div>
                   ) : (
-                    <div className="relative">
-                      <button
-                        type="button"
-                        onClick={() => { setErpDropdownOpen(!erpDropdownOpen); loadErpClients() }}
-                        className="w-full flex items-center justify-between px-3 py-2 rounded-md border border-border text-sm text-muted-foreground hover:text-foreground hover:border-brand-500/50 transition-colors"
-                      >
-                        <span>거래처 선택...</span>
-                        <Search size={14} />
-                      </button>
-                      {erpDropdownOpen && (
-                        <div className="absolute z-50 mt-1 w-full rounded-md border border-border bg-popover shadow-lg">
-                          <div className="p-2 border-b border-border">
-                            <Input
-                              type="text"
-                              value={erpFilter}
-                              onChange={e => setErpFilter(e.target.value)}
-                              placeholder="이름으로 필터..."
-                              className="h-8 text-xs"
-                              autoFocus
-                            />
-                          </div>
-                          <div className="max-h-48 overflow-y-auto">
-                            {erpClientsLoading ? (
-                              <p className="px-3 py-4 text-xs text-muted-foreground text-center">로딩 중...</p>
-                            ) : filteredErpClients.length === 0 ? (
-                              <p className="px-3 py-4 text-xs text-muted-foreground text-center">
-                                {erpClients.length === 0 ? '등록된 거래처가 없습니다.' : '일치하는 거래처가 없습니다.'}
-                              </p>
-                            ) : (
-                              filteredErpClients.map((item: any) => (
-                                <button
-                                  key={item.id}
-                                  type="button"
-                                  onClick={() => { setSelectedErpClient(item); setErpDropdownOpen(false); setErpFilter('') }}
-                                  className="w-full text-left px-3 py-2 text-sm hover:bg-muted/50 transition-colors flex justify-between"
-                                >
-                                  <span>{item.name}</span>
-                                  {item.business_number && <span className="text-xs text-muted-foreground">{item.business_number}</span>}
-                                </button>
-                              ))
-                            )}
-                          </div>
-                        </div>
-                      )}
+                    <div>
+                      <div className="mb-2">
+                        <Input
+                          type="text"
+                          value={erpFilter}
+                          onChange={e => setErpFilter(e.target.value)}
+                          placeholder="이름으로 필터..."
+                          className="h-8 text-xs"
+                        />
+                      </div>
+                      <div className="max-h-40 overflow-y-auto border border-border rounded-md">
+                        {erpClientsLoading ? (
+                          <p className="px-3 py-4 text-xs text-muted-foreground text-center">거래처 목록 로딩 중...</p>
+                        ) : filteredErpClients.length === 0 ? (
+                          <p className="px-3 py-4 text-xs text-muted-foreground text-center">
+                            {erpClients.length === 0 ? '등록된 거래처가 없습니다.' : '일치하는 거래처가 없습니다.'}
+                          </p>
+                        ) : (
+                          filteredErpClients.map((item: any) => (
+                            <button
+                              key={item.id}
+                              type="button"
+                              onClick={() => { setSelectedErpClient(item); setErpFilter('') }}
+                              className="w-full text-left px-3 py-2 text-sm hover:bg-muted/50 transition-colors flex justify-between border-b border-border last:border-b-0"
+                            >
+                              <span>{item.name}</span>
+                              {item.business_number && <span className="text-xs text-muted-foreground">{item.business_number}</span>}
+                            </button>
+                          ))
+                        )}
+                      </div>
                     </div>
                   )}
                 </div>
