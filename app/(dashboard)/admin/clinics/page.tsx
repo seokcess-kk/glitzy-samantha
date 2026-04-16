@@ -115,6 +115,8 @@ export default function ClinicsPage() {
     }
   }, [clinics, fetchApiConfigSummaries])
 
+  const erpDisplayName = (c: any) => c.branch_name ? `${c.name} (${c.branch_name})` : c.name
+
   const loadErpClients = useCallback(async () => {
     if (erpClients.length > 0) return
     setErpClientsLoading(true)
@@ -130,9 +132,11 @@ export default function ClinicsPage() {
     }
   }, [erpClients.length])
 
-  const filteredErpClients = erpClients.filter((c: any) =>
-    !erpFilter || c.name?.toLowerCase().includes(erpFilter.toLowerCase())
-  )
+  const filteredErpClients = erpClients.filter((c: any) => {
+    if (!erpFilter) return true
+    const q = erpFilter.toLowerCase()
+    return c.name?.toLowerCase().includes(q) || c.branch_name?.toLowerCase().includes(q)
+  })
 
   const handleSave = async () => {
     if (!form.name || !form.slug) {
@@ -357,10 +361,7 @@ export default function ClinicsPage() {
                   {selectedErpClient ? (
                     <div className="flex items-center gap-2 px-3 py-2 rounded-md bg-emerald-500/10 border border-emerald-500/20">
                       <Link2 size={12} className="text-emerald-400" />
-                      <span className="text-sm text-emerald-400">{selectedErpClient.name}</span>
-                      {selectedErpClient.business_number && (
-                        <span className="text-xs text-muted-foreground">({selectedErpClient.business_number})</span>
-                      )}
+                      <span className="text-sm text-emerald-400">{erpDisplayName(selectedErpClient)}</span>
                       <button type="button" onClick={() => setSelectedErpClient(null)} className="ml-auto text-muted-foreground hover:text-foreground">
                         <X size={14} />
                       </button>
@@ -391,14 +392,15 @@ export default function ClinicsPage() {
                               onClick={() => {
                                 setSelectedErpClient(item)
                                 setErpFilter('')
+                                const displayName = erpDisplayName(item)
                                 setForm(f => ({
-                                  name: f.name || item.name,
+                                  name: f.name || displayName,
                                   slug: f.slug || `erp-${(item.id as string).slice(0, 8)}`,
                                 }))
                               }}
                               className="w-full text-left px-3 py-2 text-sm hover:bg-muted/50 transition-colors flex justify-between border-b border-border last:border-b-0"
                             >
-                              <span>{item.name}</span>
+                              <span>{erpDisplayName(item)}</span>
                               {item.business_number && <span className="text-xs text-muted-foreground">{item.business_number}</span>}
                             </button>
                           ))
@@ -496,10 +498,7 @@ export default function ClinicsPage() {
             {selectedErpClient ? (
               <div className="flex items-center gap-2 px-3 py-2 rounded-md bg-emerald-500/10 border border-emerald-500/20">
                 <Link2 size={12} className="text-emerald-400" />
-                <span className="text-sm text-emerald-400">{selectedErpClient.name}</span>
-                {selectedErpClient.business_number && (
-                  <span className="text-xs text-muted-foreground">({selectedErpClient.business_number})</span>
-                )}
+                <span className="text-sm text-emerald-400">{erpDisplayName(selectedErpClient)}</span>
                 <button type="button" onClick={() => setSelectedErpClient(null)} className="ml-auto text-muted-foreground hover:text-foreground">
                   <X size={14} />
                 </button>
@@ -530,7 +529,7 @@ export default function ClinicsPage() {
                         onClick={() => { setSelectedErpClient(item); setErpFilter('') }}
                         className="w-full text-left px-3 py-2.5 text-sm hover:bg-muted/50 transition-colors flex justify-between border-b border-border last:border-b-0"
                       >
-                        <span>{item.name}</span>
+                        <span>{erpDisplayName(item)}</span>
                         {item.business_number && <span className="text-xs text-muted-foreground">{item.business_number}</span>}
                       </button>
                     ))

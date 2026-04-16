@@ -14,6 +14,7 @@ interface WebhookBody {
   data: {
     id: string
     name: string
+    branch_name?: string | null
     business_number?: string | null
     contact_name?: string | null
     contact_phone?: string | null
@@ -56,6 +57,7 @@ export async function POST(req: Request) {
   }
 
   const supabase = serverSupabase()
+  const clinicName = data.branch_name ? `${data.name} (${data.branch_name})` : data.name
 
   try {
     switch (event) {
@@ -76,7 +78,7 @@ export async function POST(req: Request) {
         const { data: created, error } = await supabase
           .from('clinics')
           .insert({
-            name: data.name,
+            name: clinicName,
             slug,
             erp_client_id: data.id,
             is_active: true,
@@ -116,7 +118,7 @@ export async function POST(req: Request) {
 
         await supabase
           .from('clinics')
-          .update({ name: data.name })
+          .update({ name: clinicName })
           .eq('id', clinic.id)
 
         logActivity(supabase, {

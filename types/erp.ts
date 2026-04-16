@@ -61,6 +61,7 @@ export interface ERPRespondResult {
 export interface ERPClient {
   id: string
   name: string
+  branch_name: string | null
   business_number: string | null
   contact_name: string | null
   contact_phone: string | null
