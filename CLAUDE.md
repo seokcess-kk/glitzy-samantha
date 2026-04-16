@@ -166,7 +166,7 @@ npm run analyze      # 번들 크기 분석
 
 | 날짜 | 내용 |
 |------|------|
-| 2026-04-17 | 거래처 양방향 동기화: `clinics.erp_client_id` 매핑, webhook 수신, 거래처 검색/생성 프록시, ERP 문서 `erp_client_id` 전환 |
+| 2026-04-17 | 거래처 양방향 동기화: `erp_client_id TEXT` 매핑, webhook, Agatha 기준 드롭다운 UI, branch_name 지점명, 아이콘 패밀리 |
 | 2026-04-07 | 광고 플랫폼 2계층 구조: `lib/platform.ts` 중앙 상수, campaign_type 컬럼, platform 값 통일, Naver/Kakao/Dable 신규 |
 | 2026-04-07 | 시술별 매출 비중 KPI 불일치 수정, capi_events FK CASCADE |
 | 2026-04-01 | 캘린더 UX 개선: 일간 10분 슬롯, 현재 시간 구분선, 전체 예약 표시, 취소/노쇼 취소선 시각 구분 |

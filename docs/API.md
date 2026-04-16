@@ -1072,15 +1072,15 @@ glitzy-web에서 거래처 CUD 이벤트를 수신하는 webhook.
 ```json
 {
   "event": "client.created",
-  "data": { "id": 47, "name": "A렌트카", "business_number": "123-45-67890" },
+  "data": { "id": "uuid-string", "name": "A렌트카", "branch_name": "강남점", "business_number": "123-45-67890" },
   "timestamp": "2026-04-17T09:00:00Z"
 }
 ```
 
 | 이벤트 | 동작 |
 |--------|------|
-| `client.created` | 클리닉 자동 생성 (멱등성: 기존 매핑 시 스킵) |
-| `client.updated` | 클리닉명 동기화 |
+| `client.created` | 클리닉 자동 생성 (멱등성: 기존 매핑 시 스킵). branch_name 포함 시 `이름 (지점명)` 형식 |
+| `client.updated` | 클리닉명 동기화 (branch_name 반영) |
 | `client.deleted` | 클리닉 비활성화 (is_active=false) |
 
 ### GET /api/admin/erp-clients
