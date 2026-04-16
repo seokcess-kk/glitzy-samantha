@@ -12,10 +12,22 @@ const inter = Inter({
 
 export const metadata: Metadata = {
   title: {
-    default: '대시보드',
-    template: '%s',
+    default: 'Samantha — Medical Marketing Intelligence',
+    template: '%s | Samantha',
   },
-  description: 'Samantha — Medical Marketing Intelligence Dashboard',
+  description: '병원 마케팅, 데이터로 진단합니다. Patients first, always.',
+  openGraph: {
+    title: 'Samantha — Medical Marketing Intelligence',
+    description: '병원 마케팅, 데이터로 진단합니다. Patients first, always.',
+    siteName: 'Samantha',
+    locale: 'ko_KR',
+    type: 'website',
+  },
+  twitter: {
+    card: 'summary_large_image',
+    title: 'Samantha — Medical Marketing Intelligence',
+    description: '병원 마케팅, 데이터로 진단합니다. Patients first, always.',
+  },
 }
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
