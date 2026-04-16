@@ -106,7 +106,7 @@ export async function fetchErpClients(params?: {
   if (params?.page) sp.set('page', String(params.page))
   if (params?.limit) sp.set('limit', String(params.limit))
   const qs = sp.toString()
-  return erpFetch<ERPClientListResponse>(`/external/clients${qs ? `?${qs}` : ''}`)
+  return erpFetch<ERPClientListResponse>(`/clients${qs ? `?${qs}` : ''}`)
 }
 
 export async function createErpClient(data: {
@@ -116,7 +116,7 @@ export async function createErpClient(data: {
   contact_phone?: string
   contact_email?: string
 }): Promise<ERPClientCreateResponse> {
-  return erpFetch<ERPClientCreateResponse>('/external/clients', {
+  return erpFetch<ERPClientCreateResponse>('/clients', {
     method: 'POST',
     body: JSON.stringify({ ...data, source: 'samantha' }),
   })
