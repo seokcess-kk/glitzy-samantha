@@ -429,7 +429,7 @@ components/erp-documents/
 
 검증:
 - [x] 로컬 환경 동작 확인 (Samantha:3002 → glitzy-web:3000)
-- [x] 프로덕션 배포 확인 (glitzymmi.kr → glitzy.kr/api/external)
+- [x] 프로덕션 배포 확인 (samantha → glitzy.kr/api/external)
 - [x] Vercel 환경변수 설정 (ERP_API_URL, ERP_SERVICE_KEY)
 - [ ] clinic_admin으로 로그인 → 자기 병원 견적서 조회
 - [ ] superadmin으로 로그인 → clinic_id 파라미터로 필터
