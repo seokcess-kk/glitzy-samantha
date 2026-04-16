@@ -71,7 +71,7 @@ export async function GET(req: Request) {
     token: {
       sub: String(user.id),
       name: user.username,
-      email: `${user.username}@mmi.local`,
+      email: `${user.username}@samantha.local`,
       role: 'demo_viewer',
       clinic_id: null,
       username: user.username,

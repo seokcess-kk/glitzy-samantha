@@ -1,6 +1,6 @@
 <#
 .SYNOPSIS
-    MMI 프로젝트 빌드 검증 훅 (Stop 이벤트)
+    Samantha 프로젝트 빌드 검증 훅 (Stop 이벤트)
 
 .DESCRIPTION
     작업 완료 시 빌드 및 린트 검사를 수행합니다.
@@ -27,7 +27,7 @@ $result = @{
 }
 
 Write-Host "========================================" -ForegroundColor Cyan
-Write-Host " MMI Build Check" -ForegroundColor Cyan
+Write-Host " Samantha Build Check" -ForegroundColor Cyan
 Write-Host "========================================" -ForegroundColor Cyan
 Write-Host ""
 
@@ -76,9 +76,9 @@ Write-Host ""
 # Next.js 빌드 테스트 (환경변수로 제어)
 Write-Host "[3/3] Next.js build check..." -ForegroundColor Yellow
 
-# 환경변수 MMI_FULL_BUILD_CHECK=true 설정 시에만 전체 빌드 실행
+# 환경변수 SAMANTHA_FULL_BUILD_CHECK=true 설정 시에만 전체 빌드 실행
 # 기본값: 스킵 (빌드는 CI/CD에서 수행)
-if ($env:MMI_FULL_BUILD_CHECK -eq "true") {
+if ($env:SAMANTHA_FULL_BUILD_CHECK -eq "true") {
     try {
         $buildOutput = & npm run build 2>&1
         $buildExitCode = $LASTEXITCODE
@@ -96,7 +96,7 @@ if ($env:MMI_FULL_BUILD_CHECK -eq "true") {
         $result.build = @{ success = $false; output = $_.Exception.Message }
     }
 } else {
-    Write-Host "  ⊘ Build: SKIPPED (set MMI_FULL_BUILD_CHECK=true to enable)" -ForegroundColor DarkGray
+    Write-Host "  ⊘ Build: SKIPPED (set SAMANTHA_FULL_BUILD_CHECK=true to enable)" -ForegroundColor DarkGray
     $result.build = @{ success = $true; output = "skipped"; skipped = $true }
 }
 

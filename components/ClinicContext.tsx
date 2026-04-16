@@ -44,7 +44,7 @@ export function ClinicProvider({ children }: { children: ReactNode }) {
           // 배정된 병원이 1개면 자동 선택
           if (list.length === 1) setSelectedClinicIdState(list[0].id)
           else {
-            const saved = localStorage.getItem('mmi_selected_clinic')
+            const saved = localStorage.getItem('samantha_selected_clinic')
             if (saved) {
               const savedId = Number(saved)
               if (list.some((c: any) => c.id === savedId)) setSelectedClinicIdState(savedId)
@@ -59,8 +59,8 @@ export function ClinicProvider({ children }: { children: ReactNode }) {
 
   const setSelectedClinicId = (id: number | null) => {
     setSelectedClinicIdState(id)
-    if (id) localStorage.setItem('mmi_selected_clinic', String(id))
-    else localStorage.removeItem('mmi_selected_clinic')
+    if (id) localStorage.setItem('samantha_selected_clinic', String(id))
+    else localStorage.removeItem('samantha_selected_clinic')
   }
 
   return (

@@ -1,4 +1,4 @@
--- MMI 테스트 데이터 시드
+-- Samantha 테스트 데이터 시드
 -- Supabase Dashboard > SQL Editor에서 실행
 
 -- 변수: 테스트할 clinic_id (없으면 NULL)

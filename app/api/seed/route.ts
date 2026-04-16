@@ -122,7 +122,7 @@ export async function POST(req: Request) {
     clinic_id: c.clinic_id,
     customer_id: c.id,
     campaign_id: c.first_campaign_id,
-    inflow_url: `https://form.mmi.kr/lead?src=${(c.first_source || '').toLowerCase()}&utm_campaign=${c.first_campaign_id}`,
+    inflow_url: `https://form.samantha.kr/lead?src=${(c.first_source || '').toLowerCase()}&utm_campaign=${c.first_campaign_id}`,
     chatbot_sent: i % 3 !== 0,
     chatbot_sent_at: i % 3 !== 0 ? new Date(Date.now() - i * 2 * 24 * 60 * 60 * 1000).toISOString() : null,
   }))

@@ -6,7 +6,7 @@
 |------|---|
 | 서비스명 | **Samantha** |
 | 정식 명칭 | Samantha — Medical Marketing Intelligence |
-| 약칭 | MMI (내부/코드용) |
+| 약칭 | Samantha (내부/코드 동일) |
 | 대상 | 병원 마케팅 담당자, 에이전시, 병원 관리자 |
 | 성격 | B2B SaaS 대시보드, 데이터 인텔리전스 |
 | 톤앤매너 | 전문적 + 따뜻함 (Samantha라는 이름의 인간적 느낌) |

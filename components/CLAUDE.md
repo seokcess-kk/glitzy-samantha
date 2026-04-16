@@ -59,7 +59,7 @@ import { useClinic } from '@/components/ClinicContext'
 const { selectedClinicId, clinics, setSelectedClinicId } = useClinic()
 ```
 - `ClinicProvider`가 대시보드 레이아웃을 감싸고 있음
-- `localStorage` 키 `mmi_selected_clinic`에 선택된 병원 ID 저장
+- `localStorage` 키 `samantha_selected_clinic`에 선택된 병원 ID 저장
 - agency_staff에게 배정 병원이 1개면 자동 선택
 - 활성화 토글: `Switch` 컴포넌트 사용 (Badge/아이콘 버튼 대신 통일)
 
