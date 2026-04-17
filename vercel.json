@@ -1,5 +1,19 @@
 {
   "framework": "nextjs",
+  "redirects": [
+    {
+      "source": "/:path*",
+      "has": [{ "type": "host", "value": "glitzymmi.kr" }],
+      "destination": "https://samantha.glitzy.kr/:path*",
+      "permanent": true
+    },
+    {
+      "source": "/:path*",
+      "has": [{ "type": "host", "value": "www.glitzymmi.kr" }],
+      "destination": "https://samantha.glitzy.kr/:path*",
+      "permanent": true
+    }
+  ],
   "crons": [
     {
       "path": "/api/cron/sync-ads",
