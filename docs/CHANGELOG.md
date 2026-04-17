@@ -59,3 +59,4 @@
 | 2026-04-17 | refactor: 병원 등록 거래처 UI Agatha 기준 재구성 — 기본 "거래처 선택" 모드, 이미 연결된 거래처 숨김, 전체 페이지네이션 로드, "새로 생성" 사업자/담당자 필드, branch_name 지점명 표시 |
 | 2026-04-17 | feat: Glitzy 아이콘 패밀리 — favicon 다크 "S" 레터, apple-icon, OG 이미지 Brutalist dark, layout.tsx OG/Twitter metadata |
 | 2026-04-17 | fix: DialogContent `aria-describedby` 경고 해결 (3개 다이얼로그 DialogDescription 추가) |
+| 2026-04-17 | fix: 로그인 username 양끝 공백 trim — 비밀번호 매니저 자동완성 시 trailing space 포함으로 `user_not_found` 실패하던 문제 (`lib/auth.ts:70`) |

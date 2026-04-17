@@ -67,7 +67,7 @@ export const authOptions: NextAuthOptions = {
 
         const ip = _requestIp
         const ua = _requestUa
-        const username = credentials.username
+        const username = credentials.username.trim()
 
         // Rate limit 체크
         const rateCheck = checkRateLimit(ip, username)
