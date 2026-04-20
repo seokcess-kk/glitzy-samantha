@@ -720,6 +720,25 @@ agency_staff 계정의 병원 배정 및 메뉴 권한을 수정합니다.
 }
 ```
 
+### PATCH /api/admin/users/{id}/password
+
+해당 사용자의 비밀번호를 재설정합니다. `password_version`이 +1 되어 기존 세션은 모두 무효화됩니다. `activity_logs`에 `reset_password` 액션이 기록됩니다. superadmin 전용.
+
+**Request Body:**
+```json
+{
+  "password": "new-password-min-8-chars"
+}
+```
+
+**검증:**
+- `password`: 최소 8자, 최대 128자
+
+**Response:**
+```json
+{ "success": true }
+```
+
 ### POST /api/admin/backfill-ads
 
 특정 병원의 과거 광고 데이터를 일괄 수집합니다 (최대 90일). `CRON_SECRET` Bearer 토큰 인증.

@@ -60,3 +60,4 @@
 | 2026-04-17 | feat: Glitzy 아이콘 패밀리 — favicon 다크 "S" 레터, apple-icon, OG 이미지 Brutalist dark, layout.tsx OG/Twitter metadata |
 | 2026-04-17 | fix: DialogContent `aria-describedby` 경고 해결 (3개 다이얼로그 DialogDescription 추가) |
 | 2026-04-17 | fix: 로그인 username 양끝 공백 trim — 비밀번호 매니저 자동완성 시 trailing space 포함으로 `user_not_found` 실패하던 문제 (`lib/auth.ts:70`) |
+| 2026-04-20 | feat: 슈퍼어드민 비밀번호 재설정 — `PATCH /api/admin/users/[id]/password` 신규 (bcrypt cost 12, `password_version` 증가로 기존 세션 무효화, `activity_logs` 기록), 계정 관리 페이지 KeyRound 아이콘 버튼 + 재설정 다이얼로그 |

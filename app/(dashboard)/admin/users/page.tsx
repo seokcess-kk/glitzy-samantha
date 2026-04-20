@@ -1,6 +1,6 @@
 'use client'
 import { useState, useEffect } from 'react'
-import { Plus, UserCog, Settings } from 'lucide-react'
+import { Plus, UserCog, Settings, KeyRound } from 'lucide-react'
 import { useSession } from 'next-auth/react'
 import { useRouter } from 'next/navigation'
 import { toast } from 'sonner'
@@ -79,6 +79,10 @@ export default function UsersPage() {
     assigned_clinic_ids: [] as number[], menu_permissions: [] as string[],
   })
   const [saving, setSaving] = useState(false)
+  const [pwDialogOpen, setPwDialogOpen] = useState(false)
+  const [pwTargetUser, setPwTargetUser] = useState<{ id: number; username: string } | null>(null)
+  const [pwForm, setPwForm] = useState({ password: '', confirm: '' })
+  const [pwSaving, setPwSaving] = useState(false)
 
   useEffect(() => {
     if (user && user.role !== 'superadmin') router.replace('/')
@@ -194,6 +198,44 @@ export default function UsersPage() {
       toast.error(e.message || '저장 실패')
     } finally {
       setPermSaving(false)
+    }
+  }
+
+  const openPwDialog = (u: { id: number; username: string }) => {
+    setPwTargetUser(u)
+    setPwForm({ password: '', confirm: '' })
+    setPwDialogOpen(true)
+  }
+
+  const submitPasswordReset = async () => {
+    if (!pwTargetUser) return
+    if (pwForm.password.length < 8) {
+      toast.error('비밀번호는 최소 8자 이상이어야 합니다.')
+      return
+    }
+    if (pwForm.password !== pwForm.confirm) {
+      toast.error('비밀번호 확인이 일치하지 않습니다.')
+      return
+    }
+    setPwSaving(true)
+    try {
+      const res = await fetch(`/api/admin/users/${pwTargetUser.id}/password`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ password: pwForm.password }),
+      })
+      if (!res.ok) {
+        const err = await res.json()
+        throw new Error(err.error)
+      }
+      toast.success(`${pwTargetUser.username} 비밀번호가 재설정되었습니다.`)
+      setPwDialogOpen(false)
+      setPwTargetUser(null)
+      setPwForm({ password: '', confirm: '' })
+    } catch (e: any) {
+      toast.error(e.message || '재설정 실패')
+    } finally {
+      setPwSaving(false)
     }
   }
 
@@ -358,6 +400,49 @@ export default function UsersPage() {
         </DialogContent>
       </Dialog>
 
+      {/* 비밀번호 재설정 다이얼로그 */}
+      <Dialog open={pwDialogOpen} onOpenChange={setPwDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>비밀번호 재설정</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4 py-4">
+            <p className="text-sm text-muted-foreground">
+              대상 계정: <span className="font-medium text-foreground">{pwTargetUser?.username}</span>
+            </p>
+            <div className="space-y-2">
+              <Label className="text-xs text-muted-foreground">새 비밀번호 * (최소 8자)</Label>
+              <Input
+                type="password"
+                value={pwForm.password}
+                onChange={e => setPwForm(f => ({ ...f, password: e.target.value }))}
+                placeholder="새 비밀번호"
+                autoComplete="new-password"
+              />
+            </div>
+            <div className="space-y-2">
+              <Label className="text-xs text-muted-foreground">비밀번호 확인 *</Label>
+              <Input
+                type="password"
+                value={pwForm.confirm}
+                onChange={e => setPwForm(f => ({ ...f, confirm: e.target.value }))}
+                placeholder="동일한 비밀번호"
+                autoComplete="new-password"
+              />
+            </div>
+            <p className="text-xs text-muted-foreground">
+              재설정하면 해당 사용자의 기존 세션은 모두 무효화됩니다.
+            </p>
+          </div>
+          <DialogFooter>
+            <Button variant="ghost" onClick={() => setPwDialogOpen(false)}>취소</Button>
+            <Button onClick={submitPasswordReset} disabled={pwSaving} className="bg-brand-600 hover:bg-brand-700">
+              {pwSaving ? '처리 중...' : '재설정'}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
       <Card variant="glass" className="p-6">
         <div className="flex items-center justify-between mb-4">
           <h2 className="font-semibold text-foreground">계정 목록 ({users.length})</h2>
@@ -403,15 +488,26 @@ export default function UsersPage() {
                   />
                 </TableCell>
                 <TableCell>
-                  {u.role === 'agency_staff' && (
+                  <div className="flex items-center gap-3">
                     <button
-                      onClick={() => openPermDialog(u.id)}
+                      onClick={() => openPwDialog({ id: u.id, username: u.username })}
                       className="text-muted-foreground hover:text-foreground transition-colors"
-                      aria-label="권한 설정"
+                      aria-label="비밀번호 재설정"
+                      title="비밀번호 재설정"
                     >
-                      <Settings size={16} />
+                      <KeyRound size={16} />
                     </button>
-                  )}
+                    {u.role === 'agency_staff' && (
+                      <button
+                        onClick={() => openPermDialog(u.id)}
+                        className="text-muted-foreground hover:text-foreground transition-colors"
+                        aria-label="권한 설정"
+                        title="권한 설정"
+                      >
+                        <Settings size={16} />
+                      </button>
+                    )}
+                  </div>
                 </TableCell>
               </TableRow>
               ))}
