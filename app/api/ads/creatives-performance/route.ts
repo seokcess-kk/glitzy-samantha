@@ -188,47 +188,79 @@ export const GET = withClinicFilter(async (req: Request, { user, clinicId, assig
       entry.revenue += Number(payment.payment_amount) || 0
     }
 
-    // ad_stats: (1) utm_content 직접, (2) ad_id 직접 (lead.utm_content가 ad_id일 때), (3) campaign 풀 fallback
-    // 이중 집계 방지: utm_content 있는 행은 direct로만, 없는 행만 campaign 풀로 분리
+    // ad_stats: (1) utm_content 직접, (2) ad_id 직접, (3) ad_name 부분문자열 매칭, (4) campaign 풀 fallback
+    // 이중 집계 방지: 각 행은 가장 강한 매칭 단계에만 기여, campaign 풀은 어디에도 안 잡힌 행만
     const directUtmStats = new Map<string, { spend: number; clicks: number; impressions: number }>()
     const campaignStats = new Map<string, { spend: number; clicks: number; impressions: number }>()
     // ad_id별 집계 — Meta url_tags가 `utm_content={{ad.id}}` 매크로로 설정된 경우
     // lead.utm_content는 치환된 실제 ad_id가 되므로 ad_stats.ad_id와 직접 매칭 가능
     const adIdDirectStats = new Map<string, { spend: number; clicks: number; impressions: number; adName: string | null; platform: string | null; campaignId: string | null }>()
+    // ad_name 부분문자열 매칭 — Meta ads_read 권한 부재 등으로 url_tags 추출 실패 시 대응
+    // 사용자가 Meta 광고명에 소재명(utm_content/creative name)을 포함시킨 경우 ad 레벨 spend 귀속
+    const adNameDirectStats = new Map<string, { spend: number; clicks: number; impressions: number }>()
+
+    // 매칭 키 후보: 등록된 소재의 utm_content + name, 리드 유입된 utm_content (미등록 포함)
+    // 4자 미만은 과매칭 방지를 위해 제외
+    const creativeKeyLookup = new Map<string, string>() // 검색 키(lowercased) → 정규화 utm_content
+    for (const c of creatives) {
+      const utm = c.utm_content.toLowerCase()
+      if (utm.length >= 4) creativeKeyLookup.set(utm, utm)
+      if (c.name && c.name.length >= 4) creativeKeyLookup.set(c.name.toLowerCase(), utm)
+    }
+    for (const utm of contentLeadMap.keys()) {
+      if (utm.length >= 4 && !creativeKeyLookup.has(utm)) creativeKeyLookup.set(utm, utm)
+    }
 
     for (const row of adStatsData) {
-      if (row.utm_content) {
-        const key = (row.utm_content as string).toLowerCase()
-        const existing = directUtmStats.get(key) || { spend: 0, clicks: 0, impressions: 0 }
-        existing.spend += Number(row.spend_amount) || 0
-        existing.clicks += row.clicks || 0
-        existing.impressions += row.impressions || 0
-        directUtmStats.set(key, existing)
-      } else if (row.campaign_id) {
-        const existing = campaignStats.get(row.campaign_id) || { spend: 0, clicks: 0, impressions: 0 }
-        existing.spend += Number(row.spend_amount) || 0
-        existing.clicks += row.clicks || 0
-        existing.impressions += row.impressions || 0
-        campaignStats.set(row.campaign_id, existing)
-      }
+      const spend = Number(row.spend_amount) || 0
+      const clicks = row.clicks || 0
+      const impressions = row.impressions || 0
 
-      // ad_id별 집계 (utm_content 유무 관계없이)
+      // ad_id별 집계 (utm_content 유무 관계없이 — 2차 direct 경로용)
       if (row.ad_id) {
         const existing = adIdDirectStats.get(row.ad_id)
         if (existing) {
-          existing.spend += Number(row.spend_amount) || 0
-          existing.clicks += row.clicks || 0
-          existing.impressions += row.impressions || 0
+          existing.spend += spend; existing.clicks += clicks; existing.impressions += impressions
         } else {
           adIdDirectStats.set(row.ad_id, {
-            spend: Number(row.spend_amount) || 0,
-            clicks: row.clicks || 0,
-            impressions: row.impressions || 0,
+            spend, clicks, impressions,
             adName: row.ad_name || null,
             platform: row.platform || null,
             campaignId: row.campaign_id || null,
           })
         }
+      }
+
+      // 매칭 우선순위: utm_content → ad_name → campaign 풀
+      if (row.utm_content) {
+        const key = (row.utm_content as string).toLowerCase()
+        const existing = directUtmStats.get(key) || { spend: 0, clicks: 0, impressions: 0 }
+        existing.spend += spend; existing.clicks += clicks; existing.impressions += impressions
+        directUtmStats.set(key, existing)
+        continue
+      }
+
+      // ad_name 부분문자열 매칭
+      let matchedByAdName = false
+      if (row.ad_name) {
+        const adNameLower = row.ad_name.toLowerCase()
+        for (const [searchKey, utmKey] of creativeKeyLookup) {
+          if (adNameLower.includes(searchKey)) {
+            const existing = adNameDirectStats.get(utmKey) || { spend: 0, clicks: 0, impressions: 0 }
+            existing.spend += spend; existing.clicks += clicks; existing.impressions += impressions
+            adNameDirectStats.set(utmKey, existing)
+            matchedByAdName = true
+            break
+          }
+        }
+      }
+      if (matchedByAdName) continue
+
+      // campaign 풀 fallback — 어디에도 매칭 안 된 경우
+      if (row.campaign_id) {
+        const existing = campaignStats.get(row.campaign_id) || { spend: 0, clicks: 0, impressions: 0 }
+        existing.spend += spend; existing.clicks += clicks; existing.impressions += impressions
+        campaignStats.set(row.campaign_id, existing)
       }
     }
 
@@ -238,12 +270,13 @@ export const GET = withClinicFilter(async (req: Request, { user, clinicId, assig
       if (adIdDirectStats.has(utm)) adIdMatchedByUtm.add(utm)
     }
 
-    // campaign_id별 fallback 분모 — direct(utm_content/ad_id) 매칭된 소재의 리드는 제외해야
-    // fallback 풀(utm_content 없는 ads)이 non-direct 소재들 사이에 정확히 배분됨
+    // campaign_id별 fallback 분모 — direct 매칭된 소재의 리드는 제외해야
+    // fallback 풀이 non-direct 소재들 사이에 정확히 배분됨
     const campTotalLeadsMap = new Map<string, number>()
     for (const [utmContent, cMap] of contentCampaignMap) {
       if (directUtmStats.has(utmContent)) continue
       if (adIdDirectStats.has(utmContent)) continue
+      if (adNameDirectStats.has(utmContent)) continue
       for (const [campId, count] of cMap) {
         campTotalLeadsMap.set(campId, (campTotalLeadsMap.get(campId) || 0) + count)
       }
@@ -259,7 +292,11 @@ export const GET = withClinicFilter(async (req: Request, { user, clinicId, assig
       const adDirect = adIdDirectStats.get(utmContent)
       if (adDirect) return { spend: adDirect.spend, clicks: adDirect.clicks, impressions: adDirect.impressions }
 
-      // 3차: campaign별 지표를 리드 비율로 배분
+      // 3차: Meta 광고명에 소재명이 포함된 경우 (url_tags 추출 실패 대응)
+      const nameDirect = adNameDirectStats.get(utmContent)
+      if (nameDirect) return nameDirect
+
+      // 4차: campaign별 지표를 리드 비율로 배분
       const campLeads = contentCampaignMap.get(utmContent)
       if (!campLeads || campLeads.size === 0) return { spend: 0, clicks: 0, impressions: 0 }
 
@@ -285,8 +322,12 @@ export const GET = withClinicFilter(async (req: Request, { user, clinicId, assig
       }
     }
 
-    // 최종 조립: leads + ad_stats 모든 utm_content 포함
-    const allUtmContents = new Set([...contentLeadMap.keys(), ...directUtmStats.keys()])
+    // 최종 조립: leads + direct 매칭된 모든 utm_content 포함
+    const allUtmContents = new Set([
+      ...contentLeadMap.keys(),
+      ...directUtmStats.keys(),
+      ...adNameDirectStats.keys(),
+    ])
 
     const allCreatives: {
       utm_content: string; name: string; platform: string | null
