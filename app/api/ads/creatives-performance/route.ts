@@ -189,11 +189,12 @@ export const GET = withClinicFilter(async (req: Request, { user, clinicId, assig
     }
 
     // ad_stats: 1차 utm_content 직접 매칭, 2차 campaign_id별 집계
+    // 이중 집계 방지: utm_content 있는 행은 direct로만, 없는 행만 campaign 풀로 분리
+    // (같은 행이 direct + campaignStats 양쪽에 들어가면 fallback 소재에 direct 소재 spend가 중복 배분됨)
     const directUtmStats = new Map<string, { spend: number; clicks: number; impressions: number }>()
     const campaignStats = new Map<string, { spend: number; clicks: number; impressions: number }>()
 
     for (const row of adStatsData) {
-      // 1차: utm_content가 있으면 직접 매칭
       if (row.utm_content) {
         const key = (row.utm_content as string).toLowerCase()
         const existing = directUtmStats.get(key) || { spend: 0, clicks: 0, impressions: 0 }
@@ -201,9 +202,7 @@ export const GET = withClinicFilter(async (req: Request, { user, clinicId, assig
         existing.clicks += row.clicks || 0
         existing.impressions += row.impressions || 0
         directUtmStats.set(key, existing)
-      }
-      // campaign_id별 집계 (2차 폴백용)
-      if (row.campaign_id) {
+      } else if (row.campaign_id) {
         const existing = campaignStats.get(row.campaign_id) || { spend: 0, clicks: 0, impressions: 0 }
         existing.spend += Number(row.spend_amount) || 0
         existing.clicks += row.clicks || 0
@@ -212,9 +211,11 @@ export const GET = withClinicFilter(async (req: Request, { user, clinicId, assig
       }
     }
 
-    // campaign_id별 전체 리드 수 사전 계산 (배분 비율용)
+    // campaign_id별 fallback 분모 — direct 매칭된 소재의 리드는 제외해야
+    // fallback 풀(utm_content 없는 ads)이 non-direct 소재들 사이에 정확히 배분됨
     const campTotalLeadsMap = new Map<string, number>()
-    for (const [, cMap] of contentCampaignMap) {
+    for (const [utmContent, cMap] of contentCampaignMap) {
+      if (directUtmStats.has(utmContent)) continue
       for (const [campId, count] of cMap) {
         campTotalLeadsMap.set(campId, (campTotalLeadsMap.get(campId) || 0) + count)
       }
@@ -222,9 +223,9 @@ export const GET = withClinicFilter(async (req: Request, { user, clinicId, assig
 
     // utm_content별 광고 지표 결정
     function getAdMetrics(utmContent: string): { spend: number; clicks: number; impressions: number } {
-      // 1차: ad_stats utm_content 직접 매칭
+      // 1차: ad_stats utm_content 직접 매칭 (spend=0도 직접 귀속 — fallback 풀의 다른 소재 spend가 흘러들면 안 됨)
       const direct = directUtmStats.get(utmContent)
-      if (direct && direct.spend > 0) return direct
+      if (direct) return direct
 
       // 2차: campaign별 지표를 리드 비율로 배분
       const campLeads = contentCampaignMap.get(utmContent)
