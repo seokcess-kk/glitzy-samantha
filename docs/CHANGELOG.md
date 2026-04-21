@@ -4,7 +4,7 @@
 
 | 날짜 | 내용 |
 |------|------|
-| 2026-04-21 | 소재별 CPL 이중 집계 버그 수정(`app/api/ads/creatives-performance/route.ts`): utm_content 있는 ad_stats 행이 `directUtmStats`·`campaignStats` 양쪽에 들어가면서, fallback 경로의 소재들이 direct 매칭 소재의 spend까지 중복 배분받던 문제. `if/else if`로 풀 분리 + `campTotalLeadsMap`에서 direct 매칭 소재의 리드 제외 + direct 존재 시(spend=0 포함) 즉시 귀속으로 수정. |
+| 2026-04-21 | 소재별 CPL 계산 개선(`app/api/ads/creatives-performance/route.ts`): (1) utm_content 있는 ad_stats 행의 이중 집계(direct+campaignStats) 차단, (2) Meta `utm_content={{ad.id}}` 매크로 패턴 대응 — `lead.utm_content`가 `ad_stats.ad_id`와 일치하면 ad 레벨 spend/clicks로 직접 귀속(2차 direct 매칭). 기존에는 direct 매칭 실패 시 모든 소재가 fallback으로 가며 CPL이 campaignSpend/totalLeads로 수렴하던 문제. |
 | 2026-04-21 | Dable Ads 연동: `lib/services/dableAds.ts` 신규 (daily_report, group_by_campaign=1, 7일 롤링 재조회). adSyncManager 확장, 연결 테스트(Budget Report 기반), `SYNC_ENABLED_PLATFORMS`에 `dable_ads` 추가. `lib/platform.ts` 필드 `advertiser_id` → `client_name` 변경 (Dable은 path에 URL-encoded client_name 사용). Budget Report는 별도 UI 없이 연결 테스트 용도로만 사용(타 플랫폼 balance 미지원이라 일관성 유지). |
 | 2026-03-19 | CLAUDE.md 재설계: 모듈 분리, 검증 루프, 도메인 용어, 네이밍 컨벤션, 팀 가이드 추가 |
 | 2026-03-19 | 원격 변경 병합: ClinicContext, archive, error-alert, channel, date 유틸, deleted_records, E2E 상세 |

@@ -188,11 +188,13 @@ export const GET = withClinicFilter(async (req: Request, { user, clinicId, assig
       entry.revenue += Number(payment.payment_amount) || 0
     }
 
-    // ad_stats: 1차 utm_content 직접 매칭, 2차 campaign_id별 집계
+    // ad_stats: (1) utm_content 직접, (2) ad_id 직접 (lead.utm_content가 ad_id일 때), (3) campaign 풀 fallback
     // 이중 집계 방지: utm_content 있는 행은 direct로만, 없는 행만 campaign 풀로 분리
-    // (같은 행이 direct + campaignStats 양쪽에 들어가면 fallback 소재에 direct 소재 spend가 중복 배분됨)
     const directUtmStats = new Map<string, { spend: number; clicks: number; impressions: number }>()
     const campaignStats = new Map<string, { spend: number; clicks: number; impressions: number }>()
+    // ad_id별 집계 — Meta url_tags가 `utm_content={{ad.id}}` 매크로로 설정된 경우
+    // lead.utm_content는 치환된 실제 ad_id가 되므로 ad_stats.ad_id와 직접 매칭 가능
+    const adIdDirectStats = new Map<string, { spend: number; clicks: number; impressions: number; adName: string | null; platform: string | null; campaignId: string | null }>()
 
     for (const row of adStatsData) {
       if (row.utm_content) {
@@ -209,13 +211,39 @@ export const GET = withClinicFilter(async (req: Request, { user, clinicId, assig
         existing.impressions += row.impressions || 0
         campaignStats.set(row.campaign_id, existing)
       }
+
+      // ad_id별 집계 (utm_content 유무 관계없이)
+      if (row.ad_id) {
+        const existing = adIdDirectStats.get(row.ad_id)
+        if (existing) {
+          existing.spend += Number(row.spend_amount) || 0
+          existing.clicks += row.clicks || 0
+          existing.impressions += row.impressions || 0
+        } else {
+          adIdDirectStats.set(row.ad_id, {
+            spend: Number(row.spend_amount) || 0,
+            clicks: row.clicks || 0,
+            impressions: row.impressions || 0,
+            adName: row.ad_name || null,
+            platform: row.platform || null,
+            campaignId: row.campaign_id || null,
+          })
+        }
+      }
     }
 
-    // campaign_id별 fallback 분모 — direct 매칭된 소재의 리드는 제외해야
+    // lead.utm_content가 ad_id와 매칭되는지 사전 스캔 — 매칭되는 ad_id는 소재별 표시에서 중복 방지
+    const adIdMatchedByUtm = new Set<string>()
+    for (const utm of contentLeadMap.keys()) {
+      if (adIdDirectStats.has(utm)) adIdMatchedByUtm.add(utm)
+    }
+
+    // campaign_id별 fallback 분모 — direct(utm_content/ad_id) 매칭된 소재의 리드는 제외해야
     // fallback 풀(utm_content 없는 ads)이 non-direct 소재들 사이에 정확히 배분됨
     const campTotalLeadsMap = new Map<string, number>()
     for (const [utmContent, cMap] of contentCampaignMap) {
       if (directUtmStats.has(utmContent)) continue
+      if (adIdDirectStats.has(utmContent)) continue
       for (const [campId, count] of cMap) {
         campTotalLeadsMap.set(campId, (campTotalLeadsMap.get(campId) || 0) + count)
       }
@@ -223,11 +251,15 @@ export const GET = withClinicFilter(async (req: Request, { user, clinicId, assig
 
     // utm_content별 광고 지표 결정
     function getAdMetrics(utmContent: string): { spend: number; clicks: number; impressions: number } {
-      // 1차: ad_stats utm_content 직접 매칭 (spend=0도 직접 귀속 — fallback 풀의 다른 소재 spend가 흘러들면 안 됨)
+      // 1차: ad_stats.utm_content 직접 매칭 (spend=0도 직접 귀속)
       const direct = directUtmStats.get(utmContent)
       if (direct) return direct
 
-      // 2차: campaign별 지표를 리드 비율로 배분
+      // 2차: lead.utm_content가 ad_id인 경우 (Meta url_tags `{{ad.id}}` 매크로 패턴)
+      const adDirect = adIdDirectStats.get(utmContent)
+      if (adDirect) return { spend: adDirect.spend, clicks: adDirect.clicks, impressions: adDirect.impressions }
+
+      // 3차: campaign별 지표를 리드 비율로 배분
       const campLeads = contentCampaignMap.get(utmContent)
       if (!campLeads || campLeads.size === 0) return { spend: 0, clicks: 0, impressions: 0 }
 
@@ -270,6 +302,8 @@ export const GET = withClinicFilter(async (req: Request, { user, clinicId, assig
       const leadData = contentLeadMap.get(utmContent)
       const paymentData = contentPaymentMap.get(utmContent)
       const adMetrics = getAdMetrics(utmContent)
+      // utm_content가 ad_id에 매칭된 경우 fallback용 ad_name/platform/campaign 정보 확보
+      const adIdMatch = !directUtmStats.has(utmContent) ? adIdDirectStats.get(utmContent) : undefined
 
       const leadCount = leadData?.leadIds.size || 0
       const customerCount = paymentData?.payingCustomers.size || 0
@@ -278,26 +312,21 @@ export const GET = withClinicFilter(async (req: Request, { user, clinicId, assig
 
       const { spend, clicks, impressions } = adMetrics
 
-      // campaign_name 역매핑: contentCampaignMap의 campaign_id → ad_campaign_stats의 campaign_name
       const campIds = contentCampaignMap.get(utmContent)
       const campaignNames: string[] = []
       if (campIds) {
-        for (const campId of campIds.keys()) {
-          // adStatsData에서 해당 campaign_id의 campaign_name 찾기 (ad_campaign_stats와 동일)
-          const matchedAd = adStatsData.find(a => a.campaign_id === campId)
-          if (matchedAd) {
-            // ad_stats에는 campaign_name이 없으므로, campaign_id만 사용
-            campaignNames.push(campId)
-          } else {
-            campaignNames.push(campId)
-          }
-        }
+        for (const campId of campIds.keys()) campaignNames.push(campId)
+      }
+      if (adIdMatch?.campaignId && !campaignNames.includes(adIdMatch.campaignId)) {
+        campaignNames.push(adIdMatch.campaignId)
       }
 
       allCreatives.push({
         utm_content: utmContent,
-        name: creative?.name || utmContent,
-        platform: creative ? normalizeChannel(creative.platform) : null,
+        name: creative?.name || adIdMatch?.adName || utmContent,
+        platform: creative
+          ? normalizeChannel(creative.platform)
+          : adIdMatch?.platform ? normalizeChannel(adIdMatch.platform) : null,
         spend,
         clicks,
         impressions,
@@ -316,10 +345,12 @@ export const GET = withClinicFilter(async (req: Request, { user, clinicId, assig
     }
 
     // utm_content 없는 ad_stats (TikTok/Google 등) → ad_id 기준으로 별도 표시
+    // 단, lead.utm_content와 ad_id가 매칭된 경우는 위에서 이미 소재별로 처리됨 → 건너뛰기
     const adIdStats = new Map<string, { adName: string; platform: string; spend: number; clicks: number; impressions: number; campaignId: string | null }>()
     for (const row of adStatsData) {
       if (row.utm_content) continue // utm_content 있는 건 위에서 이미 처리
       if (!row.ad_id) continue
+      if (adIdMatchedByUtm.has(row.ad_id)) continue // ad_id로 이미 소재에 귀속됨
       const existing = adIdStats.get(row.ad_id)
       if (existing) {
         existing.spend += Number(row.spend_amount) || 0
