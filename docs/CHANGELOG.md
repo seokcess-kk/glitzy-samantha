@@ -4,6 +4,7 @@
 
 | 날짜 | 내용 |
 |------|------|
+| 2026-04-21 | Dable Ads 연동: `lib/services/dableAds.ts` 신규 (daily_report, group_by_campaign=1, 7일 롤링 재조회). adSyncManager 확장, 연결 테스트(Budget Report 기반), `SYNC_ENABLED_PLATFORMS`에 `dable_ads` 추가. `lib/platform.ts` 필드 `advertiser_id` → `client_name` 변경 (Dable은 path에 URL-encoded client_name 사용). Budget Report는 별도 UI 없이 연결 테스트 용도로만 사용(타 플랫폼 balance 미지원이라 일관성 유지). |
 | 2026-03-19 | CLAUDE.md 재설계: 모듈 분리, 검증 루프, 도메인 용어, 네이밍 컨벤션, 팀 가이드 추가 |
 | 2026-03-19 | 원격 변경 병합: ClinicContext, archive, error-alert, channel, date 유틸, deleted_records, E2E 상세 |
 | 2026-03-19 | 검증 규칙에 '전체 맥락 코드 리뷰' 단계 추가 — 구현부만 단독 검토하지 않고 호출자/데이터 흐름/역할별/기존 패턴과의 정합성까지 확인 |

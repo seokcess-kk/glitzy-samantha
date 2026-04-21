@@ -10,6 +10,7 @@ import { createLogger } from '@/lib/logger'
 import { fetchMetaAds, fetchMetaAdStats } from '@/lib/services/metaAds'
 import { fetchGoogleAds } from '@/lib/services/googleAds'
 import { fetchTikTokAds, fetchTikTokAdStats } from '@/lib/services/tiktokAds'
+import { fetchDableAds } from '@/lib/services/dableAds'
 import { type ApiPlatform, SYNC_ENABLED_PLATFORMS, API_PLATFORM_LABELS } from '@/lib/platform'
 
 const logger = createLogger('AdSyncManager')
@@ -112,6 +113,20 @@ async function syncPlatform(
           platform: campaignResult.platform,
           count: campaignResult.count + adResult.count,
           error: campaignResult.error || adResult.error || undefined,
+        }
+      }
+      case 'dable_ads': {
+        const result = await fetchDableAds(date, {
+          clinicId,
+          clientName: decrypted.client_name as string,
+          apiKey: decrypted.api_key as string,
+        })
+        return {
+          clinicId,
+          clinicName,
+          platform: result.platform,
+          count: result.count,
+          error: result.error,
         }
       }
       default:

@@ -132,6 +132,40 @@ async function testTikTokAds(config: Record<string, unknown>): Promise<TestResul
 }
 
 /**
+ * Dable Ads 연결 테스트
+ * GET https://marketing.dable.io/api/client/{client_name}/budget_report?api_key=...
+ * 성공 시 balance, today_cost_spent 반환 → 계정명 별도 제공 안 됨 → client_name 그대로 사용
+ */
+async function testDableAds(config: Record<string, unknown>): Promise<TestResult> {
+  const clientName = config.client_name as string | undefined
+  const apiKey = config.api_key as string | undefined
+
+  if (!clientName || !apiKey) {
+    return { success: false, error: 'client_name과 api_key가 필요합니다.', platform: 'dable_ads' }
+  }
+
+  const url = `https://marketing.dable.io/api/client/${encodeURIComponent(clientName)}/budget_report?api_key=${encodeURIComponent(apiKey)}`
+
+  const { response } = await fetchWithRetry(url, {
+    timeout: TEST_TIMEOUT,
+    retries: 0,
+    service: 'DableAdsTest',
+  })
+
+  if (!response.ok) {
+    const body = await response.text().catch(() => 'Unknown error')
+    return { success: false, error: `Dable API 오류 (${response.status}): ${body.slice(0, 200)}`, platform: 'dable_ads' }
+  }
+
+  const data = (await response.json().catch(() => null)) as { balance?: number; today_cost_spent?: number } | null
+  if (!data || (data.balance === undefined && data.today_cost_spent === undefined)) {
+    return { success: false, error: 'Dable 응답 형식이 예상과 다릅니다.', platform: 'dable_ads' }
+  }
+
+  return { success: true, accountName: clientName, platform: 'dable_ads' }
+}
+
+/**
  * POST: 매체 연결 테스트 실행
  */
 export const POST = withSuperAdmin(async (req: Request) => {
@@ -198,9 +232,11 @@ export const POST = withSuperAdmin(async (req: Request) => {
       case 'tiktok_ads':
         result = await testTikTokAds(config)
         break
+      case 'dable_ads':
+        result = await testDableAds(config)
+        break
       case 'naver_ads':
       case 'kakao_ads':
-      case 'dable_ads':
         result = { success: false, error: '연결 테스트가 아직 지원되지 않습니다. API 키만 저장됩니다.', platform }
         break
       default:
