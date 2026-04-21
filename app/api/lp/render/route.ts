@@ -132,7 +132,7 @@ export async function GET(req: NextRequest) {
         }
         fetch('/api/webhook/lead', {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
+          headers: { 'Content-Type': 'application/json', 'X-Lead-Retry': '1' },
           body: JSON.stringify(item.payload)
         }).then(function(res) {
           if (res.ok) self.remove(item.key);
@@ -191,6 +191,19 @@ export async function GET(req: NextRequest) {
     var isLeadWebhook = typeof url === 'string' && url.indexOf('/api/webhook/lead') !== -1 && opts && opts.method === 'POST';
 
     if (isLeadWebhook) {
+      // retry 경로 식별 — LeadQueue.retry()가 붙인 헤더. true면 페이지 로드 시 localStorage 재전송이므로
+      // form_submit dataLayer.push / 오버레이 / 리다이렉트를 전부 건너뛴다 (전환 중복 집계 방지)
+      var isRetry = false;
+      try {
+        if (opts.headers) {
+          if (typeof Headers !== 'undefined' && opts.headers instanceof Headers) {
+            isRetry = opts.headers.get('X-Lead-Retry') === '1';
+          } else {
+            isRetry = opts.headers['X-Lead-Retry'] === '1' || opts.headers['x-lead-retry'] === '1';
+          }
+        }
+      } catch(e) {}
+
       var bodyObj = null;
       try {
         bodyObj = JSON.parse(opts.body);
@@ -204,34 +217,36 @@ export async function GET(req: NextRequest) {
         eventId = null;
       }
 
-      // 백업: localStorage 큐에 선저장 (keepalive 실패 시 재전송 대상)
+      // 백업 save: HTML 폼 핸들러가 이미 save한 경우(idempotency_key 존재) 또는 retry 경로면 생략
       var queueKey = null;
-      if (bodyObj && window.LeadQueue) {
+      if (bodyObj && !bodyObj.idempotency_key && !isRetry && window.LeadQueue) {
         queueKey = window.LeadQueue.save(bodyObj);
       }
 
       var lpData = window.__LP_DATA__ || {};
 
-      // GTM dataLayer.push (동기) — 이동 전에 트리거 발화
-      window.dataLayer.push({
-        event: 'form_submit',
-        lead_event_id: eventId,
-        landing_page_id: lpData.landingPageId || null,
-        clinic_id: lpData.clinicId || null,
-        clinic_name: lpData.clinicName || ''
-      });
+      if (!isRetry) {
+        // GTM dataLayer.push (동기) — 이동 전에 트리거 발화
+        window.dataLayer.push({
+          event: 'form_submit',
+          lead_event_id: eventId,
+          landing_page_id: lpData.landingPageId || null,
+          clinic_id: lpData.clinicId || null,
+          clinic_name: lpData.clinicName || ''
+        });
 
-      // HTML 내부의 alert() 중복 표시 억제 (우리 오버레이로 대체)
-      var _origAlert = window.alert;
-      window.alert = function() {};
-      setTimeout(function() { window.alert = _origAlert; }, 10000);
+        // HTML 내부의 alert() 중복 표시 억제 (우리 오버레이로 대체)
+        var _origAlert = window.alert;
+        window.alert = function() {};
+        setTimeout(function() { window.alert = _origAlert; }, 10000);
+      }
 
       // fetch — 응답 후 HTML의 버튼 업데이트가 먼저 보이도록 오버레이는 지연 표시
       var promise = _origFetch.call(this, url, opts).then(function(res) {
         if (res.ok && queueKey && window.LeadQueue) {
           window.LeadQueue.remove(queueKey);
         }
-        if (res.ok) {
+        if (res.ok && !isRetry) {
           // setTimeout 0 → HTML의 .then 핸들러(버튼 "제출 완료" 변경)가 먼저 실행되도록 다음 태스크로 연기
           setTimeout(function() {
             showSuccessOverlay(!!lpData.redirectUrl);

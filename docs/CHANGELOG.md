@@ -61,3 +61,4 @@
 | 2026-04-17 | fix: DialogContent `aria-describedby` 경고 해결 (3개 다이얼로그 DialogDescription 추가) |
 | 2026-04-17 | fix: 로그인 username 양끝 공백 trim — 비밀번호 매니저 자동완성 시 trailing space 포함으로 `user_not_found` 실패하던 문제 (`lib/auth.ts:70`) |
 | 2026-04-20 | feat: 슈퍼어드민 비밀번호 재설정 — `PATCH /api/admin/users/[id]/password` 신규 (bcrypt cost 12, `password_version` 증가로 기존 세션 무효화, `activity_logs` 기록), 계정 관리 페이지 KeyRound 아이콘 버튼 + 재설정 다이얼로그 |
+| 2026-04-21 | fix: 랜딩페이지 전환 중복 집계 방지 (`app/api/lp/render/route.ts`) — (1) LeadQueue.retry()에 `X-Lead-Retry: 1` 헤더 추가, (2) fetch wrapper가 retry 요청이면 `form_submit` dataLayer.push / 오버레이 / 리다이렉트 스킵 → 페이지 로드 시 localStorage 재전송이 GTM Dable/Meta 전환으로 이중 집계되던 버그 해소, (3) bodyObj에 `idempotency_key` 존재 시 wrapper의 중복 `LeadQueue.save()` 생략 (HTML 폼 핸들러와 이중 저장 제거) |
