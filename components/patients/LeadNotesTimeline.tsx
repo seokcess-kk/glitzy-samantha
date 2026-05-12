@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react'
 import { ChevronDown, ChevronUp, MessageSquare } from 'lucide-react'
+import { formatDateTime } from '@/lib/date'
 
 interface LeadNote {
   id: number
@@ -18,11 +19,6 @@ interface Props {
   clinicId?: number | null
   /** 'card' = 우측 패널처럼 좁은 카드용(기본 펼침), 'accordion' = 아코디언 섹션 본문용(기본 펼침) */
   variant?: 'card' | 'accordion'
-}
-
-function shortTime(dateStr: string): string {
-  const ts = dateStr.endsWith('Z') || /[+-]\d{2}:\d{2}$/.test(dateStr) ? dateStr : dateStr + 'Z'
-  return new Date(ts).toLocaleDateString('ko', { timeZone: 'Asia/Seoul', month: 'numeric', day: 'numeric' })
 }
 
 export function LeadNotesTimeline({ customerId, clinicId, variant = 'accordion' }: Props) {
@@ -69,8 +65,8 @@ export function LeadNotesTimeline({ customerId, clinicId, variant = 'accordion' 
           <span className="shrink-0 text-muted-foreground/70 min-w-[60px] truncate">
             {n.author?.username || '?'}
           </span>
-          <span className="shrink-0 text-muted-foreground/50 min-w-[36px]">
-            {shortTime(n.created_at)}
+          <span className="shrink-0 text-muted-foreground/50 min-w-[88px]">
+            {formatDateTime(n.created_at)}
           </span>
           <span className="flex-1 text-foreground/90 break-all whitespace-pre-wrap">
             {n.content}

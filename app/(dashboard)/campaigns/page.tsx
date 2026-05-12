@@ -49,6 +49,15 @@ interface CampaignSummary {
   today_count: number
 }
 
+interface LeadNote {
+  id: number
+  content: string
+  created_by: number | null
+  created_at: string
+  updated_at: string | null
+  author: { id: number; username: string } | null
+}
+
 interface CampaignLead {
   id: number
   customer_id: number
@@ -61,20 +70,12 @@ interface CampaignLead {
   created_at: string
   landing_page_id: number | null
   lead_status: string
+  notes: LeadNote[]
   notes_count: number
   latest_note: { content: string; created_at: string; author: string | null } | null
   custom_data: { survey?: Record<string, string>; marketing_consent?: boolean; name?: string } | null
   customer: { id: number; name: string; phone_number: string; first_source: string } | null
   landing_page: { id: number; name: string } | null
-}
-
-interface LeadNote {
-  id: number
-  content: string
-  created_by: number | null
-  created_at: string
-  updated_at: string | null
-  author: { id: number; username: string } | null
 }
 
 function timeAgo(dateStr: string): string {
@@ -293,22 +294,16 @@ function noteSnippet(content: string, max = 40): string {
   return trimmed.length > max ? trimmed.slice(0, max) + '…' : trimmed
 }
 
-function shortTime(dateStr: string): string {
-  const ts = dateStr.endsWith('Z') || /[+-]\d{2}:\d{2}$/.test(dateStr) ? dateStr : dateStr + 'Z'
-  return new Date(ts).toLocaleDateString('ko', { timeZone: 'Asia/Seoul', month: 'numeric', day: 'numeric' })
-}
-
-function LeadCard({ lead, currentUserId, currentUserRole, onStatusChange, onNotesMetaChange, selectedClinicId }: {
+function LeadCard({ lead, currentUserId, currentUserRole, onStatusChange, onNotesChange, selectedClinicId }: {
   lead: CampaignLead
   currentUserId: number | null
   currentUserRole: string | null
   onStatusChange: (id: number, status: string) => void
-  onNotesMetaChange: (id: number, notesCount: number, latestNote: CampaignLead['latest_note']) => void
+  onNotesChange: (id: number, notes: LeadNote[]) => void
   selectedClinicId: number | null
 }) {
   const [expanded, setExpanded] = useState(false)
-  const [notes, setNotes] = useState<LeadNote[] | null>(null)
-  const [loadingNotes, setLoadingNotes] = useState(false)
+  const notes = lead.notes
   const [newNote, setNewNote] = useState('')
   const [submitting, setSubmitting] = useState(false)
   const [editingNoteId, setEditingNoteId] = useState<number | null>(null)
@@ -323,35 +318,7 @@ function LeadCard({ lead, currentUserId, currentUserRole, onStatusChange, onNote
 
   const clinicQS = selectedClinicId ? `?clinic_id=${selectedClinicId}` : ''
 
-  const fetchNotes = async () => {
-    setLoadingNotes(true)
-    try {
-      const res = await fetch(`/api/leads/${lead.id}/notes${clinicQS}`)
-      if (!res.ok) throw new Error()
-      const data = await res.json()
-      const list: LeadNote[] = data?.data?.notes || data?.notes || []
-      setNotes(list)
-    } catch {
-      toast.error('메모를 불러오지 못했습니다.')
-    } finally {
-      setLoadingNotes(false)
-    }
-  }
-
-  const updateMeta = (list: LeadNote[]) => {
-    const latest = list.length > 0 ? list[list.length - 1] : null
-    onNotesMetaChange(
-      lead.id,
-      list.length,
-      latest ? { content: latest.content, created_at: latest.created_at, author: latest.author?.username ?? null } : null
-    )
-  }
-
-  const toggleExpand = () => {
-    const next = !expanded
-    setExpanded(next)
-    if (next && notes === null) fetchNotes()
-  }
+  const toggleExpand = () => setExpanded(e => !e)
 
   const handleAdd = async () => {
     const content = newNote.trim()
@@ -369,10 +336,9 @@ function LeadCard({ lead, currentUserId, currentUserRole, onStatusChange, onNote
       }
       const data = await res.json()
       const added: LeadNote = data?.data?.note || data?.note
-      const next = [...(notes || []), added]
-      setNotes(next)
+      const next = [...notes, added]
+      onNotesChange(lead.id, next)
       setNewNote('')
-      updateMeta(next)
       toast.success('메모가 추가되었습니다.')
     } catch (e) {
       toast.error(e instanceof Error ? e.message : '메모 추가 실패')
@@ -402,10 +368,9 @@ function LeadCard({ lead, currentUserId, currentUserRole, onStatusChange, onNote
       }
       const data = await res.json()
       const updated: LeadNote = data?.data?.note || data?.note
-      const next = (notes || []).map(n => n.id === updated.id ? updated : n)
-      setNotes(next)
+      const next = notes.map(n => n.id === updated.id ? updated : n)
+      onNotesChange(lead.id, next)
       setEditingNoteId(null)
-      updateMeta(next)
       toast.success('메모가 수정되었습니다.')
     } catch (e) {
       toast.error(e instanceof Error ? e.message : '메모 수정 실패')
@@ -420,9 +385,8 @@ function LeadCard({ lead, currentUserId, currentUserRole, onStatusChange, onNote
         const err = await res.json().catch(() => ({}))
         throw new Error(err.error || '메모 삭제 실패')
       }
-      const next = (notes || []).filter(n => n.id !== noteId)
-      setNotes(next)
-      updateMeta(next)
+      const next = notes.filter(n => n.id !== noteId)
+      onNotesChange(lead.id, next)
       toast.success('메모가 삭제되었습니다.')
     } catch (e) {
       toast.error(e instanceof Error ? e.message : '메모 삭제 실패')
@@ -525,7 +489,7 @@ function LeadCard({ lead, currentUserId, currentUserRole, onStatusChange, onNote
             <div className="flex items-center justify-between">
               <span className="text-[11px] font-medium text-foreground/80 flex items-center gap-1">
                 <StickyNote size={10} />
-                메모 {notes ? `${notes.length}건` : ''}
+                메모 {notes.length}건
               </span>
               <button
                 onClick={toggleExpand}
@@ -535,9 +499,7 @@ function LeadCard({ lead, currentUserId, currentUserRole, onStatusChange, onNote
               </button>
             </div>
 
-            {loadingNotes ? (
-              <p className="text-[11px] text-muted-foreground">메모 로딩 중...</p>
-            ) : notes && notes.length > 0 ? (
+            {notes.length > 0 ? (
               <ul className="space-y-1.5">
                 {notes.map((n, idx) => {
                   const editable = canEditNote(n)
@@ -550,8 +512,8 @@ function LeadCard({ lead, currentUserId, currentUserRole, onStatusChange, onNote
                       <span className="shrink-0 text-muted-foreground/70 min-w-[60px]">
                         {n.author?.username || '?'}
                       </span>
-                      <span className="shrink-0 text-muted-foreground/50 min-w-[36px]">
-                        {shortTime(n.created_at)}
+                      <span className="shrink-0 text-muted-foreground/50 min-w-[88px]">
+                        {formatDateTime(n.created_at)}
                       </span>
                       {isEditing ? (
                         <div className="flex-1 flex items-center gap-1.5">
@@ -607,7 +569,7 @@ function LeadCard({ lead, currentUserId, currentUserRole, onStatusChange, onNote
                 value={newNote}
                 onChange={e => setNewNote(e.target.value)}
                 onKeyDown={e => e.key === 'Enter' && handleAdd()}
-                placeholder={`${(notes?.length ?? 0) + 1}차 메모 입력...`}
+                placeholder={`${notes.length + 1}차 메모 입력...`}
                 className="flex-1 text-[11px] bg-muted dark:bg-white/5 border border-border dark:border-white/10 rounded-lg px-3 py-1.5 text-foreground placeholder-muted-foreground/60 focus:outline-none focus:border-brand-500"
                 disabled={submitting}
               />
@@ -765,8 +727,15 @@ function CampaignDetail({ campaign, onBack }: { campaign: string; onBack: () => 
     }
   }
 
-  const handleNotesMetaChange = (leadId: number, notesCount: number, latestNote: CampaignLead['latest_note']) => {
-    setLeads(prev => prev.map(l => l.id === leadId ? { ...l, notes_count: notesCount, latest_note: latestNote } : l))
+  const handleNotesChange = (leadId: number, notes: LeadNote[]) => {
+    const latest = notes.length > 0 ? notes[notes.length - 1] : null
+    const latestSummary = latest
+      ? { content: latest.content, created_at: latest.created_at, author: latest.author?.username ?? null }
+      : null
+    setLeads(prev => prev.map(l => l.id === leadId
+      ? { ...l, notes, notes_count: notes.length, latest_note: latestSummary }
+      : l
+    ))
   }
 
   const activeFilterCount = (search ? 1 : 0) + (dateRange.from ? 1 : 0) + (channelFilter !== 'all' ? 1 : 0) + (statusFilter !== 'all' ? 1 : 0) + (sortBy !== 'newest' ? 1 : 0)
@@ -907,7 +876,7 @@ function CampaignDetail({ campaign, onBack }: { campaign: string; onBack: () => 
                     currentUserRole={currentUserRole}
                     selectedClinicId={selectedClinicId ?? null}
                     onStatusChange={handleStatusChange}
-                    onNotesMetaChange={handleNotesMetaChange}
+                    onNotesChange={handleNotesChange}
                   />
                 ))
         }

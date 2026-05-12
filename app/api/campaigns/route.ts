@@ -55,41 +55,53 @@ export const GET = withClinicFilter(async (req: Request, { user, clinicId, assig
     const { data: leads, error } = await query
     if (error) return apiError(error.message, 500)
 
-    // 노트 메타 집계: 리드별 개수 + 최신 노트(content/created_at/author)
+    // 노트 prefetch: 리드별 전체 노트 배열을 시간순(ASC)으로 함께 반환 — 펼치기 시 추가 네트워크 호출 방지
     const leadIds = (leads || []).map(l => l.id)
-    type NoteMeta = { notes_count: number; latest_note: { content: string; created_at: string; author: string | null } | null }
-    const noteMetaMap = new Map<number, NoteMeta>()
+    type PrefetchedNote = {
+      id: number
+      content: string
+      created_by: number | null
+      created_at: string
+      updated_at: string | null
+      author: { id: number; username: string } | null
+    }
+    const notesByLead = new Map<number, PrefetchedNote[]>()
 
     if (leadIds.length > 0) {
       const { data: notes } = await supabase
         .from('lead_notes')
-        .select('lead_id, content, created_at, author:users!lead_notes_created_by_fkey(username)')
+        .select('id, lead_id, content, created_by, created_at, updated_at, author:users!lead_notes_created_by_fkey(id, username)')
         .in('lead_id', leadIds)
-        .order('created_at', { ascending: false })
+        .order('created_at', { ascending: true })
 
       for (const n of notes || []) {
-        const meta = noteMetaMap.get(n.lead_id)
-        if (!meta) {
-          // 최신순 정렬이므로 첫 번째 발견된 노트가 latest
-          const author = Array.isArray(n.author)
-            ? (n.author[0] as { username?: string } | undefined)?.username ?? null
-            : (n.author as { username?: string } | null)?.username ?? null
-          noteMetaMap.set(n.lead_id, {
-            notes_count: 1,
-            latest_note: { content: n.content, created_at: n.created_at, author },
-          })
-        } else {
-          meta.notes_count += 1
+        const author = Array.isArray(n.author)
+          ? (n.author[0] as { id: number; username: string } | undefined) ?? null
+          : (n.author as { id: number; username: string } | null) ?? null
+        const entry: PrefetchedNote = {
+          id: n.id,
+          content: n.content,
+          created_by: n.created_by,
+          created_at: n.created_at,
+          updated_at: n.updated_at,
+          author,
         }
+        const arr = notesByLead.get(n.lead_id)
+        if (arr) arr.push(entry)
+        else notesByLead.set(n.lead_id, [entry])
       }
     }
 
     const leadsWithNotes = (leads || []).map(l => {
-      const meta = noteMetaMap.get(l.id)
+      const notes = notesByLead.get(l.id) || []
+      const latest = notes.length > 0 ? notes[notes.length - 1] : null
       return {
         ...l,
-        notes_count: meta?.notes_count ?? 0,
-        latest_note: meta?.latest_note ?? null,
+        notes,
+        notes_count: notes.length,
+        latest_note: latest
+          ? { content: latest.content, created_at: latest.created_at, author: latest.author?.username ?? null }
+          : null,
       }
     })
 
