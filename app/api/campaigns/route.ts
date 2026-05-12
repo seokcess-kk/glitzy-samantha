@@ -38,7 +38,7 @@ export const GET = withClinicFilter(async (req: Request, { user, clinicId, assig
       .from('leads')
       .select(`
         id, customer_id, utm_source, utm_medium, utm_campaign, utm_content,
-        chatbot_sent, chatbot_sent_at, created_at, landing_page_id, custom_data, lead_status, notes,
+        chatbot_sent, chatbot_sent_at, created_at, landing_page_id, custom_data, lead_status,
         customer:customers(id, name, phone_number, first_source),
         landing_page:landing_pages(id, name)
       `)
@@ -52,10 +52,48 @@ export const GET = withClinicFilter(async (req: Request, { user, clinicId, assig
     if (tsStart) query = query.gte('created_at', tsStart)
     if (tsEnd) query = query.lt('created_at', tsEnd)
 
-    const { data, error } = await query
+    const { data: leads, error } = await query
     if (error) return apiError(error.message, 500)
 
-    return apiSuccess({ campaign, leads: data || [] })
+    // 노트 메타 집계: 리드별 개수 + 최신 노트(content/created_at/author)
+    const leadIds = (leads || []).map(l => l.id)
+    type NoteMeta = { notes_count: number; latest_note: { content: string; created_at: string; author: string | null } | null }
+    const noteMetaMap = new Map<number, NoteMeta>()
+
+    if (leadIds.length > 0) {
+      const { data: notes } = await supabase
+        .from('lead_notes')
+        .select('lead_id, content, created_at, author:users!lead_notes_created_by_fkey(username)')
+        .in('lead_id', leadIds)
+        .order('created_at', { ascending: false })
+
+      for (const n of notes || []) {
+        const meta = noteMetaMap.get(n.lead_id)
+        if (!meta) {
+          // 최신순 정렬이므로 첫 번째 발견된 노트가 latest
+          const author = Array.isArray(n.author)
+            ? (n.author[0] as { username?: string } | undefined)?.username ?? null
+            : (n.author as { username?: string } | null)?.username ?? null
+          noteMetaMap.set(n.lead_id, {
+            notes_count: 1,
+            latest_note: { content: n.content, created_at: n.created_at, author },
+          })
+        } else {
+          meta.notes_count += 1
+        }
+      }
+    }
+
+    const leadsWithNotes = (leads || []).map(l => {
+      const meta = noteMetaMap.get(l.id)
+      return {
+        ...l,
+        notes_count: meta?.notes_count ?? 0,
+        latest_note: meta?.latest_note ?? null,
+      }
+    })
+
+    return apiSuccess({ campaign, leads: leadsWithNotes })
   }
 
   // 캠페인 목록 (집계)

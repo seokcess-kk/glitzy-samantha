@@ -1,7 +1,8 @@
 'use client'
 import { useState, useEffect, useMemo, Suspense } from 'react'
 import { useSearchParams, useRouter } from 'next/navigation'
-import { Megaphone, ArrowLeft, Phone, Clock, ChevronRight, RefreshCw, FileText, User, ShieldCheck, StickyNote, Search, X } from 'lucide-react'
+import { useSession } from 'next-auth/react'
+import { Megaphone, ArrowLeft, Phone, Clock, ChevronRight, ChevronDown, ChevronUp, RefreshCw, FileText, User, ShieldCheck, StickyNote, Search, X, Plus, Pencil, Trash2 } from 'lucide-react'
 import { useClinic } from '@/components/ClinicContext'
 import { Card } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
@@ -60,10 +61,20 @@ interface CampaignLead {
   created_at: string
   landing_page_id: number | null
   lead_status: string
-  notes: string | null
+  notes_count: number
+  latest_note: { content: string; created_at: string; author: string | null } | null
   custom_data: { survey?: Record<string, string>; marketing_consent?: boolean; name?: string } | null
   customer: { id: number; name: string; phone_number: string; first_source: string } | null
   landing_page: { id: number; name: string } | null
+}
+
+interface LeadNote {
+  id: number
+  content: string
+  created_by: number | null
+  created_at: string
+  updated_at: string | null
+  author: { id: number; username: string } | null
 }
 
 function timeAgo(dateStr: string): string {
@@ -277,13 +288,32 @@ function CampaignList({ campaigns, loading, onSelect, onRefresh }: {
 
 // ─── 캠페인 상세 리드 목록 ───
 
-function LeadCard({ lead, onStatusChange, onNotesChange }: {
+function noteSnippet(content: string, max = 40): string {
+  const trimmed = content.replace(/\s+/g, ' ').trim()
+  return trimmed.length > max ? trimmed.slice(0, max) + '…' : trimmed
+}
+
+function shortTime(dateStr: string): string {
+  const ts = dateStr.endsWith('Z') || /[+-]\d{2}:\d{2}$/.test(dateStr) ? dateStr : dateStr + 'Z'
+  return new Date(ts).toLocaleDateString('ko', { timeZone: 'Asia/Seoul', month: 'numeric', day: 'numeric' })
+}
+
+function LeadCard({ lead, currentUserId, currentUserRole, onStatusChange, onNotesMetaChange, selectedClinicId }: {
   lead: CampaignLead
+  currentUserId: number | null
+  currentUserRole: string | null
   onStatusChange: (id: number, status: string) => void
-  onNotesChange: (id: number, notes: string) => void
+  onNotesMetaChange: (id: number, notesCount: number, latestNote: CampaignLead['latest_note']) => void
+  selectedClinicId: number | null
 }) {
-  const [editingNotes, setEditingNotes] = useState(false)
-  const [notesValue, setNotesValue] = useState(lead.notes || '')
+  const [expanded, setExpanded] = useState(false)
+  const [notes, setNotes] = useState<LeadNote[] | null>(null)
+  const [loadingNotes, setLoadingNotes] = useState(false)
+  const [newNote, setNewNote] = useState('')
+  const [submitting, setSubmitting] = useState(false)
+  const [editingNoteId, setEditingNoteId] = useState<number | null>(null)
+  const [editingContent, setEditingContent] = useState('')
+
   const survey = lead.custom_data?.survey
   const surveyEntries = survey ? Object.values(survey) : []
   const marketingConsent = lead.custom_data?.marketing_consent
@@ -291,9 +321,117 @@ function LeadCard({ lead, onStatusChange, onNotesChange }: {
   const status = lead.lead_status || 'new'
   const statusConfig = LEAD_STATUS_CONFIG[status] || LEGACY_STATUS[status] || LEAD_STATUS_CONFIG.new
 
-  const handleNotesSave = () => {
-    onNotesChange(lead.id, notesValue)
-    setEditingNotes(false)
+  const clinicQS = selectedClinicId ? `?clinic_id=${selectedClinicId}` : ''
+
+  const fetchNotes = async () => {
+    setLoadingNotes(true)
+    try {
+      const res = await fetch(`/api/leads/${lead.id}/notes${clinicQS}`)
+      if (!res.ok) throw new Error()
+      const data = await res.json()
+      const list: LeadNote[] = data?.data?.notes || data?.notes || []
+      setNotes(list)
+    } catch {
+      toast.error('메모를 불러오지 못했습니다.')
+    } finally {
+      setLoadingNotes(false)
+    }
+  }
+
+  const updateMeta = (list: LeadNote[]) => {
+    const latest = list.length > 0 ? list[list.length - 1] : null
+    onNotesMetaChange(
+      lead.id,
+      list.length,
+      latest ? { content: latest.content, created_at: latest.created_at, author: latest.author?.username ?? null } : null
+    )
+  }
+
+  const toggleExpand = () => {
+    const next = !expanded
+    setExpanded(next)
+    if (next && notes === null) fetchNotes()
+  }
+
+  const handleAdd = async () => {
+    const content = newNote.trim()
+    if (!content || submitting) return
+    setSubmitting(true)
+    try {
+      const res = await fetch(`/api/leads/${lead.id}/notes${clinicQS}`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ content }),
+      })
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({}))
+        throw new Error(err.error || '메모 추가 실패')
+      }
+      const data = await res.json()
+      const added: LeadNote = data?.data?.note || data?.note
+      const next = [...(notes || []), added]
+      setNotes(next)
+      setNewNote('')
+      updateMeta(next)
+      toast.success('메모가 추가되었습니다.')
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : '메모 추가 실패')
+    } finally {
+      setSubmitting(false)
+    }
+  }
+
+  const handleEditStart = (note: LeadNote) => {
+    setEditingNoteId(note.id)
+    setEditingContent(note.content)
+  }
+
+  const handleEditSave = async () => {
+    if (editingNoteId === null) return
+    const content = editingContent.trim()
+    if (!content) return
+    try {
+      const res = await fetch(`/api/leads/${lead.id}/notes/${editingNoteId}${clinicQS}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ content }),
+      })
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({}))
+        throw new Error(err.error || '메모 수정 실패')
+      }
+      const data = await res.json()
+      const updated: LeadNote = data?.data?.note || data?.note
+      const next = (notes || []).map(n => n.id === updated.id ? updated : n)
+      setNotes(next)
+      setEditingNoteId(null)
+      updateMeta(next)
+      toast.success('메모가 수정되었습니다.')
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : '메모 수정 실패')
+    }
+  }
+
+  const handleDelete = async (noteId: number) => {
+    if (!confirm('이 메모를 삭제하시겠습니까?')) return
+    try {
+      const res = await fetch(`/api/leads/${lead.id}/notes/${noteId}${clinicQS}`, { method: 'DELETE' })
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({}))
+        throw new Error(err.error || '메모 삭제 실패')
+      }
+      const next = (notes || []).filter(n => n.id !== noteId)
+      setNotes(next)
+      updateMeta(next)
+      toast.success('메모가 삭제되었습니다.')
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : '메모 삭제 실패')
+    }
+  }
+
+  const canEditNote = (note: LeadNote): boolean => {
+    if (currentUserRole === 'superadmin' || currentUserRole === 'clinic_admin') return true
+    return note.created_by !== null && currentUserId !== null && Number(note.created_by) === currentUserId
   }
 
   return (
@@ -356,30 +494,132 @@ function LeadCard({ lead, onStatusChange, onNotesChange }: {
         )}
       </div>
 
-      {/* 3행: 메모 */}
+      {/* 3행: 메모 (타임라인 + 인라인 확장) */}
       <div className="pl-11 mt-2">
-        {editingNotes ? (
-          <div className="flex items-center gap-2">
-            <input
-              type="text"
-              value={notesValue}
-              onChange={e => setNotesValue(e.target.value)}
-              onKeyDown={e => e.key === 'Enter' && handleNotesSave()}
-              placeholder="메모 입력..."
-              className="flex-1 text-xs bg-muted dark:bg-white/5 border border-border dark:border-white/10 rounded-lg px-3 py-1.5 text-foreground placeholder-muted-foreground/60 focus:outline-none focus:border-brand-500"
-              autoFocus
-            />
-            <button onClick={handleNotesSave} className="text-[10px] text-brand-400 hover:text-brand-300 shrink-0">저장</button>
-            <button onClick={() => { setEditingNotes(false); setNotesValue(lead.notes || '') }} className="text-[10px] text-muted-foreground hover:text-muted-foreground shrink-0">취소</button>
-          </div>
-        ) : (
+        {!expanded ? (
           <button
-            onClick={() => setEditingNotes(true)}
-            className="flex items-center gap-1.5 text-[11px] text-muted-foreground hover:text-foreground/80 transition-colors"
+            onClick={toggleExpand}
+            className="flex items-center gap-2 text-[11px] text-muted-foreground hover:text-foreground/80 transition-colors w-full text-left"
           >
-            <StickyNote size={10} />
-            {lead.notes || '메모 추가...'}
+            <StickyNote size={10} className="shrink-0" />
+            {lead.notes_count > 0 && lead.latest_note ? (
+              <>
+                <span className="shrink-0 text-foreground/70">최신:</span>
+                <span className="truncate">{noteSnippet(lead.latest_note.content, 50)}</span>
+                {lead.latest_note.author && (
+                  <span className="shrink-0 text-muted-foreground/60">· {lead.latest_note.author}</span>
+                )}
+                <span className="shrink-0 ml-auto inline-flex items-center gap-1 text-brand-400">
+                  전체 {lead.notes_count}건 <ChevronDown size={10} />
+                </span>
+              </>
+            ) : (
+              <>
+                <span>메모 추가...</span>
+                <ChevronDown size={10} className="ml-auto" />
+              </>
+            )}
           </button>
+        ) : (
+          <div className="space-y-2 pt-1">
+            <div className="flex items-center justify-between">
+              <span className="text-[11px] font-medium text-foreground/80 flex items-center gap-1">
+                <StickyNote size={10} />
+                메모 {notes ? `${notes.length}건` : ''}
+              </span>
+              <button
+                onClick={toggleExpand}
+                className="text-[10px] text-muted-foreground hover:text-foreground/80 inline-flex items-center gap-1"
+              >
+                접기 <ChevronUp size={10} />
+              </button>
+            </div>
+
+            {loadingNotes ? (
+              <p className="text-[11px] text-muted-foreground">메모 로딩 중...</p>
+            ) : notes && notes.length > 0 ? (
+              <ul className="space-y-1.5">
+                {notes.map((n, idx) => {
+                  const editable = canEditNote(n)
+                  const isEditing = editingNoteId === n.id
+                  return (
+                    <li key={n.id} className="flex items-start gap-2 text-[11px]">
+                      <span className="shrink-0 inline-flex items-center justify-center min-w-[26px] h-[18px] rounded-full bg-brand-500/15 text-brand-400 text-[10px] font-semibold">
+                        {idx + 1}차
+                      </span>
+                      <span className="shrink-0 text-muted-foreground/70 min-w-[60px]">
+                        {n.author?.username || '?'}
+                      </span>
+                      <span className="shrink-0 text-muted-foreground/50 min-w-[36px]">
+                        {shortTime(n.created_at)}
+                      </span>
+                      {isEditing ? (
+                        <div className="flex-1 flex items-center gap-1.5">
+                          <input
+                            type="text"
+                            value={editingContent}
+                            onChange={e => setEditingContent(e.target.value)}
+                            onKeyDown={e => { if (e.key === 'Enter') handleEditSave(); if (e.key === 'Escape') setEditingNoteId(null) }}
+                            className="flex-1 text-[11px] bg-background border border-border dark:border-white/10 rounded-md px-2 py-1 text-foreground focus:outline-none focus:border-brand-500"
+                            autoFocus
+                          />
+                          <button onClick={handleEditSave} className="text-[10px] text-brand-400 hover:text-brand-300 shrink-0">저장</button>
+                          <button onClick={() => setEditingNoteId(null)} className="text-[10px] text-muted-foreground shrink-0">취소</button>
+                        </div>
+                      ) : (
+                        <>
+                          <span className="flex-1 text-foreground/90 break-all whitespace-pre-wrap">
+                            {n.content}
+                            {n.updated_at && <span className="ml-1 text-muted-foreground/40">(수정됨)</span>}
+                          </span>
+                          {editable && (
+                            <div className="shrink-0 flex items-center gap-1.5">
+                              <button
+                                onClick={() => handleEditStart(n)}
+                                className="text-muted-foreground/60 hover:text-foreground/80"
+                                aria-label="수정"
+                              >
+                                <Pencil size={11} />
+                              </button>
+                              <button
+                                onClick={() => handleDelete(n.id)}
+                                className="text-muted-foreground/60 hover:text-red-400"
+                                aria-label="삭제"
+                              >
+                                <Trash2 size={11} />
+                              </button>
+                            </div>
+                          )}
+                        </>
+                      )}
+                    </li>
+                  )
+                })}
+              </ul>
+            ) : (
+              <p className="text-[11px] text-muted-foreground/60">아직 메모가 없습니다.</p>
+            )}
+
+            {/* 새 메모 입력 */}
+            <div className="flex items-center gap-2 pt-1">
+              <input
+                type="text"
+                value={newNote}
+                onChange={e => setNewNote(e.target.value)}
+                onKeyDown={e => e.key === 'Enter' && handleAdd()}
+                placeholder={`${(notes?.length ?? 0) + 1}차 메모 입력...`}
+                className="flex-1 text-[11px] bg-muted dark:bg-white/5 border border-border dark:border-white/10 rounded-lg px-3 py-1.5 text-foreground placeholder-muted-foreground/60 focus:outline-none focus:border-brand-500"
+                disabled={submitting}
+              />
+              <button
+                onClick={handleAdd}
+                disabled={submitting || !newNote.trim()}
+                className="inline-flex items-center gap-1 text-[10px] text-brand-400 hover:text-brand-300 disabled:opacity-40 disabled:cursor-not-allowed shrink-0"
+              >
+                <Plus size={11} /> 추가
+              </button>
+            </div>
+          </div>
         )}
       </div>
     </div>
@@ -394,6 +634,9 @@ const DETAIL_SORT_OPTIONS = [
 
 function CampaignDetail({ campaign, onBack }: { campaign: string; onBack: () => void }) {
   const { selectedClinicId } = useClinic()
+  const { data: session } = useSession()
+  const currentUserId = session?.user?.id ? Number(session.user.id) : null
+  const currentUserRole = session?.user?.role ?? null
   const [leads, setLeads] = useState<CampaignLead[]>([])
   const [loading, setLoading] = useState(true)
   const [statusFilter, setStatusFilter] = useState<string>('all')
@@ -522,20 +765,8 @@ function CampaignDetail({ campaign, onBack }: { campaign: string; onBack: () => 
     }
   }
 
-  const handleNotesChange = async (leadId: number, notes: string) => {
-    const params = new URLSearchParams()
-    if (selectedClinicId) params.set('clinic_id', String(selectedClinicId))
-    const res = await fetch(`/api/leads/${leadId}?${params}`, {
-      method: 'PATCH',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ notes }),
-    })
-    if (res.ok) {
-      toast.success('메모가 저장되었습니다.')
-      setLeads(prev => prev.map(l => l.id === leadId ? { ...l, notes } : l))
-    } else {
-      toast.error('메모 저장 실패')
-    }
+  const handleNotesMetaChange = (leadId: number, notesCount: number, latestNote: CampaignLead['latest_note']) => {
+    setLeads(prev => prev.map(l => l.id === leadId ? { ...l, notes_count: notesCount, latest_note: latestNote } : l))
   }
 
   const activeFilterCount = (search ? 1 : 0) + (dateRange.from ? 1 : 0) + (channelFilter !== 'all' ? 1 : 0) + (statusFilter !== 'all' ? 1 : 0) + (sortBy !== 'newest' ? 1 : 0)
@@ -668,7 +899,17 @@ function CampaignDetail({ campaign, onBack }: { campaign: string; onBack: () => 
                   검색 결과가 없습니다.
                 </Card>
               )
-              : paged.map(lead => <LeadCard key={lead.id} lead={lead} onStatusChange={handleStatusChange} onNotesChange={handleNotesChange} />)
+              : paged.map(lead => (
+                  <LeadCard
+                    key={lead.id}
+                    lead={lead}
+                    currentUserId={currentUserId}
+                    currentUserRole={currentUserRole}
+                    selectedClinicId={selectedClinicId ?? null}
+                    onStatusChange={handleStatusChange}
+                    onNotesMetaChange={handleNotesMetaChange}
+                  />
+                ))
         }
       </div>
 

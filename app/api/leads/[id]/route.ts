@@ -1,15 +1,18 @@
 import { serverSupabase } from '@/lib/supabase'
 import { withClinicFilter, withSuperAdmin, ClinicContext, applyClinicFilter, apiError, apiSuccess } from '@/lib/api-middleware'
-import { parseId, sanitizeString } from '@/lib/security'
+import { parseId } from '@/lib/security'
 import { logActivity } from '@/lib/activity-log'
 import { archiveBeforeDelete } from '@/lib/archive'
 
 const VALID_LEAD_STATUSES = ['new', 'no_answer', 'consulted', 'booked', 'hold', 'rejected'] as const
 
 /**
- * 리드 상태/메모 변경 API
- * - lead_status, notes 변경
- * - "booked" 상태로 변경 시 bookings 테이블에 자동 생성 (메모 포함)
+ * 리드 상태 변경 API
+ * - lead_status 변경
+ * - "booked" 상태로 변경 시 bookings 테이블에 자동 생성
+ *   (lead_notes의 최신 메모 내용을 bookings.notes로 이관)
+ *
+ * 메모(notes)는 별도 엔드포인트(/api/leads/[id]/notes)에서 다건 관리.
  */
 export const PATCH = withClinicFilter(async (req: Request, { user, clinicId, assignedClinicIds }: ClinicContext) => {
   const supabase = serverSupabase()
@@ -19,19 +22,18 @@ export const PATCH = withClinicFilter(async (req: Request, { user, clinicId, ass
   if (!leadId) return apiError('유효한 ID가 필요합니다.', 400)
 
   const body = await req.json()
-  const { lead_status, notes } = body
+  const { lead_status } = body
 
-  // 최소 하나는 있어야 함
-  if (!lead_status && notes === undefined) {
+  if (!lead_status) {
     return apiError('변경할 항목이 없습니다.', 400)
   }
 
-  if (lead_status && !VALID_LEAD_STATUSES.includes(lead_status)) {
+  if (!VALID_LEAD_STATUSES.includes(lead_status)) {
     return apiError(`유효하지 않은 상태입니다. (${VALID_LEAD_STATUSES.join(', ')})`, 400)
   }
 
   // 리드 조회 (clinic_id 권한 확인 포함)
-  let query = supabase.from('leads').select('id, customer_id, clinic_id, lead_status, notes').eq('id', leadId)
+  let query = supabase.from('leads').select('id, customer_id, clinic_id, lead_status').eq('id', leadId)
   const filtered = applyClinicFilter(query, { clinicId, assignedClinicIds })
   if (filtered === null) return apiError('접근 권한이 없습니다.', 403)
   query = filtered
@@ -39,18 +41,13 @@ export const PATCH = withClinicFilter(async (req: Request, { user, clinicId, ass
   const { data: lead, error: fetchError } = await query.single()
   if (fetchError || !lead) return apiError('리드를 찾을 수 없습니다.', 404)
 
-  // 업데이트할 필드 구성
-  const updateData: Record<string, unknown> = { updated_by: Number(user.id) }
-  if (lead_status) updateData.lead_status = lead_status
-  if (notes !== undefined) updateData.notes = sanitizeString(notes, 1000)
-
   const { error: updateError } = await supabase
     .from('leads')
-    .update(updateData)
+    .update({ lead_status, updated_by: Number(user.id) })
     .eq('id', leadId)
   if (updateError) return apiError(updateError.message, 500)
 
-  // "booked" 상태로 변경 시 bookings 자동 생성
+  // "booked" 상태로 변경 시 bookings 자동 생성 (최신 lead_notes를 booking 메모로 이관)
   if (lead_status === 'booked' && lead.lead_status !== 'booked') {
     const { data: existingBooking } = await supabase
       .from('bookings')
@@ -62,14 +59,20 @@ export const PATCH = withClinicFilter(async (req: Request, { user, clinicId, ass
       .maybeSingle()
 
     if (!existingBooking) {
-      // 리드 메모를 예약 메모로 전달
-      const bookingNotes = (notes !== undefined ? sanitizeString(notes, 1000) : lead.notes) || ''
+      const { data: latestNote } = await supabase
+        .from('lead_notes')
+        .select('content')
+        .eq('lead_id', leadId)
+        .order('created_at', { ascending: false })
+        .limit(1)
+        .maybeSingle()
+
       const { data: newBooking } = await supabase.from('bookings').insert({
         customer_id: lead.customer_id,
         clinic_id: lead.clinic_id,
         status: 'confirmed',
         booking_datetime: new Date().toISOString(),
-        notes: bookingNotes,
+        notes: latestNote?.content || '',
         created_by: Number(user.id),
       }).select('id').single()
 
@@ -85,12 +88,12 @@ export const PATCH = withClinicFilter(async (req: Request, { user, clinicId, ass
 
   await logActivity(supabase, {
     userId: user.id, clinicId: lead.clinic_id,
-    action: lead_status ? 'lead_status_change' : 'lead_note_update',
+    action: 'lead_status_change',
     targetTable: 'leads', targetId: leadId,
-    detail: { before: lead.lead_status, after: lead_status, notes_changed: notes !== undefined },
+    detail: { before: lead.lead_status, after: lead_status },
   })
 
-  return apiSuccess({ success: true, lead_status, notes: updateData.notes })
+  return apiSuccess({ success: true, lead_status })
 })
 
 /**

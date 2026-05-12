@@ -440,6 +440,57 @@ Samantha 대시보드의 REST API 엔드포인트 문서입니다.
 ]
 ```
 
+### PATCH /api/leads/{id}
+
+리드 상태를 변경합니다. `lead_status: "booked"`로 전환 시 `bookings`에 자동 생성되며, 가장 최근 `lead_notes` 내용이 `bookings.notes`로 이관됩니다. 메모는 별도 엔드포인트(아래)에서 관리합니다.
+
+**Request Body:**
+```json
+{ "lead_status": "new|no_answer|consulted|booked|hold|rejected" }
+```
+
+### GET /api/leads/{id}/notes
+
+리드의 메모 타임라인(1차/2차/3차...)을 오래된 순으로 조회합니다.
+
+**Response:**
+```json
+{
+  "notes": [
+    {
+      "id": 1,
+      "content": "부재중. 음성 메시지 남김",
+      "created_by": 12,
+      "created_at": "2026-05-10T07:30:00Z",
+      "updated_at": null,
+      "author": { "id": 12, "username": "consult1" }
+    }
+  ]
+}
+```
+
+### POST /api/leads/{id}/notes
+
+리드에 새 메모를 추가합니다 (타임라인 끝에 N+1차로 누적).
+
+**Request Body:**
+```json
+{ "content": "내일 다시 통화 예정" }
+```
+
+### PATCH /api/leads/{id}/notes/{noteId}
+
+본인이 작성한 메모를 수정합니다 (clinic_admin/superadmin은 모든 메모 수정 가능).
+
+**Request Body:**
+```json
+{ "content": "수정된 내용" }
+```
+
+### DELETE /api/leads/{id}/notes/{noteId}
+
+본인이 작성한 메모를 삭제합니다 (clinic_admin/superadmin은 모든 메모 삭제 가능).
+
 ### POST /api/webhook/lead
 
 외부에서 리드를 등록합니다 (웹훅).

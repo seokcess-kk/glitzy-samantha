@@ -165,8 +165,8 @@ npm run analyze      # 번들 크기 분석
 
 | 날짜 | 내용 |
 |------|------|
+| 2026-05-12 | 캠페인 리드 메모 다건화: `lead_notes` 테이블, 단일 `leads.notes` 제거 + 1차 메모 이관, /api/leads/[id]/notes CRUD, 카드 인라인 확장 타임라인 |
 | 2026-05-04 | 주간 리포트 cron 중지 — `vercel.json`에서 `/api/cron/weekly-report` 항목 제거 (라우트/서비스 코드는 보존) |
 | 2026-04-21 | Dable Ads 연동: `lib/services/dableAds.ts` (7일 롤링 재조회, group_by_campaign=1), adSyncManager/연결 테스트/SYNC_ENABLED_PLATFORMS 등록, `advertiser_id` → `client_name` 필드 변경 |
 | 2026-04-17 | 거래처 양방향 동기화: `erp_client_id TEXT` 매핑, webhook, Agatha 기준 드롭다운 UI, branch_name 지점명, 아이콘 패밀리 |
 | 2026-04-07 | 광고 플랫폼 2계층 구조: `lib/platform.ts` 중앙 상수, campaign_type 컬럼, platform 값 통일, Naver/Kakao/Dable 신규 |
-| 2026-04-07 | 시술별 매출 비중 KPI 불일치 수정, capi_events FK CASCADE |

@@ -38,7 +38,8 @@
 | `clinics` | 병원 고객사 | `notify_phones TEXT[]` 최대 3개, `erp_client_id TEXT` glitzy-web 거래처 UUID 매핑 |
 | `users` | 로그인 계정 | role: superadmin/agency_staff/clinic_admin/clinic_staff |
 | `customers` | 고객 (CDP) | `phone_number`로 식별 |
-| `leads` | 리드/문의 | UTM, `landing_page_id`, `updated_by` |
+| `leads` | 리드/문의 | UTM, `landing_page_id`, `updated_by` (단일 `notes` 컬럼 폐기 → `lead_notes` 사용) |
+| `lead_notes` | 리드 메모 히스토리 (타임라인) | 1차/2차/3차... 다건. `created_by`/`created_at`, ON DELETE CASCADE |
 | `bookings` | 예약 | `created_by`, `updated_by` |
 | `consultations` | 상담 | `created_by`, `updated_by` |
 | `payments` | 결제 | `created_by` |
