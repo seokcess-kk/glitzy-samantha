@@ -491,27 +491,6 @@ Samantha 대시보드의 REST API 엔드포인트 문서입니다.
 
 본인이 작성한 메모를 삭제합니다 (clinic_admin/superadmin은 모든 메모 삭제 가능).
 
-### GET /api/patients/{customerId}/lead-notes
-
-고객(customer)에 속한 모든 리드의 메모 타임라인을 통합 조회합니다. 예약/결제 화면에서 리드 단계 상담 컨텍스트를 보여주기 위한 읽기 전용 엔드포인트입니다.
-
-**Response:**
-```json
-{
-  "notes": [
-    {
-      "id": 1,
-      "lead_id": 42,
-      "content": "부재중. 음성 메시지 남김",
-      "created_by": 12,
-      "created_at": "2026-05-10T07:30:00Z",
-      "updated_at": null,
-      "author": { "id": 12, "username": "consult1" }
-    }
-  ]
-}
-```
-
 ### POST /api/webhook/lead
 
 외부에서 리드를 등록합니다 (웹훅).
@@ -548,7 +527,7 @@ Samantha 대시보드의 REST API 엔드포인트 문서입니다.
 
 ### GET /api/bookings
 
-예약 목록을 조회합니다.
+예약 목록을 조회합니다. 응답 각 booking에는 고객의 모든 리드(leads)의 lead_notes가 시간순(ASC)으로 `lead_notes` 필드에 prefetch됩니다 — 예약/결제 화면이 추가 fetch 없이 리드 단계 메모를 즉시 표시할 수 있도록 함입니다.
 
 **Query Parameters:**
 - `clinic_id`
@@ -561,13 +540,25 @@ Samantha 대시보드의 REST API 엔드포인트 문서입니다.
     "customer_id": 1,
     "status": "confirmed",
     "booking_datetime": "2024-01-20T14:00:00Z",
-    "notes": "메모",
+    "notes": "예약 메모",
     "customer": {
       "name": "홍길동",
       "phone_number": "010-1234-5678",
+      "leads": [{ "id": 42, "utm_source": "meta", "utm_campaign": "spring_promo" }],
       "consultations": [...],
       "payments": [...]
-    }
+    },
+    "lead_notes": [
+      {
+        "id": 1,
+        "lead_id": 42,
+        "content": "부재중. 음성 메시지 남김",
+        "created_by": 12,
+        "created_at": "2026-05-10T07:30:00Z",
+        "updated_at": null,
+        "author": { "id": 12, "username": "consult1" }
+      }
+    ]
   }
 ]
 ```

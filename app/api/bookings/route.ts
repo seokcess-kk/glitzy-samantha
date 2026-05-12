@@ -39,14 +39,69 @@ export async function GET(req: Request) {
 
     let query = supabase
       .from('bookings')
-      .select('*, customer:customers(id, name, phone_number, first_source, leads(utm_source, utm_campaign), consultations(*), payments(*))')
+      .select('*, customer:customers(id, name, phone_number, first_source, leads(id, utm_source, utm_campaign), consultations(*), payments(*))')
       .order('booking_datetime', { ascending: false })
 
     if (clinicId) query = query.eq('clinic_id', clinicId)
 
-    const { data, error } = await query
+    const { data: bookings, error } = await query
     if (error) return apiError(error.message, 500)
-    return apiSuccess(data)
+
+    // lead_notes prefetch — booking별 customer_id → leads → lead_notes 조회 후 booking에 부착
+    type AnyBooking = Record<string, unknown> & { customer?: { leads?: Array<{ id: number }> } | null }
+    const bookingsList = (bookings || []) as AnyBooking[]
+
+    const leadIdSet = new Set<number>()
+    for (const b of bookingsList) {
+      const leads = b.customer?.leads || []
+      for (const l of leads) {
+        if (typeof l?.id === 'number') leadIdSet.add(l.id)
+      }
+    }
+
+    type LeadNoteRow = {
+      id: number
+      lead_id: number
+      content: string
+      created_by: number | null
+      created_at: string
+      updated_at: string | null
+      author: { id: number; username: string } | { id: number; username: string }[] | null
+    }
+    const notesByLeadId = new Map<number, LeadNoteRow[]>()
+
+    if (leadIdSet.size > 0) {
+      const { data: notes } = await supabase
+        .from('lead_notes')
+        .select('id, lead_id, content, created_by, created_at, updated_at, author:users!lead_notes_created_by_fkey(id, username)')
+        .in('lead_id', Array.from(leadIdSet))
+        .order('created_at', { ascending: true })
+
+      for (const n of (notes || []) as LeadNoteRow[]) {
+        const arr = notesByLeadId.get(n.lead_id)
+        if (arr) arr.push(n)
+        else notesByLeadId.set(n.lead_id, [n])
+      }
+    }
+
+    const bookingsWithNotes = bookingsList.map(b => {
+      const leadIds = (b.customer?.leads || []).map(l => l.id)
+      const lead_notes = leadIds
+        .flatMap(id => notesByLeadId.get(id) || [])
+        .sort((a, b2) => a.created_at.localeCompare(b2.created_at))
+        .map(n => ({
+          id: n.id,
+          lead_id: n.lead_id,
+          content: n.content,
+          created_by: n.created_by,
+          created_at: n.created_at,
+          updated_at: n.updated_at,
+          author: Array.isArray(n.author) ? (n.author[0] ?? null) : n.author,
+        }))
+      return { ...b, lead_notes }
+    })
+
+    return apiSuccess(bookingsWithNotes)
   } catch (err) {
     logger.error('예약 목록 조회 실패', err)
     return apiError('서버 오류가 발생했습니다.', 500)

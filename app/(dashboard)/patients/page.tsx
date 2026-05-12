@@ -1,7 +1,7 @@
 'use client'
 import { useState, useEffect, useCallback, useMemo, useRef } from 'react'
 import { Search, Plus, ChevronDown, ChevronUp, Check, AlertCircle, Calendar, List, ChevronLeft, ChevronRight, Clock, Phone, Edit2, Trash2, X, Settings, MessageSquare } from 'lucide-react'
-import { LeadNotesTimeline } from '@/components/patients/LeadNotesTimeline'
+import { LeadNotesTimeline, type LeadNote } from '@/components/patients/LeadNotesTimeline'
 import { useSession } from 'next-auth/react'
 import { useClinic } from '@/components/ClinicContext'
 import { toast } from 'sonner'
@@ -129,9 +129,11 @@ function BookingEditForm({ booking, onSave }: { booking: any; onSave: () => void
     }
   }
 
+  const leadNotes = (booking.lead_notes as LeadNote[] | undefined) || []
+
   return (
     <div className="space-y-3 mt-3">
-      <div className="grid grid-cols-1 sm:grid-cols-4 gap-3">
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
         <div className="space-y-2">
           <Label className="text-xs text-muted-foreground">예약 상태</Label>
           <Select value={form.status} onValueChange={v => setForm(f => ({ ...f, status: v }))}>
@@ -166,14 +168,33 @@ function BookingEditForm({ booking, onSave }: { booking: any; onSave: () => void
             </SelectContent>
           </Select>
         </div>
-        <div className="space-y-2">
-          <Label className="text-xs text-muted-foreground">메모</Label>
-          <Input
-            type="text"
-            value={form.notes}
-            onChange={e => setForm(f => ({ ...f, notes: e.target.value }))}
-            placeholder="예약 관련 메모"
-          />
+      </div>
+
+      {/* 통합 메모 영역: 리드 단계(읽기) + 예약 메모(편집) */}
+      <div className="space-y-2">
+        <Label className="text-xs text-muted-foreground flex items-center gap-1.5">
+          <MessageSquare size={11} /> 메모
+        </Label>
+        <div className="rounded-lg border border-border dark:border-white/5 overflow-hidden">
+          {leadNotes.length > 0 && (
+            <div className="px-3 py-2.5 bg-muted/30 dark:bg-white/[0.02] border-b border-border dark:border-white/5">
+              <p className="text-[10px] font-semibold text-muted-foreground/80 uppercase tracking-wider mb-1.5">
+                리드 단계 ({leadNotes.length}건)
+              </p>
+              <LeadNotesTimeline notes={leadNotes} density="comfortable" />
+            </div>
+          )}
+          <div className="px-3 py-2.5 space-y-1.5">
+            <p className="text-[10px] font-semibold text-muted-foreground/80 uppercase tracking-wider">
+              예약 메모
+            </p>
+            <Input
+              type="text"
+              value={form.notes}
+              onChange={e => setForm(f => ({ ...f, notes: e.target.value }))}
+              placeholder="예약 관련 메모"
+            />
+          </div>
         </div>
       </div>
       <div className="flex gap-4">
@@ -764,7 +785,7 @@ function PaymentSection({ customerId, payments, onSave, isSuperAdmin, clinicId, 
 // F: 탭→섹션 전환 (예약/상담/결제를 한 화면에 세로 배치)
 // G: 목록에 상담 횟수 + 상태 표시
 function BookingRow({ booking, onRefresh, isSuperAdmin, clinicId, isOpen, onToggle }: { booking: any; onRefresh: () => void; isSuperAdmin?: boolean; clinicId?: number | null; isOpen: boolean; onToggle: () => void }) {
-  const [expandedSection, setExpandedSection] = useState<'booking' | 'leadnotes' | 'consult' | 'payment' | null>(null)
+  const [expandedSection, setExpandedSection] = useState<'booking' | 'consult' | 'payment' | null>(null)
   const [changingStatus, setChangingStatus] = useState(false)
   const [treatmentDialogOpen, setTreatmentDialogOpen] = useState(false)
   const [treatmentRefreshKey, setTreatmentRefreshKey] = useState(0)
@@ -893,25 +914,7 @@ function BookingRow({ booking, onRefresh, isSuperAdmin, clinicId, isOpen, onTogg
             )}
           </div>
 
-          {/* 섹션 2: 리드 메모 (아코디언) */}
-          <div className="rounded-lg border border-border dark:border-white/5 overflow-hidden">
-            <button
-              onClick={() => setExpandedSection(s => s === 'leadnotes' ? null : 'leadnotes')}
-              className="w-full flex items-center justify-between px-3 py-2 hover:bg-muted/50 dark:hover:bg-white/[0.02] transition-colors"
-            >
-              <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wider flex items-center gap-1.5">
-                <MessageSquare size={11} /> 리드 메모
-              </span>
-              <ChevronDown size={13} className={`text-muted-foreground transition-transform ${expandedSection === 'leadnotes' ? 'rotate-180' : ''}`} />
-            </button>
-            {expandedSection === 'leadnotes' && customer?.id && (
-              <div className="px-3 pb-3 pt-2">
-                <LeadNotesTimeline customerId={customer.id} clinicId={clinicId} variant="accordion" />
-              </div>
-            )}
-          </div>
-
-          {/* 섹션 3: 상담 기록 (아코디언) */}
+          {/* 섹션 2: 상담 기록 (아코디언) */}
           <div className="rounded-lg border border-border dark:border-white/5 overflow-hidden">
             <button
               onClick={() => setExpandedSection(s => s === 'consult' ? null : 'consult')}
@@ -1903,13 +1906,27 @@ export default function PatientsPage() {
                             : <span className="text-muted-foreground/60 text-xs">-</span>}
                         </div>
                       </div>
-                      {b.notes && (
-                        <p className="text-[11px] text-muted-foreground mt-2 pt-2 border-t border-border dark:border-white/5 whitespace-pre-wrap break-words">
-                          {b.notes}
-                        </p>
-                      )}
-                      {b.customer?.id && (
-                        <LeadNotesTimeline customerId={b.customer.id} clinicId={selectedClinicId} variant="card" />
+                      {((b.lead_notes as LeadNote[] | undefined)?.length || b.notes) && (
+                        <div className="mt-2 pt-2 border-t border-border dark:border-white/5 space-y-2">
+                          {(b.lead_notes as LeadNote[] | undefined)?.length ? (
+                            <div>
+                              <p className="text-[10px] font-semibold text-muted-foreground/70 uppercase tracking-wider mb-1">
+                                리드 단계 ({(b.lead_notes as LeadNote[]).length}건)
+                              </p>
+                              <LeadNotesTimeline notes={b.lead_notes as LeadNote[]} density="comfortable" />
+                            </div>
+                          ) : null}
+                          {b.notes && (
+                            <div>
+                              <p className="text-[10px] font-semibold text-muted-foreground/70 uppercase tracking-wider mb-1">
+                                예약 메모
+                              </p>
+                              <p className="text-[11px] text-muted-foreground whitespace-pre-wrap break-words">
+                                {b.notes}
+                              </p>
+                            </div>
+                          )}
+                        </div>
                       )}
                     </div>
                   )
