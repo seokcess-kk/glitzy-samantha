@@ -1,6 +1,7 @@
 'use client'
 import { useState, useEffect, useCallback, useMemo, useRef } from 'react'
-import { Search, Plus, ChevronDown, ChevronUp, Check, AlertCircle, Calendar, List, ChevronLeft, ChevronRight, Clock, Phone, Edit2, Trash2, X, Settings } from 'lucide-react'
+import { Search, Plus, ChevronDown, ChevronUp, Check, AlertCircle, Calendar, List, ChevronLeft, ChevronRight, Clock, Phone, Edit2, Trash2, X, Settings, MessageSquare } from 'lucide-react'
+import { LeadNotesTimeline } from '@/components/patients/LeadNotesTimeline'
 import { useSession } from 'next-auth/react'
 import { useClinic } from '@/components/ClinicContext'
 import { toast } from 'sonner'
@@ -763,7 +764,7 @@ function PaymentSection({ customerId, payments, onSave, isSuperAdmin, clinicId, 
 // F: 탭→섹션 전환 (예약/상담/결제를 한 화면에 세로 배치)
 // G: 목록에 상담 횟수 + 상태 표시
 function BookingRow({ booking, onRefresh, isSuperAdmin, clinicId, isOpen, onToggle }: { booking: any; onRefresh: () => void; isSuperAdmin?: boolean; clinicId?: number | null; isOpen: boolean; onToggle: () => void }) {
-  const [expandedSection, setExpandedSection] = useState<'booking' | 'consult' | 'payment' | null>(null)
+  const [expandedSection, setExpandedSection] = useState<'booking' | 'leadnotes' | 'consult' | 'payment' | null>(null)
   const [changingStatus, setChangingStatus] = useState(false)
   const [treatmentDialogOpen, setTreatmentDialogOpen] = useState(false)
   const [treatmentRefreshKey, setTreatmentRefreshKey] = useState(0)
@@ -892,7 +893,25 @@ function BookingRow({ booking, onRefresh, isSuperAdmin, clinicId, isOpen, onTogg
             )}
           </div>
 
-          {/* 섹션 2: 상담 기록 (아코디언) */}
+          {/* 섹션 2: 리드 메모 (아코디언) */}
+          <div className="rounded-lg border border-border dark:border-white/5 overflow-hidden">
+            <button
+              onClick={() => setExpandedSection(s => s === 'leadnotes' ? null : 'leadnotes')}
+              className="w-full flex items-center justify-between px-3 py-2 hover:bg-muted/50 dark:hover:bg-white/[0.02] transition-colors"
+            >
+              <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wider flex items-center gap-1.5">
+                <MessageSquare size={11} /> 리드 메모
+              </span>
+              <ChevronDown size={13} className={`text-muted-foreground transition-transform ${expandedSection === 'leadnotes' ? 'rotate-180' : ''}`} />
+            </button>
+            {expandedSection === 'leadnotes' && customer?.id && (
+              <div className="px-3 pb-3 pt-2">
+                <LeadNotesTimeline customerId={customer.id} clinicId={clinicId} variant="accordion" />
+              </div>
+            )}
+          </div>
+
+          {/* 섹션 3: 상담 기록 (아코디언) */}
           <div className="rounded-lg border border-border dark:border-white/5 overflow-hidden">
             <button
               onClick={() => setExpandedSection(s => s === 'consult' ? null : 'consult')}
@@ -1888,6 +1907,9 @@ export default function PatientsPage() {
                         <p className="text-[11px] text-muted-foreground mt-2 pt-2 border-t border-border dark:border-white/5 whitespace-pre-wrap break-words">
                           {b.notes}
                         </p>
+                      )}
+                      {b.customer?.id && (
+                        <LeadNotesTimeline customerId={b.customer.id} clinicId={selectedClinicId} variant="card" />
                       )}
                     </div>
                   )

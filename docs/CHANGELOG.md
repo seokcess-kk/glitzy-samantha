@@ -4,6 +4,7 @@
 
 | 날짜 | 내용 |
 |------|------|
+| 2026-05-12 | 예약/결제 화면에 리드 메모 타임라인 노출: `GET /api/patients/[id]/lead-notes` (고객 단위 통합 조회), `LeadNotesTimeline` 컴포넌트 — BookingRow 4번째 아코디언 + 우측 날짜 패널 카드(card variant: 최신 1건 미리보기 + 접기/펴기) |
 | 2026-05-12 | 캠페인 리드 메모 다건화: `lead_notes` 테이블 도입(타임라인), 단일 `leads.notes` 컬럼 제거 + 1차 메모로 이관, /api/leads/[id]/notes CRUD 추가, LeadCard 인라인 확장 + 1차/2차/3차 표기 |
 | 2026-04-21 | 소재별 CPL 계산 개선(`app/api/ads/creatives-performance/route.ts`): 직접 매칭 4단계 체계 구축. (1) `ad_stats.utm_content` ↔ `lead.utm_content` 직접, (2) `ad_stats.ad_id` ↔ `lead.utm_content`(Meta `{{ad.id}}` 매크로 대응), (3) `ad_stats.ad_name` 부분문자열에 `ad_creatives.utm_content`/`name` 포함 시 ad 레벨 귀속(Meta ads_read 권한 부재로 url_tags 추출 실패한 경우 대응), (4) 어디에도 안 잡힌 행만 campaign 풀 fallback. 이중 집계 방지 및 `campTotalLeadsMap` 분모에서 direct 매칭 소재 리드 제외. |
 | 2026-04-21 | Dable Ads 연동: `lib/services/dableAds.ts` 신규 (daily_report, group_by_campaign=1, 7일 롤링 재조회). adSyncManager 확장, 연결 테스트(Budget Report 기반), `SYNC_ENABLED_PLATFORMS`에 `dable_ads` 추가. `lib/platform.ts` 필드 `advertiser_id` → `client_name` 변경 (Dable은 path에 URL-encoded client_name 사용). Budget Report는 별도 UI 없이 연결 테스트 용도로만 사용(타 플랫폼 balance 미지원이라 일관성 유지). |
