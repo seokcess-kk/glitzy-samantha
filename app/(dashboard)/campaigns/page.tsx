@@ -29,6 +29,7 @@ const LEADS_PER_PAGE = 50
 const LEAD_STATUS_CONFIG: Record<string, { label: string; color: string }> = {
   new:        { label: '신규',     color: 'bg-blue-500/20 text-blue-400 border-blue-500/30' },
   no_answer:  { label: '부재',     color: 'bg-muted text-muted-foreground border-border dark:bg-slate-500/20 dark:text-slate-400 dark:border-slate-500/30' },
+  consulting: { label: '상담중',   color: 'bg-cyan-500/20 text-cyan-400 border-cyan-500/30' },
   booked:     { label: '예약완료', color: 'bg-emerald-500/20 text-emerald-400 border-emerald-500/30' },
   hold:       { label: '보류',     color: 'bg-purple-500/20 text-purple-400 border-purple-500/30' },
   rejected:   { label: '거절',     color: 'bg-red-500/20 text-red-400 border-red-500/30' },

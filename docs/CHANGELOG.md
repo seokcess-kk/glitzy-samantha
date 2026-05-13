@@ -4,6 +4,7 @@
 
 | 날짜 | 내용 |
 |------|------|
+| 2026-05-13 | 캠페인 리드 상태값 `consulting`(상담중) 추가 — `LEAD_STATUS_CONFIG`(campaigns/page.tsx) + `VALID_LEAD_STATUSES`(/api/leads/[id]). 상태 흐름 신규→부재→상담중→예약완료 사이 단계. 색상 cyan (기존 `consulted` legacy=amber와 구분). 6개 상태 그리드(`sm:grid-cols-6`)에 정확히 맞음 |
 | 2026-05-12 | perf/UI: 예약/결제 메모 영역 통합 + 속도 개선 — 별도 "리드 메모" 아코디언 제거. 예약 정보 메모 영역 안에 리드 단계 타임라인(읽기) + 예약 메모(편집) 세로 배치. `/api/bookings` 응답에 booking별 `lead_notes` 배열을 prefetch (단일 bulk 쿼리) → 펼침/표시 시 추가 fetch 0건. `/api/patients/[id]/lead-notes` 엔드포인트 제거. `LeadNotesTimeline`을 props 기반 presentational 컴포넌트로 리팩토링 |
 | 2026-05-12 | perf/UI: 캠페인 리드 메모 펴치기 지연 제거 — `/api/campaigns?campaign=…` 응답에 `notes: LeadNote[]` 전체 배열을 prefetch로 포함 (펼침 시 추가 fetch 불필요). 날짜 포맷 M/D → `formatDateTime` "M월 D일 HH:MM" (campaigns LeadCard + LeadNotesTimeline 양쪽 통일) |
 | 2026-05-12 | 캠페인 리드 메모 다건화: `lead_notes` 테이블 도입(타임라인), 단일 `leads.notes` 컬럼 제거 + 1차 메모로 이관, /api/leads/[id]/notes CRUD 추가, LeadCard 인라인 확장 + 1차/2차/3차 표기 |

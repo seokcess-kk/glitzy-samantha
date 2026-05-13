@@ -4,7 +4,7 @@ import { parseId } from '@/lib/security'
 import { logActivity } from '@/lib/activity-log'
 import { archiveBeforeDelete } from '@/lib/archive'
 
-const VALID_LEAD_STATUSES = ['new', 'no_answer', 'consulted', 'booked', 'hold', 'rejected'] as const
+const VALID_LEAD_STATUSES = ['new', 'no_answer', 'consulting', 'consulted', 'booked', 'hold', 'rejected'] as const
 
 /**
  * 리드 상태 변경 API

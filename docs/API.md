@@ -446,7 +446,7 @@ Samantha 대시보드의 REST API 엔드포인트 문서입니다.
 
 **Request Body:**
 ```json
-{ "lead_status": "new|no_answer|consulted|booked|hold|rejected" }
+{ "lead_status": "new|no_answer|consulting|consulted|booked|hold|rejected" }
 ```
 
 ### GET /api/leads/{id}/notes
