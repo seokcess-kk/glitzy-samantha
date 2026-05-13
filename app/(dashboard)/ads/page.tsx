@@ -77,9 +77,28 @@ export default function AdsPage() {
     try {
       const res = await fetch('/api/ads/sync', { method: 'POST' })
       const data = await res.json()
-      toast.success(
-        `데이터 수집 완료 (Meta: ${data.results?.meta ?? 0}, Google: ${data.results?.google ?? 0}, TikTok: ${data.results?.tiktok ?? 0})`
-      )
+      // /api/ads/sync 응답: { results: [{ platform, count, error, ... }] } (clinic × 매체 배열)
+      const results = (data?.results || []) as Array<{ platform: string; count: number; error: string | null }>
+      const platformLabel = (p: string): string => {
+        const map: Record<string, string> = {
+          meta_ads: 'Meta', google_ads: 'Google', tiktok_ads: 'TikTok',
+          dable_ads: 'Dable', naver_ads: 'Naver', kakao_ads: 'Kakao',
+        }
+        return map[p] || p
+      }
+      const counts = new Map<string, number>()
+      const errors: string[] = []
+      for (const r of results) {
+        const label = platformLabel(r.platform)
+        if (r.error) errors.push(`${label}: ${r.error}`)
+        else counts.set(label, (counts.get(label) || 0) + (r.count || 0))
+      }
+      const summary = Array.from(counts.entries()).map(([k, v]) => `${k}: ${v}`).join(', ') || '신규 없음'
+      if (errors.length > 0) {
+        toast.warning(`동기화 완료 (일부 실패) — ${summary} / 에러: ${errors.join(' | ')}`)
+      } else {
+        toast.success(`데이터 수집 완료 — ${summary}`)
+      }
       handleRefresh()
     } catch {
       toast.error('동기화 실패')
