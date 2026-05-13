@@ -11,6 +11,19 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 30
 
+    # 환경변수는 job 레벨에서 정의 — step의 `if:` 조건에서 secrets 컨텍스트 직접
+    # 참조는 GitHub이 거부하므로 (워크플로우 파일 유효성 실패), env로 한 번 받아서 사용.
+    env:
+      NEXTAUTH_URL: http://localhost:3000
+      NEXTAUTH_SECRET: ${{ secrets.NEXTAUTH_SECRET || 'test-secret-for-ci' }}
+      NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL || 'https://placeholder.supabase.co' }}
+      NEXT_PUBLIC_SUPABASE_ANON_KEY: ${{ secrets.NEXT_PUBLIC_SUPABASE_ANON_KEY || 'placeholder-key' }}
+      SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+      E2E_SUPERADMIN_EMAIL: ${{ secrets.E2E_SUPERADMIN_EMAIL }}
+      E2E_SUPERADMIN_PASSWORD: ${{ secrets.E2E_SUPERADMIN_PASSWORD }}
+      E2E_CLINIC_EMAIL: ${{ secrets.E2E_CLINIC_EMAIL }}
+      E2E_CLINIC_PASSWORD: ${{ secrets.E2E_CLINIC_PASSWORD }}
+
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -29,40 +42,13 @@ jobs:
 
       - name: Build application
         run: npm run build
-        env:
-          # 빌드에 필요한 환경변수
-          NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL || 'https://placeholder.supabase.co' }}
-          NEXT_PUBLIC_SUPABASE_ANON_KEY: ${{ secrets.NEXT_PUBLIC_SUPABASE_ANON_KEY || 'placeholder-key' }}
 
       - name: Run E2E tests (no auth)
         run: npx playwright test --project=chromium-no-auth
-        env:
-          # NextAuth 설정
-          NEXTAUTH_URL: http://localhost:3000
-          NEXTAUTH_SECRET: ${{ secrets.NEXTAUTH_SECRET || 'test-secret-for-ci' }}
-          # Supabase 설정
-          NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}
-          NEXT_PUBLIC_SUPABASE_ANON_KEY: ${{ secrets.NEXT_PUBLIC_SUPABASE_ANON_KEY }}
-          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
-          # E2E 테스트 계정
-          E2E_SUPERADMIN_EMAIL: ${{ secrets.E2E_SUPERADMIN_EMAIL }}
-          E2E_SUPERADMIN_PASSWORD: ${{ secrets.E2E_SUPERADMIN_PASSWORD }}
-          E2E_CLINIC_EMAIL: ${{ secrets.E2E_CLINIC_EMAIL }}
-          E2E_CLINIC_PASSWORD: ${{ secrets.E2E_CLINIC_PASSWORD }}
 
       - name: Run E2E tests (authenticated)
-        if: ${{ secrets.E2E_SUPERADMIN_EMAIL != '' }}
+        if: env.E2E_SUPERADMIN_EMAIL != ''
         run: npx playwright test --project=chromium
-        env:
-          NEXTAUTH_URL: http://localhost:3000
-          NEXTAUTH_SECRET: ${{ secrets.NEXTAUTH_SECRET || 'test-secret-for-ci' }}
-          NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}
-          NEXT_PUBLIC_SUPABASE_ANON_KEY: ${{ secrets.NEXT_PUBLIC_SUPABASE_ANON_KEY }}
-          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
-          E2E_SUPERADMIN_EMAIL: ${{ secrets.E2E_SUPERADMIN_EMAIL }}
-          E2E_SUPERADMIN_PASSWORD: ${{ secrets.E2E_SUPERADMIN_PASSWORD }}
-          E2E_CLINIC_EMAIL: ${{ secrets.E2E_CLINIC_EMAIL }}
-          E2E_CLINIC_PASSWORD: ${{ secrets.E2E_CLINIC_PASSWORD }}
 
       - name: Upload test results
         uses: actions/upload-artifact@v4
