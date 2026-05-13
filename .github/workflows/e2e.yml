@@ -43,12 +43,22 @@ jobs:
       - name: Build application
         run: npm run build
 
+      # Supabase secrets가 없으면 dev server가 'supabaseKey is required'로 응답해
+      # 모든 페이지가 빈 body로 나와 테스트가 timeout 됨 → 두 test step 모두 secrets
+      # 누락 시 skip(워크플로우는 success). Repository Secrets 설정 시 자동으로 실행.
       - name: Run E2E tests (no auth)
+        if: env.SUPABASE_SERVICE_ROLE_KEY != ''
         run: npx playwright test --project=chromium-no-auth
 
       - name: Run E2E tests (authenticated)
-        if: env.E2E_SUPERADMIN_EMAIL != ''
+        if: env.SUPABASE_SERVICE_ROLE_KEY != '' && env.E2E_SUPERADMIN_EMAIL != ''
         run: npx playwright test --project=chromium
+
+      - name: Notify if tests skipped
+        if: env.SUPABASE_SERVICE_ROLE_KEY == ''
+        run: |
+          echo "::warning::E2E tests skipped — Supabase secrets not configured."
+          echo "::warning::Set SUPABASE_SERVICE_ROLE_KEY, NEXT_PUBLIC_SUPABASE_URL, NEXT_PUBLIC_SUPABASE_ANON_KEY in Repository Secrets to enable."
 
       - name: Upload test results
         uses: actions/upload-artifact@v4
