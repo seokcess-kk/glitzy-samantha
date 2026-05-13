@@ -2,6 +2,7 @@ import { serverSupabase } from '@/lib/supabase'
 import { withSuperAdmin, apiError, apiSuccess } from '@/lib/api-middleware'
 import { sanitizeString, sanitizeUrl, parseId } from '@/lib/security'
 import { createLogger } from '@/lib/logger'
+import { demoAdminLandingPagesResponse } from '@/lib/demo/fixtures/admin'
 import fs from 'fs'
 import path from 'path'
 
@@ -31,10 +32,16 @@ async function getAvailableHtmlFiles(supabase: ReturnType<typeof serverSupabase>
   return [...files].sort()
 }
 
-export const GET = withSuperAdmin(async (req: Request) => {
+export const GET = withSuperAdmin(async (req: Request, { user }) => {
   try {
     const url = new URL(req.url)
     const includeFiles = url.searchParams.get('includeFiles') === 'true'
+
+    if (user.role === 'demo_viewer') {
+      const clinicIdParam = url.searchParams.get('clinic_id')
+      const clinicId = clinicIdParam ? Number(clinicIdParam) : null
+      return apiSuccess(demoAdminLandingPagesResponse(clinicId))
+    }
 
     const supabase = serverSupabase()
     const { data, error } = await supabase

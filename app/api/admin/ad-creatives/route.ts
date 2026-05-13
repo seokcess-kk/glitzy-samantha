@@ -4,15 +4,21 @@ import { sanitizeString, parseId } from '@/lib/security'
 import { buildUtmUrl } from '@/lib/utm'
 import { createLogger } from '@/lib/logger'
 import { creativeToApiPlatform } from '@/lib/platform'
+import { demoAdminAdCreatives } from '@/lib/demo/fixtures/admin'
 
 const logger = createLogger('AdCreatives')
 
-export const GET = withSuperAdmin(async (req: Request) => {
+export const GET = withSuperAdmin(async (req: Request, { user }) => {
   try {
     const url = new URL(req.url)
     const clinicId = url.searchParams.get('clinic_id')
     const landingPageId = url.searchParams.get('landing_page_id')
     const activeOnly = url.searchParams.get('active') === 'true'
+
+    if (user.role === 'demo_viewer') {
+      const parsedClinicId = clinicId ? parseId(clinicId) : null
+      return apiSuccess(demoAdminAdCreatives(parsedClinicId))
+    }
 
     const supabase = serverSupabase()
     let query = supabase

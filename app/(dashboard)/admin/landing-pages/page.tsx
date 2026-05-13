@@ -2,6 +2,7 @@
 import { useState, useEffect } from 'react'
 import { Plus, FileText, Copy, ExternalLink, Trash2, Pencil, Upload, X } from 'lucide-react'
 import { useSession } from 'next-auth/react'
+import { useDemoGuard } from '@/hooks/useDemoGuard'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { toast } from 'sonner'
@@ -53,6 +54,7 @@ export default function LandingPagesPage() {
   const { data: session } = useSession()
   const router = useRouter()
   const user = session?.user
+  const { blockDemoWrite } = useDemoGuard()
 
   const [landingPages, setLandingPages] = useState<LandingPage[]>([])
   const [availableFiles, setAvailableFiles] = useState<string[]>([])
@@ -70,7 +72,7 @@ export default function LandingPagesPage() {
   const [deleteTarget, setDeleteTarget] = useState<number | null>(null)
 
   useEffect(() => {
-    if (user && user.role !== 'superadmin') router.replace('/')
+    if (user && user.role !== 'superadmin' && user?.role !== 'demo_viewer') router.replace('/')
   }, [user, router])
 
   const fetchData = async () => {
@@ -104,6 +106,7 @@ export default function LandingPagesPage() {
   useEffect(() => { fetchData() }, [])
 
   const handleSave = async () => {
+    if (blockDemoWrite()) return
     const needsUpload = fileMode === 'upload'
     if (!form.name || (!needsUpload && !form.file_name) || (needsUpload && !uploadFile)) {
       toast.error(needsUpload ? '이름과 HTML 파일을 첨부해주세요.' : '이름과 파일을 선택해주세요.')
@@ -172,6 +175,7 @@ export default function LandingPagesPage() {
   }
 
   const handleEdit = (lp: LandingPage) => {
+    if (blockDemoWrite()) return
     setEditing(lp)
     setFileMode('select')
     setUploadFile(null)
@@ -188,6 +192,7 @@ export default function LandingPagesPage() {
   }
 
   const handleDelete = (id: number) => {
+    if (blockDemoWrite()) return
     setDeleteTarget(id)
   }
 
@@ -205,6 +210,7 @@ export default function LandingPagesPage() {
   }
 
   const toggleActive = async (id: number, currentActive: boolean) => {
+    if (blockDemoWrite()) return
     try {
       const res = await fetch(`/api/admin/landing-pages/${id}`, {
         method: 'PUT',
@@ -225,7 +231,7 @@ export default function LandingPagesPage() {
     toast.success('URL이 복사되었습니다.')
   }
 
-  if (user?.role !== 'superadmin') return null
+  if (user?.role !== 'superadmin' && user?.role !== 'demo_viewer') return null
 
   return (
     <>

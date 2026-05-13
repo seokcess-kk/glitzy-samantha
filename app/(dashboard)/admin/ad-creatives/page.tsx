@@ -4,6 +4,7 @@ import { Plus, Image, Trash2, Pencil, Upload, X, Film, ChevronDown, Copy, QrCode
 import { useSession } from 'next-auth/react'
 import { useRouter } from 'next/navigation'
 import { toast } from 'sonner'
+import { useDemoGuard } from '@/hooks/useDemoGuard'
 import { Card } from '@/components/ui/card'
 import { Skeleton } from '@/components/ui/skeleton'
 import { Button } from '@/components/ui/button'
@@ -80,6 +81,7 @@ export default function AdCreativesPage() {
   const { data: session } = useSession()
   const router = useRouter()
   const user = session?.user
+  const { blockDemoWrite } = useDemoGuard()
   const fileInputRef = useRef<HTMLInputElement>(null)
 
   const [adCreatives, setAdCreatives] = useState<AdCreative[]>([])
@@ -108,7 +110,7 @@ export default function AdCreativesPage() {
   const [qrLabel, setQrLabel] = useState('')
 
   useEffect(() => {
-    if (user && user.role !== 'superadmin') router.replace('/')
+    if (user && user.role !== 'superadmin' && user?.role !== 'demo_viewer') router.replace('/')
   }, [user, router])
 
   const fetchData = async () => {
@@ -136,6 +138,7 @@ export default function AdCreativesPage() {
   useEffect(() => { fetchData() }, [])
 
   const handleFileUpload = async (file: File) => {
+    if (blockDemoWrite()) return
     setUploading(true)
     try {
       // 1) signed URL 발급
@@ -205,6 +208,7 @@ export default function AdCreativesPage() {
   }
 
   const handleSave = async () => {
+    if (blockDemoWrite()) return
     if (!form.name || !form.utm_content || !form.clinic_id) {
       toast.error('소재명, UTM Content, 병원을 입력해주세요.')
       return
@@ -275,16 +279,19 @@ export default function AdCreativesPage() {
   }
 
   const handleEdit = (creative: AdCreative) => {
+    if (blockDemoWrite()) return
     setEditing(creative)
     openFormWith(creative)
   }
 
   const handleDuplicate = (creative: AdCreative) => {
+    if (blockDemoWrite()) return
     setEditing(null)
     openFormWith(creative, `${creative.name} (복사)`, `${creative.utm_content}_copy`)
   }
 
   const handleDelete = (id: number) => {
+    if (blockDemoWrite()) return
     setDeleteTarget(id)
   }
 
@@ -302,6 +309,7 @@ export default function AdCreativesPage() {
   }
 
   const toggleActive = async (creative: AdCreative) => {
+    if (blockDemoWrite()) return
     try {
       const res = await fetch(`/api/admin/ad-creatives/${creative.id}`, {
         method: 'PUT',
@@ -342,7 +350,7 @@ export default function AdCreativesPage() {
     }
   }
 
-  if (user?.role !== 'superadmin') return null
+  if (user?.role !== 'superadmin' && user?.role !== 'demo_viewer') return null
 
   const utmSources = form.platform && form.platform !== 'none' ? PLATFORM_UTM_SOURCES[form.platform] : null
 

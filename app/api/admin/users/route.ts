@@ -3,11 +3,16 @@ import { serverSupabase } from '@/lib/supabase'
 import { withSuperAdmin, apiError, apiSuccess } from '@/lib/api-middleware'
 import { sanitizeString, parseId } from '@/lib/security'
 import { createLogger } from '@/lib/logger'
+import { demoAdminUsers } from '@/lib/demo/fixtures/admin'
 
 const logger = createLogger('AdminUsers')
 
-export const GET = withSuperAdmin(async () => {
+export const GET = withSuperAdmin(async (_req: Request, { user }) => {
   try {
+    if (user.role === 'demo_viewer') {
+      return apiSuccess(demoAdminUsers())
+    }
+
     const supabase = serverSupabase()
     const { data, error } = await supabase
       .from('users')

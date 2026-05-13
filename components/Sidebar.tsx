@@ -261,11 +261,13 @@ export default function Sidebar({ onClose }: { onClose?: () => void }) {
           </div>
         )}
 
-        {/* 슈퍼어드민 전용 메뉴 */}
-        {isSuperAdmin && (
+        {/* 슈퍼어드민 / 데모 — 관리 메뉴 */}
+        {(isSuperAdmin || isDemoViewer) && (
           <>
             <div className="pt-4 pb-1">
-              <p className="text-[10px] text-muted-foreground uppercase tracking-widest px-3">슈퍼어드민</p>
+              <p className="text-[10px] text-muted-foreground uppercase tracking-widest px-3">
+                {isDemoViewer ? '관리 (데모)' : '슈퍼어드민'}
+              </p>
             </div>
             <div className="space-y-1">
               <Link
@@ -296,34 +298,39 @@ export default function Sidebar({ onClose }: { onClose?: () => void }) {
                 <UserCog size={17} />
                 계정 관리
               </Link>
-              <Link
-                href="/utm" onClick={onClose}
-                className={navLinkClass(pathname.startsWith('/utm'))}
-              >
-                <Link2 size={17} />
-                UTM 생성
-              </Link>
-              <Link
-                href="/lead-form" onClick={onClose}
-                className={navLinkClass(pathname === '/lead-form')}
-              >
-                <ClipboardList size={17} />
-                리드 수집
-              </Link>
-              <Link
-                href="/admin/login-logs" onClick={onClose}
-                className={navLinkClass(pathname === '/admin/login-logs')}
-              >
-                <Shield size={17} />
-                로그인 로그
-              </Link>
-              <Link
-                href="/admin/settings" onClick={onClose}
-                className={navLinkClass(pathname === '/admin/settings')}
-              >
-                <Settings2 size={17} />
-                시스템 설정
-              </Link>
+              {/* 슈퍼어드민 전용 — UTM/리드수집/로그/설정 */}
+              {isSuperAdmin && (
+                <>
+                  <Link
+                    href="/utm" onClick={onClose}
+                    className={navLinkClass(pathname.startsWith('/utm'))}
+                  >
+                    <Link2 size={17} />
+                    UTM 생성
+                  </Link>
+                  <Link
+                    href="/lead-form" onClick={onClose}
+                    className={navLinkClass(pathname === '/lead-form')}
+                  >
+                    <ClipboardList size={17} />
+                    리드 수집
+                  </Link>
+                  <Link
+                    href="/admin/login-logs" onClick={onClose}
+                    className={navLinkClass(pathname === '/admin/login-logs')}
+                  >
+                    <Shield size={17} />
+                    로그인 로그
+                  </Link>
+                  <Link
+                    href="/admin/settings" onClick={onClose}
+                    className={navLinkClass(pathname === '/admin/settings')}
+                  >
+                    <Settings2 size={17} />
+                    시스템 설정
+                  </Link>
+                </>
+              )}
             </div>
           </>
         )}

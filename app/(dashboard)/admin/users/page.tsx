@@ -4,6 +4,7 @@ import { Plus, UserCog, Settings, KeyRound } from 'lucide-react'
 import { useSession } from 'next-auth/react'
 import { useRouter } from 'next/navigation'
 import { toast } from 'sonner'
+import { useDemoGuard } from '@/hooks/useDemoGuard'
 import { Card } from '@/components/ui/card'
 import { Skeleton } from '@/components/ui/skeleton'
 import { Button } from '@/components/ui/button'
@@ -64,6 +65,7 @@ export default function UsersPage() {
   const { data: session } = useSession()
   const router = useRouter()
   const user = session?.user
+  const { blockDemoWrite } = useDemoGuard()
 
   const [users, setUsers] = useState<any[]>([])
   const [clinics, setClinics] = useState<any[]>([])
@@ -85,7 +87,7 @@ export default function UsersPage() {
   const [pwSaving, setPwSaving] = useState(false)
 
   useEffect(() => {
-    if (user && user.role !== 'superadmin') router.replace('/')
+    if (user && user.role !== 'superadmin' && user?.role !== 'demo_viewer') router.replace('/')
   }, [user, router])
 
   const fetchData = async () => {
@@ -107,6 +109,7 @@ export default function UsersPage() {
   useEffect(() => { fetchData() }, [])
 
   const handleSave = async () => {
+    if (blockDemoWrite()) return
     if (!form.username || !form.password) {
       toast.error('아이디와 비밀번호를 입력해주세요.')
       return
@@ -144,6 +147,7 @@ export default function UsersPage() {
   }
 
   const toggleUser = async (id: number, is_active: boolean) => {
+    if (blockDemoWrite()) return
     try {
       const res = await fetch('/api/admin/users', {
         method: 'PATCH',
@@ -162,6 +166,7 @@ export default function UsersPage() {
   }
 
   const openPermDialog = async (userId: number) => {
+    if (blockDemoWrite()) return
     setPermUserId(userId)
     setPermSaving(true)
     setPermDialogOpen(true)
@@ -180,6 +185,7 @@ export default function UsersPage() {
   }
 
   const savePermissions = async () => {
+    if (blockDemoWrite()) return
     if (!permUserId) return
     setPermSaving(true)
     try {
@@ -202,12 +208,14 @@ export default function UsersPage() {
   }
 
   const openPwDialog = (u: { id: number; username: string }) => {
+    if (blockDemoWrite()) return
     setPwTargetUser(u)
     setPwForm({ password: '', confirm: '' })
     setPwDialogOpen(true)
   }
 
   const submitPasswordReset = async () => {
+    if (blockDemoWrite()) return
     if (!pwTargetUser) return
     if (pwForm.password.length < 8) {
       toast.error('비밀번호는 최소 8자 이상이어야 합니다.')
@@ -247,7 +255,7 @@ export default function UsersPage() {
     setter(list.includes(key) ? list.filter(x => x !== key) : [...list, key])
   }
 
-  if (user?.role !== 'superadmin') return null
+  if (user?.role !== 'superadmin' && user?.role !== 'demo_viewer') return null
 
   return (
     <>

@@ -4,6 +4,7 @@ import { Plus, Building2, Bell, Pencil, X, Settings2, Link2 } from 'lucide-react
 import { useSession } from 'next-auth/react'
 import { useRouter } from 'next/navigation'
 import { toast } from 'sonner'
+import { useDemoGuard } from '@/hooks/useDemoGuard'
 import { Card } from '@/components/ui/card'
 import { Skeleton } from '@/components/ui/skeleton'
 import { Button } from '@/components/ui/button'
@@ -45,6 +46,7 @@ export default function ClinicsPage() {
   const { data: session } = useSession()
   const router = useRouter()
   const user = session?.user
+  const { blockDemoWrite } = useDemoGuard()
 
   const [clinics, setClinics] = useState<any[]>([])
   const [loading, setLoading] = useState(true)
@@ -73,7 +75,7 @@ export default function ClinicsPage() {
   const [erpLinkSaving, setErpLinkSaving] = useState(false)
 
   useEffect(() => {
-    if (user && user.role !== 'superadmin') router.replace('/')
+    if (user && user.role !== 'superadmin' && user?.role !== 'demo_viewer') router.replace('/')
   }, [user, router])
 
   const fetchClinics = async () => {
@@ -152,6 +154,7 @@ export default function ClinicsPage() {
   }
 
   const handleSave = async () => {
+    if (blockDemoWrite()) return
     if (!form.name || !form.slug) {
       toast.error('병원명과 슬러그를 입력해주세요.')
       return
@@ -195,6 +198,7 @@ export default function ClinicsPage() {
   }
 
   const openErpLinkDialog = (clinic: any) => {
+    if (blockDemoWrite()) return
     setErpLinkTarget(clinic)
     setSelectedErpClient(null)
     setErpLinkDialogOpen(true)
@@ -202,6 +206,7 @@ export default function ClinicsPage() {
   }
 
   const handleErpLink = async () => {
+    if (blockDemoWrite()) return
     if (!erpLinkTarget || !selectedErpClient) return
     setErpLinkSaving(true)
     try {
@@ -225,6 +230,7 @@ export default function ClinicsPage() {
   }
 
   const toggleClinicActive = async (id: number, currentActive: boolean) => {
+    if (blockDemoWrite()) return
     try {
       const res = await fetch(`/api/admin/clinics/${id}`, {
         method: 'PATCH',
@@ -240,6 +246,7 @@ export default function ClinicsPage() {
   }
 
   const openNotifyDialog = (clinic: any) => {
+    if (blockDemoWrite()) return
     setNotifyTarget(clinic)
     // notify_phones 우선, fallback: notify_phone
     const phones: string[] =
@@ -270,6 +277,7 @@ export default function ClinicsPage() {
   }
 
   const handleNotifySave = async () => {
+    if (blockDemoWrite()) return
     if (!notifyTarget) return
     const filtered = notifyPhones.filter(p => p && p.trim())
     if (notifyEnabled && filtered.length === 0) {
@@ -325,7 +333,7 @@ export default function ClinicsPage() {
     }
   }
 
-  if (user?.role !== 'superadmin') return null
+  if (user?.role !== 'superadmin' && user?.role !== 'demo_viewer') return null
 
   return (
     <>

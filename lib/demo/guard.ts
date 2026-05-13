@@ -7,7 +7,11 @@
 
 import { NextResponse } from 'next/server'
 
-export const DEMO_ALLOWED_PAGES = ['/', '/ads', '/patients', '/campaigns']
+export const DEMO_ALLOWED_PAGES = [
+  '/', '/ads', '/patients', '/campaigns',
+  // admin 페이지 — 데모 시연용 read-only
+  '/admin', '/admin/landing-pages', '/admin/ad-creatives', '/admin/clinics', '/admin/users',
+]
 
 export const DEMO_ALLOWED_API_PREFIXES = [
   '/api/auth/',
@@ -33,6 +37,10 @@ export const DEMO_ALLOWED_API_PREFIXES = [
   '/api/bookings',
   '/api/clinic-treatments',
   '/api/campaigns',
+  // admin API (read-only GET만 demo_viewer 분기로 fixture 반환)
+  '/api/admin/landing-pages',
+  '/api/admin/ad-creatives',
+  '/api/admin/users',
 ]
 
 export function isDemoPageAllowed(pathname: string): boolean {

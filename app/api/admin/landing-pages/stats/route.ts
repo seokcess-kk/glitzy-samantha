@@ -1,13 +1,18 @@
 import { serverSupabase } from '@/lib/supabase'
 import { withClinicFilter, ClinicContext, apiError, apiSuccess, applyClinicFilter, applyDateRange } from '@/lib/api-middleware'
 import { getKstDateString } from '@/lib/date'
+import { demoAdminLandingPageStats } from '@/lib/demo/fixtures/admin'
 
 /**
  * 랜딩 페이지별 성과 통계 API
  * - 리드 수, 예약 전환율, 결제 전환율, 매출
  * - leads 테이블 기준 (캠페인 리드 건수와 동일한 소스)
  */
-export const GET = withClinicFilter(async (req: Request, { clinicId, assignedClinicIds }: ClinicContext) => {
+export const GET = withClinicFilter(async (req: Request, { user, clinicId, assignedClinicIds }: ClinicContext) => {
+  if (user.role === 'demo_viewer') {
+    return apiSuccess(demoAdminLandingPageStats(clinicId))
+  }
+
   const supabase = serverSupabase()
   const url = new URL(req.url)
   const startParam = url.searchParams.get('startDate')

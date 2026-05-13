@@ -49,13 +49,18 @@ function validateConfigValues(config: Record<string, unknown>): string | null {
 /**
  * GET: 해당 병원의 광고 매체 설정 조회
  */
-export const GET = withSuperAdmin(async (req: Request) => {
+export const GET = withSuperAdmin(async (req: Request, { user }) => {
   const url = new URL(req.url)
   const segments = url.pathname.split('/')
   // pathname: /api/admin/clinics/[id]/api-configs
   const idSegment = segments[segments.indexOf('clinics') + 1]
   const clinicId = parseId(idSegment)
   if (!clinicId) return apiError('유효한 병원 ID가 필요합니다.')
+
+  if (user.role === 'demo_viewer') {
+    const { demoAdminClinicApiConfigs } = await import('@/lib/demo/fixtures/admin')
+    return apiSuccess(demoAdminClinicApiConfigs(clinicId))
+  }
 
   const supabase = serverSupabase()
 
