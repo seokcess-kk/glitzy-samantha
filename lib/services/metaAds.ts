@@ -6,6 +6,20 @@ import { getKstDateString } from '@/lib/date'
 const SERVICE_NAME = 'MetaAds'
 const logger = createLogger(SERVICE_NAME)
 
+// Meta Graph API 버전 — 업그레이드 시 이 한 줄만 변경
+// 분기별 changelog 점검: https://developers.facebook.com/docs/marketing-api/changelog
+const META_API_VERSION = 'v25.0'
+const META_GRAPH_BASE = `https://graph.facebook.com/${META_API_VERSION}`
+
+// 응답이 "필드 존재하지 않음"(deprecation) 패턴인지 감지
+// 다음 버전 업그레이드 또는 Meta의 일방적 필드 제거 시 즉시 인지 가능
+function isFieldRemovedError(err: unknown): boolean {
+  if (!err || typeof err !== 'object') return false
+  const e = (err as { error?: { code?: number; message?: string } }).error
+  if (!e) return false
+  return e.code === 100 && typeof e.message === 'string' && /nonexisting field/i.test(e.message)
+}
+
 export interface MetaAdsOptions {
   clinicId?: number
   accountId?: string
@@ -28,7 +42,7 @@ export async function fetchMetaAds(date = new Date(), options?: MetaAdsOptions) 
 
   try {
     // access_token은 URL이 아닌 Authorization 헤더로 전달 (보안)
-    const url = `https://graph.facebook.com/v19.0/${accountId}/insights?` +
+    const url = `${META_GRAPH_BASE}/${accountId}/insights?` +
       new URLSearchParams({
         level: 'campaign',
         fields: 'campaign_id,campaign_name,spend,clicks,impressions',
@@ -47,6 +61,9 @@ export async function fetchMetaAds(date = new Date(), options?: MetaAdsOptions) 
 
     if (!response.ok) {
       const err = await response.json()
+      if (isFieldRemovedError(err)) {
+        logger.error('Meta API 필드 제거 감지 (campaign insights) — 버전 호환성 점검 필요', new Error(JSON.stringify(err)), { version: META_API_VERSION, clinicId: options?.clinicId })
+      }
       throw new Error(`Meta API error: ${JSON.stringify(err)}`)
     }
 
@@ -112,7 +129,7 @@ function parseUtmContentFromUrl(url: string | null | undefined): string | null {
 }
 
 // creative 객체에서 utm_content를 폴백 체인으로 추출
-// Graph API v19.0에서 effective_link 필드는 제거됨 → object_story_spec / asset_feed_spec 사용
+// Graph API에서 creative.effective_link 필드는 제거됨 → object_story_spec / asset_feed_spec 사용
 function extractUtmContentFromCreative(creative: unknown): string | null {
   if (!creative || typeof creative !== 'object') return null
   const c = creative as Record<string, unknown>
@@ -183,7 +200,7 @@ export async function fetchMetaAdStats(date = new Date(), options?: MetaAdsOptio
   try {
     // 1. Ad 레벨 인사이트 조회 (페이지네이션)
     const allAds: MetaAdInsight[] = []
-    let nextUrl: string | null = `https://graph.facebook.com/v19.0/${accountId}/insights?` +
+    let nextUrl: string | null = `${META_GRAPH_BASE}/${accountId}/insights?` +
       new URLSearchParams({
         level: 'ad',
         fields: 'ad_id,ad_name,campaign_id,campaign_name,spend,clicks,impressions',
@@ -202,6 +219,9 @@ export async function fetchMetaAdStats(date = new Date(), options?: MetaAdsOptio
 
       if (!response.ok) {
         const err = await response.json()
+        if (isFieldRemovedError(err)) {
+          logger.error('Meta API 필드 제거 감지 (ad insights) — 버전 호환성 점검 필요', new Error(JSON.stringify(err)), { version: META_API_VERSION, clinicId: options?.clinicId })
+        }
         throw new Error(`Meta API error (ad level): ${JSON.stringify(err)}`)
       }
 
@@ -230,12 +250,12 @@ export async function fetchMetaAdStats(date = new Date(), options?: MetaAdsOptio
     }
 
     // 캐시에 없는 ad_id → utm_content 추출 (url_tags → object_story_spec → asset_feed_spec)
-    // Graph API v19.0에서 effective_link는 제거됨. 폴백 체인은 extractUtmContentFromCreative 참조.
+    // Graph API에서 creative.effective_link는 제거됨. 폴백 체인은 extractUtmContentFromCreative 참조.
     const uncachedIds = adIds.filter(id => !utmCache.has(id))
     const creativeFields = 'creative{url_tags,object_story_spec{link_data{link},video_data{call_to_action}},asset_feed_spec{link_urls}}'
     for (const adId of uncachedIds) {
       try {
-        const creativeUrl = `https://graph.facebook.com/v19.0/${adId}?fields=${creativeFields}`
+        const creativeUrl = `${META_GRAPH_BASE}/${adId}?fields=${creativeFields}`
         const { response: cRes } = await fetchWithRetry(creativeUrl, {
           service: SERVICE_NAME,
           timeout: 10000,
@@ -246,6 +266,13 @@ export async function fetchMetaAdStats(date = new Date(), options?: MetaAdsOptio
           const cJson = await cRes.json()
           utmCache.set(adId, extractUtmContentFromCreative(cJson?.creative))
         } else {
+          // 필드 제거(deprecation) 패턴이면 명시적 로깅 — 운영자가 즉시 인지하고 폴백 체인 추가 가능
+          try {
+            const err = await cRes.json()
+            if (isFieldRemovedError(err)) {
+              logger.error('Meta API 필드 제거 감지 (ad creative) — 폴백 체인 보강 필요', new Error(JSON.stringify(err)), { adId, version: META_API_VERSION, clinicId: options?.clinicId })
+            }
+          } catch { /* JSON 파싱 실패 무시 */ }
           utmCache.set(adId, null)
         }
       } catch {
