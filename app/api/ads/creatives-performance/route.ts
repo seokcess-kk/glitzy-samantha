@@ -211,6 +211,14 @@ export const GET = withClinicFilter(async (req: Request, { user, clinicId, assig
       if (utm.length >= 4 && !creativeKeyLookup.has(utm)) creativeKeyLookup.set(utm, utm)
     }
 
+    // 긴 키 우선 매칭 — `울쎄라피_79_c` 가 `울쎄라피_79` 보다 먼저 매칭되어야
+    // 부분문자열 포함 관계(짧은 키가 긴 키에 includes됨)에서 더 구체적인 소재로 귀속
+    const sortedCreativeKeys = Array.from(creativeKeyLookup.entries())
+      .sort((a, b) => b[0].length - a[0].length)
+
+    // ad_name 매칭 성공한 ad_id 추적 — 아래 별도 ad_id 표시 분기에서 중복 출력 방지
+    const adIdMatchedByAdName = new Set<string>()
+
     for (const row of adStatsData) {
       const spend = Number(row.spend_amount) || 0
       const clicks = row.clicks || 0
@@ -240,15 +248,16 @@ export const GET = withClinicFilter(async (req: Request, { user, clinicId, assig
         continue
       }
 
-      // ad_name 부분문자열 매칭
+      // ad_name 부분문자열 매칭 — 긴 검색키부터 시도 (sortedCreativeKeys)
       let matchedByAdName = false
       if (row.ad_name) {
         const adNameLower = row.ad_name.toLowerCase()
-        for (const [searchKey, utmKey] of creativeKeyLookup) {
+        for (const [searchKey, utmKey] of sortedCreativeKeys) {
           if (adNameLower.includes(searchKey)) {
             const existing = adNameDirectStats.get(utmKey) || { spend: 0, clicks: 0, impressions: 0 }
             existing.spend += spend; existing.clicks += clicks; existing.impressions += impressions
             adNameDirectStats.set(utmKey, existing)
+            if (row.ad_id) adIdMatchedByAdName.add(row.ad_id)
             matchedByAdName = true
             break
           }
@@ -392,6 +401,7 @@ export const GET = withClinicFilter(async (req: Request, { user, clinicId, assig
       if (row.utm_content) continue // utm_content 있는 건 위에서 이미 처리
       if (!row.ad_id) continue
       if (adIdMatchedByUtm.has(row.ad_id)) continue // ad_id로 이미 소재에 귀속됨
+      if (adIdMatchedByAdName.has(row.ad_id)) continue // ad_name 부분문자열로 이미 등록 소재에 귀속됨
       const existing = adIdStats.get(row.ad_id)
       if (existing) {
         existing.spend += Number(row.spend_amount) || 0

@@ -4,6 +4,7 @@
 
 | 날짜 | 내용 |
 |------|------|
+| 2026-05-13 | 광고 성과 소재별 spend 정합성 fix(2건): (1) `lib/services/metaAds.ts` — Meta Graph API v19.0에서 제거된 `creative.effective_link` 필드 호출이 항상 throw하던 문제. fields 를 `object_story_spec{link_data{link},video_data{call_to_action}}` + `asset_feed_spec{link_urls}` 로 교체하고 `extractUtmContentFromCreative` 폴백 체인(url_tags → link_data → video CTA → asset_feed)으로 전환 → `ad_stats.utm_content`가 비정상 NULL로 들어오던 버그 해소. (2) `app/api/ads/creatives-performance/route.ts` — `creativeKeyLookup` 을 길이 내림차순으로 정렬해 긴 검색키(`울쎄라피_79_c`)가 짧은 키(`울쎄라피_79`)보다 먼저 매칭되도록 변경. `adIdMatchedByAdName` set 추가해 ad_name 부분문자열로 등록 소재에 귀속된 ad_id 가 별도 미등록 ad_id 표시 분기에도 출력돼 spend가 정확히 2배로 잡히던 중복 카운트 제거. |
 | 2026-05-13 | 캠페인 리드 상태값 `consulting`(상담중) 추가 — `LEAD_STATUS_CONFIG`(campaigns/page.tsx) + `VALID_LEAD_STATUSES`(/api/leads/[id]). 상태 흐름 신규→부재→상담중→예약완료 사이 단계. 색상 cyan (기존 `consulted` legacy=amber와 구분). 6개 상태 그리드(`sm:grid-cols-6`)에 정확히 맞음 |
 | 2026-05-12 | perf/UI: 예약/결제 메모 영역 통합 + 속도 개선 — 별도 "리드 메모" 아코디언 제거. 예약 정보 메모 영역 안에 리드 단계 타임라인(읽기) + 예약 메모(편집) 세로 배치. `/api/bookings` 응답에 booking별 `lead_notes` 배열을 prefetch (단일 bulk 쿼리) → 펼침/표시 시 추가 fetch 0건. `/api/patients/[id]/lead-notes` 엔드포인트 제거. `LeadNotesTimeline`을 props 기반 presentational 컴포넌트로 리팩토링 |
 | 2026-05-12 | perf/UI: 캠페인 리드 메모 펴치기 지연 제거 — `/api/campaigns?campaign=…` 응답에 `notes: LeadNote[]` 전체 배열을 prefetch로 포함 (펼침 시 추가 fetch 불필요). 날짜 포맷 M/D → `formatDateTime` "M월 D일 HH:MM" (campaigns LeadCard + LeadNotesTimeline 양쪽 통일) |

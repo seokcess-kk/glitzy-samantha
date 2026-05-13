@@ -111,6 +111,47 @@ function parseUtmContentFromUrl(url: string | null | undefined): string | null {
   }
 }
 
+// creative 객체에서 utm_content를 폴백 체인으로 추출
+// Graph API v19.0에서 effective_link 필드는 제거됨 → object_story_spec / asset_feed_spec 사용
+function extractUtmContentFromCreative(creative: unknown): string | null {
+  if (!creative || typeof creative !== 'object') return null
+  const c = creative as Record<string, unknown>
+
+  // 1) url_tags (광고 레벨 URL Parameters)
+  const utmFromTags = parseUtmContentFromUrlTags(c.url_tags as string | undefined)
+  if (utmFromTags) return utmFromTags
+
+  // 2) object_story_spec.link_data.link (외부 트래픽/일반 페이지 게시물 광고)
+  const oss = c.object_story_spec as Record<string, unknown> | undefined
+  if (oss && typeof oss === 'object') {
+    const linkData = oss.link_data as Record<string, unknown> | undefined
+    const link = linkData?.link as string | undefined
+    const utmFromLink = parseUtmContentFromUrl(link)
+    if (utmFromLink) return utmFromLink
+
+    // 3) video_data.call_to_action.value.link (동영상 광고)
+    const videoData = oss.video_data as Record<string, unknown> | undefined
+    const cta = videoData?.call_to_action as Record<string, unknown> | undefined
+    const ctaValue = cta?.value as Record<string, unknown> | undefined
+    const ctaLink = ctaValue?.link as string | undefined
+    const utmFromCta = parseUtmContentFromUrl(ctaLink)
+    if (utmFromCta) return utmFromCta
+  }
+
+  // 4) asset_feed_spec.link_urls[*].website_url (Advantage+ / Dynamic Creative)
+  const afs = c.asset_feed_spec as Record<string, unknown> | undefined
+  const linkUrls = afs?.link_urls as Array<Record<string, unknown>> | undefined
+  if (Array.isArray(linkUrls)) {
+    for (const entry of linkUrls) {
+      const websiteUrl = entry?.website_url as string | undefined
+      const utmFromAfs = parseUtmContentFromUrl(websiteUrl)
+      if (utmFromAfs) return utmFromAfs
+    }
+  }
+
+  return null
+}
+
 interface MetaAdInsight {
   ad_id: string
   ad_name: string
@@ -188,11 +229,13 @@ export async function fetchMetaAdStats(date = new Date(), options?: MetaAdsOptio
       utmCache.set(row.ad_id, row.utm_content)
     }
 
-    // 캐시에 없는 ad_id → utm_content 추출 (url_tags → effective_link 순서)
+    // 캐시에 없는 ad_id → utm_content 추출 (url_tags → object_story_spec → asset_feed_spec)
+    // Graph API v19.0에서 effective_link는 제거됨. 폴백 체인은 extractUtmContentFromCreative 참조.
     const uncachedIds = adIds.filter(id => !utmCache.has(id))
+    const creativeFields = 'creative{url_tags,object_story_spec{link_data{link},video_data{call_to_action}},asset_feed_spec{link_urls}}'
     for (const adId of uncachedIds) {
       try {
-        const creativeUrl = `https://graph.facebook.com/v19.0/${adId}?fields=creative{url_tags,effective_link}`
+        const creativeUrl = `https://graph.facebook.com/v19.0/${adId}?fields=${creativeFields}`
         const { response: cRes } = await fetchWithRetry(creativeUrl, {
           service: SERVICE_NAME,
           timeout: 10000,
@@ -201,15 +244,7 @@ export async function fetchMetaAdStats(date = new Date(), options?: MetaAdsOptio
         })
         if (cRes.ok) {
           const cJson = await cRes.json()
-          // 1차: url_tags에서 추출
-          const urlTags = cJson?.creative?.url_tags as string | undefined
-          let utm = parseUtmContentFromUrlTags(urlTags)
-          // 2차: effective_link URL에서 추출
-          if (!utm) {
-            const effectiveLink = cJson?.creative?.effective_link as string | undefined
-            utm = parseUtmContentFromUrl(effectiveLink)
-          }
-          utmCache.set(adId, utm)
+          utmCache.set(adId, extractUtmContentFromCreative(cJson?.creative))
         } else {
           utmCache.set(adId, null)
         }
