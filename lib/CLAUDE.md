@@ -33,6 +33,8 @@
 
 ## DB 핵심 테이블
 
+> **RLS 정책 (필수)**: 모든 `public` 스키마 테이블은 RLS 활성화 상태. 신규 테이블 마이그레이션 작성 시 `ALTER TABLE public.테이블명 ENABLE ROW LEVEL SECURITY;` 추가 필수. Samantha는 `serverSupabase()`의 service_role 키로만 DB에 접근하므로 RLS는 자동 우회되고, 노출된 anon 키로 외부에서 PostgREST에 직접 접근하는 공격 표면만 차단됨. 정책(POLICY)은 의도적으로 추가하지 않음.
+
 | 테이블 | 용도 | 비고 |
 |--------|------|------|
 | `clinics` | 병원 고객사 | `notify_phones TEXT[]` 최대 3개, `erp_client_id TEXT` glitzy-web 거래처 UUID 매핑 |
