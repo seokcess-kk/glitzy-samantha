@@ -4,6 +4,7 @@
 
 | 날짜 | 내용 |
 |------|------|
+| 2026-05-18 | 광고 소재 페이지 병원 필터 연동(`app/(dashboard)/admin/ad-creatives/page.tsx`): 사이드바 ClinicContext의 `selectedClinicId`를 `useClinic()`으로 구독하고 `/api/admin/ad-creatives?clinic_id=…` 쿼리에 전달. 사이드바에서 병원 변경 시 자동 재조회(useEffect deps). 신규 등록 다이얼로그 오픈 시 선택된 병원을 폼에 기본 채움. API 라우트는 이미 `clinic_id` 파라미터를 지원하고 있어 서버 변경 불필요. |
 | 2026-05-13 | CI: E2E 워크플로우의 test step에 `SUPABASE_SERVICE_ROLE_KEY` 가드 추가. Repository Secrets 미설정 시 dev server가 `supabaseKey is required` 로 모든 페이지를 빈 body로 응답해 11개 테스트가 timeout 되던 문제 회피. secrets 누락 시 test step skip + warning 출력 → 워크플로우 success. 향후 secrets 설정 시 자동으로 테스트 실행 재개. |
 | 2026-05-13 | 보안: 모든 `public` 스키마 테이블 38개에 RLS 활성화(`supabase/migrations/20260513_enable_rls_all_public_tables.sql`) — Supabase Linter `rls_disabled_in_public` 경고 일괄 해소. Samantha는 `serverSupabase()` service_role로만 DB 접근하므로 자체 동작 영향 0이지만, 노출된 anon 키(`NEXT_PUBLIC_SUPABASE_ANON_KEY`)로 외부에서 PostgREST에 직접 접근해 모든 데이터를 읽어가는 공격 표면 차단. 정책(POLICY)은 의도적으로 추가하지 않음(service_role 자동 우회로 충분). `lib/CLAUDE.md` 에 신규 테이블 마이그레이션 시 RLS 활성화 필수 정책 명시. |
 | 2026-05-13 | CI: `.github/workflows/e2e.yml` 워크플로우 즉시 실패(0초) 버그 fix. step의 `if:` 조건에서 `secrets` 컨텍스트 직접 참조(`if: ${{ secrets.E2E_SUPERADMIN_EMAIL != '' }}`)는 GitHub 유효성 검증이 거부함 → 모든 환경변수를 job-level `env:` 로 한 번 정의 후 `if: env.E2E_SUPERADMIN_EMAIL != ''` 패턴으로 전환. step별 env 중복 제거. |

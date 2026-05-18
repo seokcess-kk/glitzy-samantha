@@ -38,6 +38,7 @@ import {
 import { ConfirmDialog, EmptyState, PageHeader } from '@/components/common'
 import { QRCodeDialog } from '@/app/(dashboard)/utm/components/QRCodeDialog'
 import { buildUtmUrl } from '@/lib/utm'
+import { useClinic } from '@/components/ClinicContext'
 
 interface LandingPage {
   id: number
@@ -82,6 +83,7 @@ export default function AdCreativesPage() {
   const router = useRouter()
   const user = session?.user
   const { blockDemoWrite } = useDemoGuard()
+  const { selectedClinicId } = useClinic()
   const fileInputRef = useRef<HTMLInputElement>(null)
 
   const [adCreatives, setAdCreatives] = useState<AdCreative[]>([])
@@ -116,8 +118,11 @@ export default function AdCreativesPage() {
   const fetchData = async () => {
     try {
       setLoading(true)
+      const acUrl = selectedClinicId
+        ? `/api/admin/ad-creatives?clinic_id=${selectedClinicId}`
+        : '/api/admin/ad-creatives'
       const [acRes, lpRes, cRes] = await Promise.all([
-        fetch('/api/admin/ad-creatives').then(r => r.json()),
+        fetch(acUrl).then(r => r.json()),
         fetch('/api/admin/landing-pages').then(r => r.json()),
         fetch('/api/admin/clinics').then(r => r.json()),
       ])
@@ -135,7 +140,7 @@ export default function AdCreativesPage() {
     }
   }
 
-  useEffect(() => { fetchData() }, [])
+  useEffect(() => { fetchData() }, [selectedClinicId])
 
   const handleFileUpload = async (file: File) => {
     if (blockDemoWrite()) return
@@ -368,6 +373,9 @@ export default function AdCreativesPage() {
 
       <Dialog open={dialogOpen} onOpenChange={(open) => {
         setDialogOpen(open)
+        if (open && !editing && selectedClinicId && !form.clinic_id) {
+          setForm(f => ({ ...f, clinic_id: String(selectedClinicId) }))
+        }
         if (!open) resetForm()
       }}>
         <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
