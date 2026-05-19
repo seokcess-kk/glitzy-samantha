@@ -44,7 +44,7 @@
 | `lead_notes` | 리드 메모 히스토리 (타임라인) | 1차/2차/3차... 다건. `created_by`/`created_at`, ON DELETE CASCADE |
 | `bookings` | 예약 | `created_by`, `updated_by` |
 | `consultations` | 상담 | `created_by`, `updated_by` |
-| `payments` | 결제 | `created_by` |
+| `payments` | 결제 | `created_by`, `updated_by` |
 | `ad_campaign_stats` | 캠페인 레벨 광고 통계 | 일별 집계 |
 | `ad_stats` | 광고(ad) 레벨 성과 | Meta: utm_content 매핑, TikTok: ad_id 기준 (utm_content=null) |
 | `clinic_api_configs` | 병원별 광고 API 키 | |

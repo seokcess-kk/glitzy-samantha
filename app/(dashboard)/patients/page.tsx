@@ -536,8 +536,8 @@ function parseAmount(val: string): string {
   return val.replace(/[^\d]/g, '')
 }
 
-function PaymentSection({ customerId, payments, onSave, isSuperAdmin, clinicId, treatmentRefreshKey }: {
-  customerId: number; payments: any[]; onSave: () => void; isSuperAdmin?: boolean; clinicId?: number | null; treatmentRefreshKey?: number
+function PaymentSection({ customerId, payments, onSave, canEdit, clinicId, treatmentRefreshKey }: {
+  customerId: number; payments: any[]; onSave: () => void; canEdit?: boolean; clinicId?: number | null; treatmentRefreshKey?: number
 }) {
   const [saving, setSaving] = useState(false)
   const [showForm, setShowForm] = useState(false)
@@ -546,6 +546,49 @@ function PaymentSection({ customerId, payments, onSave, isSuperAdmin, clinicId, 
   const [customInput, setCustomInput] = useState(false)
   const [customName, setCustomName] = useState('')
   const [customAmount, setCustomAmount] = useState('')
+  // 인라인 편집 상태
+  const [editingId, setEditingId] = useState<number | null>(null)
+  const [editForm, setEditForm] = useState<{ treatment_name: string; payment_amount: string; payment_date: string }>({ treatment_name: '', payment_amount: '', payment_date: '' })
+  const [updating, setUpdating] = useState(false)
+
+  const startEdit = (p: any) => {
+    // payment_date(ISO timestamp) → KST YYYY-MM-DD
+    const ymd = new Date(p.payment_date).toLocaleDateString('en-CA', { timeZone: 'Asia/Seoul' })
+    setEditingId(p.id)
+    setEditForm({
+      treatment_name: p.treatment_name || '',
+      payment_amount: String(p.payment_amount ?? ''),
+      payment_date: ymd,
+    })
+  }
+  const cancelEdit = () => { setEditingId(null) }
+  const saveEdit = async () => {
+    const name = editForm.treatment_name.trim()
+    const amount = Number(editForm.payment_amount)
+    if (!name) { toast.error('시술명을 입력하세요.'); return }
+    if (!amount || amount <= 0) { toast.error('올바른 금액을 입력하세요.'); return }
+    if (!editForm.payment_date) { toast.error('결제일을 입력하세요.'); return }
+    setUpdating(true)
+    try {
+      const res = await fetch(`/api/payments/${editingId}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          treatmentName: name,
+          paymentAmount: amount,
+          paymentDate: editForm.payment_date,
+        }),
+      })
+      if (!res.ok) throw new Error()
+      toast.success('결제 내역이 수정되었습니다.')
+      setEditingId(null)
+      onSave()
+    } catch {
+      toast.error('수정에 실패했습니다.')
+    } finally {
+      setUpdating(false)
+    }
+  }
 
   // 시술 카탈로그 로드 (treatmentRefreshKey 변경 시 재로드)
   useEffect(() => {
@@ -642,35 +685,84 @@ function PaymentSection({ customerId, payments, onSave, isSuperAdmin, clinicId, 
               <TableHead className="text-xs text-muted-foreground uppercase tracking-wider font-medium">시술명</TableHead>
               <TableHead className="text-xs text-muted-foreground uppercase tracking-wider font-medium text-right">금액</TableHead>
               <TableHead className="text-xs text-muted-foreground uppercase tracking-wider font-medium">결제일</TableHead>
-              {isSuperAdmin && <TableHead className="text-xs text-muted-foreground uppercase tracking-wider font-medium w-10" />}
+              {canEdit && <TableHead className="text-xs text-muted-foreground uppercase tracking-wider font-medium w-20 text-right" />}
             </TableRow>
           </TableHeader>
           <TableBody>
-            {payments.map((p: any) => (
-              <TableRow key={p.id} className="border-b border-border dark:border-white/5">
-                <TableCell className="text-foreground text-sm">{p.treatment_name}</TableCell>
-                <TableCell className="text-emerald-600 dark:text-emerald-400 font-semibold text-right">₩{Number(p.payment_amount).toLocaleString()}</TableCell>
-                <TableCell className="text-muted-foreground text-xs">{formatDate(p.payment_date)}</TableCell>
-                {isSuperAdmin && (
-                  <TableCell>
-                    <button
-                      onClick={async () => {
-                        if (!confirm('이 결제 내역을 삭제하시겠습니까?')) return
-                        try {
-                          const res = await fetch(`/api/payments/${p.id}`, { method: 'DELETE' })
-                          if (!res.ok) throw new Error()
-                          toast.success('결제 내역이 삭제되었습니다.')
-                          onSave()
-                        } catch { toast.error('삭제에 실패했습니다.') }
-                      }}
-                      className="text-red-400 hover:text-red-300 p-1"
-                    >
-                      <Trash2 size={13} />
-                    </button>
-                  </TableCell>
-                )}
-              </TableRow>
-            ))}
+            {payments.map((p: any) => {
+              const isEditing = editingId === p.id
+              if (isEditing) {
+                return (
+                  <TableRow key={p.id} className="border-b border-border dark:border-white/5 bg-muted/30 dark:bg-white/[0.03]">
+                    <TableCell colSpan={canEdit ? 4 : 3} className="py-2">
+                      <div className="flex flex-wrap items-center gap-2">
+                        <Input
+                          value={editForm.treatment_name}
+                          onChange={e => setEditForm(f => ({ ...f, treatment_name: e.target.value }))}
+                          placeholder="시술명"
+                          className="h-8 text-sm flex-1 min-w-[120px] bg-muted dark:bg-white/5"
+                          maxLength={200}
+                        />
+                        <Input
+                          type="text"
+                          value={formatAmount(editForm.payment_amount)}
+                          onChange={e => setEditForm(f => ({ ...f, payment_amount: parseAmount(e.target.value) }))}
+                          placeholder="금액"
+                          className="h-8 text-sm w-28 text-right bg-muted dark:bg-white/5"
+                        />
+                        <Input
+                          type="date"
+                          value={editForm.payment_date}
+                          onChange={e => setEditForm(f => ({ ...f, payment_date: e.target.value }))}
+                          className="h-8 text-sm w-36 bg-muted dark:bg-white/5"
+                        />
+                        <Button size="sm" onClick={saveEdit} disabled={updating} className="h-8 px-3">
+                          {updating ? '저장중...' : '저장'}
+                        </Button>
+                        <Button size="sm" variant="ghost" onClick={cancelEdit} disabled={updating} className="h-8 px-3">취소</Button>
+                      </div>
+                    </TableCell>
+                  </TableRow>
+                )
+              }
+              return (
+                <TableRow key={p.id} className="border-b border-border dark:border-white/5">
+                  <TableCell className="text-foreground text-sm">{p.treatment_name}</TableCell>
+                  <TableCell className="text-emerald-600 dark:text-emerald-400 font-semibold text-right">₩{Number(p.payment_amount).toLocaleString()}</TableCell>
+                  <TableCell className="text-muted-foreground text-xs">{formatDate(p.payment_date)}</TableCell>
+                  {canEdit && (
+                    <TableCell>
+                      <div className="flex items-center justify-end gap-0.5">
+                        <button
+                          onClick={() => startEdit(p)}
+                          className="text-muted-foreground hover:text-foreground p-1"
+                          aria-label="결제 수정"
+                          title="수정"
+                        >
+                          <Edit2 size={13} />
+                        </button>
+                        <button
+                          onClick={async () => {
+                            if (!confirm('이 결제 내역을 삭제하시겠습니까?')) return
+                            try {
+                              const res = await fetch(`/api/payments/${p.id}`, { method: 'DELETE' })
+                              if (!res.ok) throw new Error()
+                              toast.success('결제 내역이 삭제되었습니다.')
+                              onSave()
+                            } catch { toast.error('삭제에 실패했습니다.') }
+                          }}
+                          className="text-red-400 hover:text-red-300 p-1"
+                          aria-label="결제 삭제"
+                          title="삭제"
+                        >
+                          <Trash2 size={13} />
+                        </button>
+                      </div>
+                    </TableCell>
+                  )}
+                </TableRow>
+              )
+            })}
           </TableBody>
         </Table>
       )}
@@ -784,7 +876,7 @@ function PaymentSection({ customerId, payments, onSave, isSuperAdmin, clinicId, 
 
 // F: 탭→섹션 전환 (예약/상담/결제를 한 화면에 세로 배치)
 // G: 목록에 상담 횟수 + 상태 표시
-function BookingRow({ booking, onRefresh, isSuperAdmin, clinicId, isOpen, onToggle }: { booking: any; onRefresh: () => void; isSuperAdmin?: boolean; clinicId?: number | null; isOpen: boolean; onToggle: () => void }) {
+function BookingRow({ booking, onRefresh, isSuperAdmin, canEditPayment, clinicId, isOpen, onToggle }: { booking: any; onRefresh: () => void; isSuperAdmin?: boolean; canEditPayment?: boolean; clinicId?: number | null; isOpen: boolean; onToggle: () => void }) {
   const [expandedSection, setExpandedSection] = useState<'booking' | 'consult' | 'payment' | null>(null)
   const [changingStatus, setChangingStatus] = useState(false)
   const [treatmentDialogOpen, setTreatmentDialogOpen] = useState(false)
@@ -957,7 +1049,7 @@ function BookingRow({ booking, onRefresh, isSuperAdmin, clinicId, isOpen, onTogg
             </button>
             {expandedSection === 'payment' && (
               <div className="px-3 pb-3">
-                <PaymentSection customerId={customer?.id} payments={customer?.payments || []} onSave={onRefresh} isSuperAdmin={isSuperAdmin} clinicId={clinicId} treatmentRefreshKey={treatmentRefreshKey} />
+                <PaymentSection customerId={customer?.id} payments={customer?.payments || []} onSave={onRefresh} canEdit={canEditPayment} clinicId={clinicId} treatmentRefreshKey={treatmentRefreshKey} />
               </div>
             )}
             {canManageTreatments && clinicId && (
@@ -1114,6 +1206,9 @@ export default function PatientsPage() {
   const { selectedClinicId } = useClinic()
   const { data: session } = useSession()
   const isSuperAdmin = session?.user?.role === 'superadmin'
+  // 결제 수정/삭제: 자기 병원 결제만 — 서버 checkClinicAccess가 재검증
+  // agency_staff는 결제 생성 API와 동일하게 차단 (user.clinic_id null → checkClinicAccess false)
+  const canEditPayment = ['superadmin', 'clinic_admin', 'clinic_staff'].includes(session?.user?.role || '')
   const [bookings, setBookings] = useState<any[]>([])
   const [loading, setLoading] = useState(true)
   const [view, setView] = useState<'list' | 'calendar'>('list')
@@ -1665,7 +1760,7 @@ export default function PatientsPage() {
               </Card>
               <div className="space-y-2 min-w-[720px]">
                 {filtered.map(b => (
-                  <BookingRow key={b.id} booking={b} onRefresh={fetchBookings} isSuperAdmin={isSuperAdmin} clinicId={selectedClinicId} isOpen={openBookingId === b.id} onToggle={() => setOpenBookingId(prev => prev === b.id ? null : b.id)} />
+                  <BookingRow key={b.id} booking={b} onRefresh={fetchBookings} isSuperAdmin={isSuperAdmin} canEditPayment={canEditPayment} clinicId={selectedClinicId} isOpen={openBookingId === b.id} onToggle={() => setOpenBookingId(prev => prev === b.id ? null : b.id)} />
                 ))}
               </div>
             </div>
