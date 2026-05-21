@@ -11,6 +11,7 @@ import { decryptApiConfig } from '@/lib/crypto'
 import { fetchWithRetry } from '@/lib/api-client'
 import { createLogger } from '@/lib/logger'
 import { API_CONFIG_PLATFORMS, isApiPlatform, type ApiPlatform } from '@/lib/platform'
+import { normalizeGoogleAdsCustomerId } from '@/lib/services/googleAds'
 
 const logger = createLogger('ApiConfigTest')
 
@@ -62,8 +63,13 @@ async function testGoogleAds(config: Record<string, unknown>): Promise<TestResul
   const clientId = (config.client_id as string | undefined) || process.env.GOOGLE_ADS_CLIENT_ID
   const clientSecret = (config.client_secret as string | undefined) || process.env.GOOGLE_ADS_CLIENT_SECRET
   const developerToken = (config.developer_token as string | undefined) || process.env.GOOGLE_ADS_DEVELOPER_TOKEN
-  const customerId = (config.customer_id as string | undefined) || process.env.GOOGLE_ADS_CUSTOMER_ID
-  const loginCustomerId = (config.login_customer_id as string | undefined) || process.env.GOOGLE_ADS_LOGIN_CUSTOMER_ID
+  // customer_id / login_customer_id 는 하이픈 표기 입력을 허용하므로 호출 직전 숫자만 추출.
+  const customerId = normalizeGoogleAdsCustomerId(
+    (config.customer_id as string | undefined) || process.env.GOOGLE_ADS_CUSTOMER_ID
+  )
+  const loginCustomerId = normalizeGoogleAdsCustomerId(
+    (config.login_customer_id as string | undefined) || process.env.GOOGLE_ADS_LOGIN_CUSTOMER_ID
+  )
   const refreshToken = (config.refresh_token as string | undefined) || process.env.GOOGLE_ADS_REFRESH_TOKEN
 
   const missing = [

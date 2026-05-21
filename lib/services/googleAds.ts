@@ -6,6 +6,17 @@ import { getKstDateString } from '@/lib/date'
 const SERVICE_NAME = 'GoogleAds'
 const logger = createLogger(SERVICE_NAME)
 
+/**
+ * Google Ads customer_id / login_customer_id 정규화 — 비숫자 제거.
+ * UI placeholder가 "123-456-7890" 표기를 안내하지만 Google Ads REST API는 숫자만 허용하므로
+ * 호출 직전에 하이픈/공백/괄호 등을 제거. 빈 결과는 undefined 로 통일해 ENV fallback 트리거.
+ */
+export function normalizeGoogleAdsCustomerId(value: string | undefined): string | undefined {
+  if (!value) return undefined
+  const digits = value.replace(/\D/g, '')
+  return digits || undefined
+}
+
 export interface GoogleAdsOptions {
   clinicId?: number
   clientId?: string
@@ -27,8 +38,9 @@ export async function fetchGoogleAds(date = new Date(), options?: GoogleAdsOptio
   const clientId = options?.clientId || process.env.GOOGLE_ADS_CLIENT_ID
   const clientSecret = options?.clientSecret || process.env.GOOGLE_ADS_CLIENT_SECRET
   const developerToken = options?.developerToken || process.env.GOOGLE_ADS_DEVELOPER_TOKEN
-  const customerId = options?.customerId || process.env.GOOGLE_ADS_CUSTOMER_ID
-  const loginCustomerId = options?.loginCustomerId || process.env.GOOGLE_ADS_LOGIN_CUSTOMER_ID
+  // customer_id / login_customer_id 는 하이픈 표기("123-456-7890") 입력을 허용하므로 호출 직전 숫자만 추출.
+  const customerId = normalizeGoogleAdsCustomerId(options?.customerId || process.env.GOOGLE_ADS_CUSTOMER_ID)
+  const loginCustomerId = normalizeGoogleAdsCustomerId(options?.loginCustomerId || process.env.GOOGLE_ADS_LOGIN_CUSTOMER_ID)
   const refreshToken = options?.refreshToken || process.env.GOOGLE_ADS_REFRESH_TOKEN
 
   if (!clientId || !clientSecret || !developerToken || !customerId || !refreshToken) {
