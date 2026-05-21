@@ -18,6 +18,7 @@ import {
 import { createLogger } from '@/lib/logger'
 import { sendErrorAlert } from '@/lib/error-alert'
 import { sendCapiEvent } from '@/lib/services/metaCapi'
+import { waitUntil } from '@vercel/functions'
 
 const logger = createLogger('WebhookLead')
 
@@ -224,8 +225,8 @@ export async function POST(req: Request) {
     // raw 로그 → processed
     await updateRawLog(supabase, rawLogId, { status: 'processed', lead_id: lead.id })
 
-    // 3. SMS 알림 — fire-and-forget (응답 차단 방지, sendSmsWithLog가 내부에서 DB 로그+재시도 처리)
-    ;(async () => {
+    // 3. SMS 알림 — waitUntil 로 함수 응답 이후에도 promise 완료 보장 (서버리스 환경에서 응답 직후 fetch abort 방지)
+    waitUntil((async () => {
       try {
         const { data: clinic } = await supabase
           .from('clinics')
@@ -272,7 +273,7 @@ export async function POST(req: Request) {
       } catch (e) {
         logger.warn('SMS 알림 발송 실패 (non-blocking)', { error: e, leadId: lead.id })
       }
-    })()
+    })())
 
     // 4. QStash 챗봇 스케줄 — 카카오 알림톡 API 연동 전까지 비활성화
     // if (process.env.QSTASH_TOKEN && process.env.KAKAO_API_KEY) {
@@ -283,23 +284,26 @@ export async function POST(req: Request) {
     //   })
     // }
 
-    // 5. Meta CAPI Lead 이벤트 전송 (async, non-blocking)
+    // 5. Meta CAPI Lead 이벤트 전송 — waitUntil 로 함수 응답 이후에도 fetch 유지 (이전엔 fire-and-forget 이라
+    // 응답 직후 함수 종료 시 fetch 가 abort 되어 "This operation was aborted" 로 capi_events.fail 누적)
     // event_id 검증: UUID 형식이거나 100자 이내 영숫자+하이픈만 허용
     const isValidEventId = event_id && /^[a-zA-Z0-9\-]{1,100}$/.test(event_id)
     const capiEventId = isValidEventId ? event_id : crypto.randomUUID()
-    sendCapiEvent(supabase, {
-      clinicId: validClinicId,
-      leadId: lead.id,
-      eventName: 'Lead',
-      eventId: capiEventId,
-      userData: {
-        phone: normalizedPhone,
-        firstName: sanitizedName || undefined,
-      },
-      eventSourceUrl: inflowUrl ? sanitizeUrl(inflowUrl, 500) : undefined,
-    }).catch((e) => {
-      logger.warn('CAPI 전송 실패 (non-blocking)', { error: e, leadId: lead.id })
-    })
+    waitUntil(
+      sendCapiEvent(supabase, {
+        clinicId: validClinicId,
+        leadId: lead.id,
+        eventName: 'Lead',
+        eventId: capiEventId,
+        userData: {
+          phone: normalizedPhone,
+          firstName: sanitizedName || undefined,
+        },
+        eventSourceUrl: inflowUrl ? sanitizeUrl(inflowUrl, 500) : undefined,
+      }).catch((e) => {
+        logger.warn('CAPI 전송 실패 (non-blocking)', { error: e, leadId: lead.id })
+      })
+    )
 
     return apiSuccess({
       success: true,
@@ -314,7 +318,9 @@ export async function POST(req: Request) {
     const errorMsg = err instanceof Error ? err.message : String(err)
     logger.error('리드 처리 실패', err as Error, { rawLogId, clinic_id: validClinicId })
     await updateRawLog(supabase, rawLogId, { status: 'failed', error_message: errorMsg })
-    sendErrorAlert('lead_webhook_fail', `리드 처리 실패: ${errorMsg}`, { rawLogId, clinic_id: validClinicId }).catch(() => {})
+    waitUntil(
+      sendErrorAlert('lead_webhook_fail', `리드 처리 실패: ${errorMsg}`, { rawLogId, clinic_id: validClinicId }).catch(() => {})
+    )
     return apiError('서버 오류가 발생했습니다.', 500)
   }
 }

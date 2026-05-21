@@ -165,8 +165,8 @@ npm run analyze      # 번들 크기 분석
 
 | 날짜 | 내용 |
 |------|------|
+| 2026-05-21 | Meta CAPI fire-and-forget abort fix — `app/api/webhook/lead/route.ts` 의 SMS IIFE/`sendCapiEvent`/`sendErrorAlert`(catch) 3곳을 `@vercel/functions`의 `waitUntil`로 감싸 응답 후 fetch abort 차단, `meta_capi_fail` 알림 누적 해소 |
 | 2026-05-21 | E2E 로그인 셀렉터 정합화 — 로그인 Input에 `name="username"`/`name="password"` 추가, e2e 4파일(`login.page.ts`·`auth.fixture.ts`·`auth.setup.ts`·`auth.spec.ts`) `email`→`username` 일괄 교체로 GitHub Actions `chromium-no-auth` 6테스트 timeout 해소 |
 | 2026-05-21 | Agatha 패치 이식 3건: ERP webhook `client.created` 자동 등록 비활성화 / Google Ads `customer_id`만 필수 + `GOOGLE_ADS_*` ENV fallback(`login_customer_id` 신규) / 광고 백필 다이얼로그 + 매체 선택(`SyncOptions.platforms`, `/api/admin/clinics/[id]/backfill-ads`, `/api/ads/configured-platforms`) |
 | 2026-05-12 | 캠페인 리드 메모 다건화: `lead_notes` 테이블, 단일 `leads.notes` 제거 + 1차 메모 이관, /api/leads/[id]/notes CRUD, 카드 인라인 확장 타임라인 |
 | 2026-05-04 | 주간 리포트 cron 중지 — `vercel.json`에서 `/api/cron/weekly-report` 항목 제거 (라우트/서비스 코드는 보존) |
-| 2026-04-21 | Dable Ads 연동: `lib/services/dableAds.ts` (7일 롤링 재조회, group_by_campaign=1), adSyncManager/연결 테스트/SYNC_ENABLED_PLATFORMS 등록, `advertiser_id` → `client_name` 필드 변경 |
