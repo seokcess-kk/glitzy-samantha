@@ -23,6 +23,11 @@ export interface SyncResult {
   error?: string
 }
 
+export interface SyncOptions {
+  /** 지정 시 해당 매체만 동기화 — 백필 UI 매체 선택용. 비우면 활성 매체 전체. */
+  platforms?: ApiPlatform[]
+}
+
 interface ClinicApiConfig {
   id: number
   clinic_id: number
@@ -87,6 +92,7 @@ async function syncPlatform(
           clientSecret: decrypted.client_secret as string,
           developerToken: decrypted.developer_token as string,
           customerId: decrypted.customer_id as string,
+          loginCustomerId: decrypted.login_customer_id as string,
           refreshToken: decrypted.refresh_token as string,
         })
         return {
@@ -269,7 +275,11 @@ export async function syncAllClinics(date: Date = new Date()): Promise<SyncResul
  * 2. 설정된 매체만 동기화
  * 3. 없으면 환경변수 폴백
  */
-export async function syncClinic(clinicId: number, date: Date = new Date()): Promise<SyncResult[]> {
+export async function syncClinic(
+  clinicId: number,
+  date: Date = new Date(),
+  options?: SyncOptions,
+): Promise<SyncResult[]> {
   const supabase = serverSupabase()
   const results: SyncResult[] = []
 
@@ -294,7 +304,13 @@ export async function syncClinic(clinicId: number, date: Date = new Date()): Pro
     logger.error('clinic_api_configs 조회 실패', error, { clinicId })
   }
 
-  const validConfigs = (configs || []) as unknown as ClinicApiConfig[]
+  let validConfigs = (configs || []) as unknown as ClinicApiConfig[]
+
+  // 매체 선택 필터 (백필 UI 등에서 특정 매체만 호출하고 싶을 때)
+  if (options?.platforms && options.platforms.length > 0) {
+    const allow = new Set(options.platforms)
+    validConfigs = validConfigs.filter(c => allow.has(c.platform as ApiPlatform))
+  }
 
   if (validConfigs.length > 0) {
     // 설정된 매체 병렬 동기화

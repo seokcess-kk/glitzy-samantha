@@ -12,6 +12,7 @@ export interface GoogleAdsOptions {
   clientSecret?: string
   developerToken?: string
   customerId?: string
+  loginCustomerId?: string
   refreshToken?: string
 }
 
@@ -27,6 +28,7 @@ export async function fetchGoogleAds(date = new Date(), options?: GoogleAdsOptio
   const clientSecret = options?.clientSecret || process.env.GOOGLE_ADS_CLIENT_SECRET
   const developerToken = options?.developerToken || process.env.GOOGLE_ADS_DEVELOPER_TOKEN
   const customerId = options?.customerId || process.env.GOOGLE_ADS_CUSTOMER_ID
+  const loginCustomerId = options?.loginCustomerId || process.env.GOOGLE_ADS_LOGIN_CUSTOMER_ID
   const refreshToken = options?.refreshToken || process.env.GOOGLE_ADS_REFRESH_TOKEN
 
   if (!clientId || !clientSecret || !developerToken || !customerId || !refreshToken) {
@@ -46,6 +48,7 @@ export async function fetchGoogleAds(date = new Date(), options?: GoogleAdsOptio
     const customer = client.Customer({
       customer_id: customerId,
       refresh_token: refreshToken,
+      ...(loginCustomerId ? { login_customer_id: loginCustomerId } : {}),
     })
 
     const campaigns = await customer.query(`

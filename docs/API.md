@@ -804,16 +804,19 @@ agency_staff 계정의 병원 배정 및 메뉴 권한을 수정합니다.
 
 ### POST /api/admin/backfill-ads
 
-특정 병원의 과거 광고 데이터를 일괄 수집합니다 (최대 90일). `CRON_SECRET` Bearer 토큰 인증.
+특정 병원의 과거 광고 데이터를 일괄 수집합니다 (최대 90일). `CRON_SECRET` Bearer 토큰 인증 — 스크립트/curl 전용. UI 트리거는 `POST /api/admin/clinics/{id}/backfill-ads` 사용.
 
 **Request Body:**
 ```json
 {
   "clinicId": 19,
   "startDate": "2026-03-01",
-  "endDate": "2026-03-25"
+  "endDate": "2026-03-25",
+  "platforms": ["meta_ads", "google_ads"]
 }
 ```
+
+- `platforms` (선택): `ApiPlatform[]` — 지정 시 해당 매체만 동기화. 미지정/빈 배열이면 활성 매체 전체.
 
 **Response:**
 ```json
@@ -1262,7 +1265,29 @@ glitzy-web 외부 API 프록시. `erp_client_id` 기반 조회.
 
 ### POST /api/admin/clinics/{id}/api-configs/test
 
-매체별 API 키 연결 테스트를 실행합니다.
+매체별 API 키 연결 테스트를 실행합니다. Google Ads는 `client_id`/`client_secret`/`developer_token`/`refresh_token`/`login_customer_id` 가 비어 있으면 동일 이름의 `GOOGLE_ADS_*` 환경변수로 자동 fallback — MCC 공통 자격증명 공유 시나리오 지원.
+
+### POST /api/admin/clinics/{id}/backfill-ads
+
+광고 백필 다이얼로그 UI 트리거용 (superadmin). 날짜 범위 + 선택 매체로 `syncClinic`을 호출합니다.
+
+**Request Body:**
+```json
+{
+  "startDate": "2026-05-14",
+  "endDate": "2026-05-21",
+  "platforms": ["meta_ads", "dable_ads"]
+}
+```
+
+- `platforms`: 필수 (1개 이상). 활성 매체 목록은 `GET /api/ads/configured-platforms?clinic_id=<id>` 로 조회.
+
+### GET /api/ads/configured-platforms
+
+병원의 활성(`is_active=true`) 광고 매체 목록을 distinct로 반환. 백필 다이얼로그의 체크박스 목록에 사용.
+
+**Query:** `?clinic_id=<id>` (필수)
+**Response:** `{ "platforms": ["meta_ads", "google_ads", ...] }`
 
 ### GET /api/menu-visibility
 

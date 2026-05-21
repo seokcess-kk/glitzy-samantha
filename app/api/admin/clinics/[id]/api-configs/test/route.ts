@@ -58,29 +58,40 @@ async function testMetaAds(config: Record<string, unknown>): Promise<TestResult>
  * customer.query('SELECT customer.descriptive_name FROM customer LIMIT 1')
  */
 async function testGoogleAds(config: Record<string, unknown>): Promise<TestResult> {
-  const clientId = config.client_id as string | undefined
-  const clientSecret = config.client_secret as string | undefined
-  const developerToken = config.developer_token as string | undefined
-  const customerId = config.customer_id as string | undefined
-  const refreshToken = config.refresh_token as string | undefined
+  // config 값이 비어 있으면 환경변수 fallback (MCC 공통 필드 공유 시나리오)
+  const clientId = (config.client_id as string | undefined) || process.env.GOOGLE_ADS_CLIENT_ID
+  const clientSecret = (config.client_secret as string | undefined) || process.env.GOOGLE_ADS_CLIENT_SECRET
+  const developerToken = (config.developer_token as string | undefined) || process.env.GOOGLE_ADS_DEVELOPER_TOKEN
+  const customerId = (config.customer_id as string | undefined) || process.env.GOOGLE_ADS_CUSTOMER_ID
+  const loginCustomerId = (config.login_customer_id as string | undefined) || process.env.GOOGLE_ADS_LOGIN_CUSTOMER_ID
+  const refreshToken = (config.refresh_token as string | undefined) || process.env.GOOGLE_ADS_REFRESH_TOKEN
 
-  if (!clientId || !clientSecret || !developerToken || !customerId || !refreshToken) {
+  const missing = [
+    !clientId && 'client_id',
+    !clientSecret && 'client_secret',
+    !developerToken && 'developer_token',
+    !customerId && 'customer_id',
+    !refreshToken && 'refresh_token',
+  ].filter(Boolean).join(', ')
+
+  if (missing) {
     return {
       success: false,
-      error: 'client_id, client_secret, developer_token, customer_id, refresh_token이 모두 필요합니다.',
+      error: `필수 인증 정보가 비어있습니다 — ${missing}. config 또는 GOOGLE_ADS_* 환경변수를 확인하세요.`,
       platform: 'google_ads',
     }
   }
 
   const client = new GoogleAdsApi({
-    client_id: clientId,
-    client_secret: clientSecret,
-    developer_token: developerToken,
+    client_id: clientId!,
+    client_secret: clientSecret!,
+    developer_token: developerToken!,
   })
 
   const customer = client.Customer({
-    customer_id: customerId,
-    refresh_token: refreshToken,
+    customer_id: customerId!,
+    refresh_token: refreshToken!,
+    ...(loginCustomerId ? { login_customer_id: loginCustomerId } : {}),
   })
 
   const rows = await customer.query(

@@ -62,46 +62,13 @@ export async function POST(req: Request) {
   try {
     switch (event) {
       case 'client.created': {
-        // 멱등성: 이미 매핑된 클리닉이 있으면 스킵
-        const { data: existing } = await supabase
-          .from('clinics')
-          .select('id')
-          .eq('erp_client_id', data.id)
-          .maybeSingle()
-
-        if (existing) {
-          logger.info('이미 매핑된 클리닉 존재 — 스킵', { erpClientId: data.id, clinicId: existing.id })
-          return apiSuccess({ message: 'already_linked', clinic_id: existing.id })
-        }
-
-        const slug = `erp-${data.id.slice(0, 8)}`
-        const { data: created, error } = await supabase
-          .from('clinics')
-          .insert({
-            name: clinicName,
-            slug,
-            erp_client_id: data.id,
-            is_active: true,
-          })
-          .select('id')
-          .single()
-
-        if (error) {
-          logger.error('클리닉 자동 생성 실패', error, { erpClientId: data.id })
-          return apiError('클리닉 생성 실패', 500)
-        }
-
-        logActivity(supabase, {
-          userId: 0,
-          clinicId: created.id,
-          action: 'erp_webhook_client_created',
-          targetTable: 'clinics',
-          targetId: created.id,
-          detail: { erp_client_id: data.id, name: data.name },
+        // 자동 등록 비활성화 — clinics 는 admin 에서 명시적으로 생성 후 ERP 매핑.
+        // glitzy-web 에서 잘못 꼬여 등록된 거래처가 자동 유입되는 운영 혼선을 차단.
+        logger.info('client.created 이벤트 무시 (자동 등록 비활성화)', {
+          erp_client_id: data.id,
+          name: data.name,
         })
-
-        logger.info('클리닉 자동 생성 완료', { clinicId: created.id, erpClientId: data.id })
-        return apiSuccess({ message: 'created', clinic_id: created.id })
+        return apiSuccess({ message: '자동 등록이 비활성화되어 있습니다. admin 에서 매핑하세요.' })
       }
 
       case 'client.updated': {

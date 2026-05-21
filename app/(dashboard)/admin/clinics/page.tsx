@@ -1,6 +1,6 @@
 'use client'
 import { useState, useEffect, useCallback, useRef } from 'react'
-import { Plus, Building2, Bell, Pencil, X, Settings2, Link2 } from 'lucide-react'
+import { Plus, Building2, Bell, Pencil, X, Settings2, Link2, History } from 'lucide-react'
 import { useSession } from 'next-auth/react'
 import { useRouter } from 'next/navigation'
 import { toast } from 'sonner'
@@ -30,6 +30,7 @@ import {
 import { formatDate } from '@/lib/date'
 import { EmptyState, PageHeader } from '@/components/common'
 import ClinicApiConfigDialog from '@/components/admin/ClinicApiConfigDialog'
+import BackfillDialog from '@/components/ads/backfill-dialog'
 import { API_CONFIG_PLATFORMS, API_PLATFORM_SHORT, type ApiPlatform } from '@/lib/platform'
 
 type Platform = ApiPlatform
@@ -62,6 +63,8 @@ export default function ClinicsPage() {
   // API 설정
   const [apiConfigTarget, setApiConfigTarget] = useState<{ id: number; name: string } | null>(null)
   const [apiConfigSummaries, setApiConfigSummaries] = useState<Record<number, ApiConfigSummary[]>>({})
+  // 광고 백필
+  const [backfillTarget, setBackfillTarget] = useState<{ id: number; name: string } | null>(null)
   // ERP 거래처 연결
   type ErpLinkMode = 'select' | 'create' | 'later'
   const [erpLinkMode, setErpLinkMode] = useState<ErpLinkMode>('select')
@@ -639,6 +642,16 @@ export default function ClinicsPage() {
         />
       )}
 
+      {/* 광고 백필 다이얼로그 */}
+      {backfillTarget && (
+        <BackfillDialog
+          clinicId={backfillTarget.id}
+          clinicName={backfillTarget.name}
+          open={!!backfillTarget}
+          onClose={() => setBackfillTarget(null)}
+        />
+      )}
+
       <Card variant="glass" className="p-6">
         <div className="flex items-center justify-between mb-4">
           <h2 className="font-semibold text-foreground">병원 목록 ({clinics.length})</h2>
@@ -687,26 +700,39 @@ export default function ClinicsPage() {
                     </TableCell>
                     <TableCell className="text-muted-foreground text-xs">{formatDate(c.created_at)}</TableCell>
                     <TableCell>
-                      <button
-                        onClick={() => setApiConfigTarget({ id: c.id, name: c.name })}
-                        className="flex items-center gap-1.5 group cursor-pointer"
-                        aria-label="API 설정"
-                      >
-                        {PLATFORMS.map(p => (
-                          <span
-                            key={p}
-                            className="flex items-center gap-1"
-                            title={`${PLATFORM_SHORT[p]}: ${
-                              getApiStatusColor(c.id, p).includes('emerald') ? '연결됨' :
-                              getApiStatusColor(c.id, p).includes('red') ? '실패' : '미설정'
-                            }`}
-                          >
-                            <span className={`inline-block w-2 h-2 rounded-full ${getApiStatusColor(c.id, p)}`} />
-                            <span className="text-[10px] text-muted-foreground">{PLATFORM_SHORT[p]}</span>
-                          </span>
-                        ))}
-                        <Settings2 size={12} className="ml-1 text-muted-foreground/60 group-hover:text-foreground transition-colors" />
-                      </button>
+                      <div className="flex items-center gap-2">
+                        <button
+                          onClick={() => setApiConfigTarget({ id: c.id, name: c.name })}
+                          className="flex items-center gap-1.5 group cursor-pointer"
+                          aria-label="API 설정"
+                        >
+                          {PLATFORMS.map(p => (
+                            <span
+                              key={p}
+                              className="flex items-center gap-1"
+                              title={`${PLATFORM_SHORT[p]}: ${
+                                getApiStatusColor(c.id, p).includes('emerald') ? '연결됨' :
+                                getApiStatusColor(c.id, p).includes('red') ? '실패' : '미설정'
+                              }`}
+                            >
+                              <span className={`inline-block w-2 h-2 rounded-full ${getApiStatusColor(c.id, p)}`} />
+                              <span className="text-[10px] text-muted-foreground">{PLATFORM_SHORT[p]}</span>
+                            </span>
+                          ))}
+                          <Settings2 size={12} className="ml-1 text-muted-foreground/60 group-hover:text-foreground transition-colors" />
+                        </button>
+                        <button
+                          onClick={() => {
+                            if (blockDemoWrite()) return
+                            setBackfillTarget({ id: c.id, name: c.name })
+                          }}
+                          className="text-muted-foreground hover:text-brand-500 transition-colors"
+                          aria-label="광고 백필"
+                          title="광고 백필"
+                        >
+                          <History size={14} />
+                        </button>
+                      </div>
                     </TableCell>
                     <TableCell>
                       {c.notify_enabled && phones.length > 0 ? (

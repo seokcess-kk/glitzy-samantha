@@ -1,64 +1,67 @@
+/**
+ * 병원별 광고 backfill (superadmin UI 트리거용)
+ * - POST: 날짜 범위 + 매체 선택으로 광고 데이터 재동기화
+ *
+ * 동일 로직의 /api/admin/backfill-ads 는 CRON_SECRET 인증 스크립트 전용.
+ * UI 다이얼로그(components/ads/backfill-dialog.tsx)는 이 라우트를 호출.
+ */
+
+import { withSuperAdmin, apiError, apiSuccess } from '@/lib/api-middleware'
 import { syncClinic } from '@/lib/services/adSyncManager'
-import { apiError, apiSuccess } from '@/lib/api-middleware'
+import { parseId } from '@/lib/security'
 import { createLogger } from '@/lib/logger'
 import { getKstDateString } from '@/lib/date'
 import { isApiPlatform, type ApiPlatform } from '@/lib/platform'
 
-const logger = createLogger('BackfillAds')
+const logger = createLogger('BackfillAdsAdmin')
 
 export const maxDuration = 300
 
-/**
- * 광고 데이터 backfill API (관리자 전용)
- *
- * 사용법:
- *   curl -X POST http://localhost:3000/api/admin/backfill-ads \
- *     -H "Authorization: Bearer $CRON_SECRET" \
- *     -H "Content-Type: application/json" \
- *     -d '{"clinicId": 1, "startDate": "2026-03-01", "endDate": "2026-03-25"}'
- */
-export async function POST(req: Request) {
-  if (req.headers.get('Authorization') !== `Bearer ${process.env.CRON_SECRET}`) {
-    return apiError('Unauthorized', 401)
-  }
+export const POST = withSuperAdmin(async (req: Request) => {
+  const url = new URL(req.url)
+  const segments = url.pathname.split('/')
+  // pathname: /api/admin/clinics/[id]/backfill-ads
+  const idSegment = segments[segments.indexOf('clinics') + 1]
+  const clinicId = parseId(idSegment)
+  if (!clinicId) return apiError('유효한 병원 ID가 필요합니다.')
 
   let body: Record<string, unknown>
   try {
     body = await req.json()
   } catch {
-    return apiError('유효한 JSON body가 필요합니다.', 400)
+    return apiError('유효한 JSON 본문이 필요합니다.')
   }
 
-  const clinicId = typeof body.clinicId === 'number' ? body.clinicId : Number(body.clinicId)
   const startDate = typeof body.startDate === 'string' ? body.startDate : ''
   const endDate = typeof body.endDate === 'string' ? body.endDate : ''
 
-  // platforms 선택 입력 — 미지정 시 활성 매체 전체
+  if (!startDate || !endDate) {
+    return apiError('startDate, endDate 필수 (YYYY-MM-DD)')
+  }
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(startDate) || !/^\d{4}-\d{2}-\d{2}$/.test(endDate)) {
+    return apiError('날짜 형식: YYYY-MM-DD')
+  }
+
   let platforms: ApiPlatform[] | undefined
   if (Array.isArray(body.platforms)) {
     const filtered = body.platforms.filter((p: unknown): p is ApiPlatform => isApiPlatform(p))
     platforms = filtered.length > 0 ? filtered : undefined
   }
 
-  if (!clinicId || isNaN(clinicId) || !startDate || !endDate) {
-    return apiError('clinicId(숫자), startDate, endDate 필수', 400)
-  }
-
-  // YYYY-MM-DD 형식 검증
-  if (!/^\d{4}-\d{2}-\d{2}$/.test(startDate) || !/^\d{4}-\d{2}-\d{2}$/.test(endDate)) {
-    return apiError('날짜 형식: YYYY-MM-DD', 400)
+  if (!platforms || platforms.length === 0) {
+    return apiError('백필할 매체를 1개 이상 선택해주세요.')
   }
 
   const start = new Date(startDate + 'T00:00:00+09:00')
   const end = new Date(endDate + 'T00:00:00+09:00')
 
   if (isNaN(start.getTime()) || isNaN(end.getTime())) {
-    return apiError('유효한 날짜 형식이 아닙니다 (YYYY-MM-DD)', 400)
+    return apiError('유효한 날짜 형식이 아닙니다 (YYYY-MM-DD)')
   }
 
   const diffDays = Math.round((end.getTime() - start.getTime()) / 86400000)
-  if (diffDays < 0) return apiError('시작일이 종료일보다 늦습니다.', 400)
-  if (diffDays > 90) return apiError('최대 90일까지 가능합니다.', 400)
+  if (diffDays < 0) return apiError('시작일이 종료일보다 늦습니다.')
+  if (diffDays > 90) return apiError('최대 90일까지 가능합니다.')
 
   logger.info('Backfill 시작', { clinicId, startDate, endDate, days: diffDays + 1, platforms })
 
@@ -79,11 +82,6 @@ export async function POST(req: Request) {
           error: r.error || null,
         })
       }
-
-      logger.info(`Backfill ${dateStr} 완료`, {
-        clinicId,
-        results: results.map(r => `${r.platform}: ${r.count}건${r.error ? ` (${r.error})` : ''}`),
-      })
     }
 
     const totalCount = allResults.reduce((sum, r) => sum + r.count, 0)
@@ -102,4 +100,4 @@ export async function POST(req: Request) {
     logger.error('Backfill 실패', error, { clinicId, startDate, endDate })
     return apiError('서버 오류가 발생했습니다.', 500)
   }
-}
+})
