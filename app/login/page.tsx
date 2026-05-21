@@ -69,6 +69,7 @@ export default function LoginPage() {
               <Label htmlFor="username" className="text-xs text-muted-foreground font-medium">아이디</Label>
               <Input
                 id="username"
+                name="username"
                 type="text"
                 value={username}
                 onChange={e => setUsername(e.target.value)}
@@ -83,6 +84,7 @@ export default function LoginPage() {
               <div className="relative">
                 <Input
                   id="password"
+                  name="password"
                   type={showPw ? 'text' : 'password'}
                   value={password}
                   onChange={e => setPassword(e.target.value)}

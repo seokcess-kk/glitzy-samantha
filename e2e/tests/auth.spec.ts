@@ -17,7 +17,7 @@ test.describe('인증', () => {
   test('유효한 자격 증명으로 로그인 성공', async ({ page }) => {
     const user = TEST_USERS.superadmin
 
-    await loginPage.login(user.email, user.password)
+    await loginPage.login(user.username, user.password)
     await loginPage.expectLoginSuccess()
 
     // 대시보드에 도착했는지 확인
@@ -25,22 +25,22 @@ test.describe('인증', () => {
   })
 
   test('잘못된 비밀번호로 로그인 실패', async () => {
-    await loginPage.login(TEST_USERS.superadmin.email, 'wrong-password')
+    await loginPage.login(TEST_USERS.superadmin.username, 'wrong-password')
     await loginPage.expectLoginFailure()
   })
 
-  test('빈 이메일로 로그인 시도 실패', async ({ page }) => {
+  test('빈 아이디로 로그인 시도 실패', async ({ page }) => {
     await loginPage.login('', 'any-password')
 
     // HTML5 유효성 검사 또는 커스텀 에러
-    const isInvalid = await page.locator('input[name="email"]:invalid').count() > 0
+    const isInvalid = await page.locator('input[name="username"]:invalid').count() > 0
     const hasError = await loginPage.errorMessage.isVisible().catch(() => false)
 
     expect(isInvalid || hasError).toBeTruthy()
   })
 
   test('빈 비밀번호로 로그인 시도 실패', async ({ page }) => {
-    await loginPage.login(TEST_USERS.superadmin.email, '')
+    await loginPage.login(TEST_USERS.superadmin.username, '')
 
     const isInvalid = await page.locator('input[name="password"]:invalid').count() > 0
     const hasError = await loginPage.errorMessage.isVisible().catch(() => false)
@@ -68,7 +68,7 @@ test.describe('로그아웃', () => {
   test('로그인 후 로그아웃 성공', async ({ page }) => {
     const loginPage = new LoginPage(page)
     await loginPage.goto()
-    await loginPage.login(TEST_USERS.superadmin.email, TEST_USERS.superadmin.password)
+    await loginPage.login(TEST_USERS.superadmin.username, TEST_USERS.superadmin.password)
     await loginPage.expectLoginSuccess()
 
     // 로그아웃 버튼 클릭
