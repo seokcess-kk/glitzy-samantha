@@ -431,10 +431,10 @@ export function demoEfficiencyTrend(clinicId: number | null, startDate: string |
 
 // ── /api/ads/stats ──
 // 반환: { stats: [...ad_campaign_stats row 형태], campaignLeadCounts: {} }
-export function demoAdStats(clinicId: number | null, days: number, platformFilter: string | null) {
-  const since = kstDateDaysAgo(days)
-  const today = kstNow()
-  const rows = filterAdRows(clinicId, since, today)
+export function demoAdStats(clinicId: number | null, startDate: string, endDate: string, platformFilter: string | null) {
+  const start = toDateOnly(startDate) || kstDateDaysAgo(30)
+  const end = toDateOnly(endDate) || kstNow()
+  const rows = filterAdRows(clinicId, start, end)
 
   // campaign_id 10개 풀 생성 (결정적)
   const campaigns = generateDemoCampaigns(clinicId)

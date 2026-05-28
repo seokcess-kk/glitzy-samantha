@@ -14,26 +14,37 @@ function extractUtmId(inflowUrl: string | null): string | null {
 
 export const GET = withClinicFilter(async (req: Request, { user, clinicId, assignedClinicIds }: ClinicContext) => {
   const url = new URL(req.url)
+  const platform = url.searchParams.get('platform')
+
+  // 우선순위: startDate/endDate(명시) > days(fallback, 호환성)
+  const startDateParam = url.searchParams.get('startDate')
+  const endDateParam = url.searchParams.get('endDate')
   const daysParam = Number(url.searchParams.get('days') || 30)
   const days = Number.isFinite(daysParam) && daysParam > 0 ? daysParam : 30
-  const platform = url.searchParams.get('platform')
+
+  const endDate = endDateParam || getKstDateString()
+  const startDate = startDateParam || getKstDateString(new Date(Date.now() - days * 86400000))
 
   if (user.role === 'demo_viewer') {
     const { demoAdStats } = await import('@/lib/demo/fixtures/aggregates')
-    return apiSuccess(demoAdStats(clinicId, days, platform))
+    return apiSuccess(demoAdStats(clinicId, startDate, endDate, platform))
   }
 
   const supabase = serverSupabase()
 
-  const sinceDate = new Date(Date.now() - days * 24 * 60 * 60 * 1000)
-  const since = getKstDateString(sinceDate)
+  // 리드 created_at 비교용 KST 범위 (timestamptz)
+  const leadStart = `${startDate}T00:00:00+09:00`
+  const leadEndDate = new Date(`${endDate}T00:00:00+09:00`)
+  leadEndDate.setDate(leadEndDate.getDate() + 1)
+  const leadEnd = leadEndDate.toISOString()
 
   try {
-    // 1) ad_campaign_stats 조회
+    // 1) ad_campaign_stats 조회 (stat_date는 DATE 타입 → KST 'YYYY-MM-DD'와 직접 비교)
     let query = supabase
       .from('ad_campaign_stats')
       .select('*')
-      .gte('stat_date', since)
+      .gte('stat_date', startDate)
+      .lte('stat_date', endDate)
       .order('stat_date', { ascending: false })
 
     if (platform) query = query.eq('platform', platform)
@@ -55,7 +66,8 @@ export const GET = withClinicFilter(async (req: Request, { user, clinicId, assig
       .from('leads')
       .select('inflow_url')
       .not('inflow_url', 'is', null)
-      .gte('created_at', since)
+      .gte('created_at', leadStart)
+      .lt('created_at', leadEnd)
 
     const filteredLeads = applyClinicFilter(leadsQuery, { clinicId, assignedClinicIds })
     if (filteredLeads) leadsQuery = filteredLeads

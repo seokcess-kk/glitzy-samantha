@@ -168,5 +168,5 @@ npm run analyze      # 번들 크기 분석
 | 2026-05-21 | Meta CAPI fire-and-forget abort fix — `app/api/webhook/lead/route.ts` 의 SMS IIFE/`sendCapiEvent`/`sendErrorAlert`(catch) 3곳을 `@vercel/functions`의 `waitUntil`로 감싸 응답 후 fetch abort 차단, `meta_capi_fail` 알림 누적 해소 |
 | 2026-05-21 | E2E 로그인 셀렉터 정합화 — 로그인 Input에 `name="username"`/`name="password"` 추가, e2e 4파일(`login.page.ts`·`auth.fixture.ts`·`auth.setup.ts`·`auth.spec.ts`) `email`→`username` 일괄 교체로 GitHub Actions `chromium-no-auth` 6테스트 timeout 해소 |
 | 2026-05-21 | Agatha 패치 이식 3건: ERP webhook `client.created` 자동 등록 비활성화 / Google Ads `customer_id`만 필수 + `GOOGLE_ADS_*` ENV fallback(`login_customer_id` 신규) / 광고 백필 다이얼로그 + 매체 선택(`SyncOptions.platforms`, `/api/admin/clinics/[id]/backfill-ads`, `/api/ads/configured-platforms`) |
+| 2026-05-28 | 광고 성과 일자별 데이터 정합화 — `/api/ads/stats` 가 `days` 만 받아 항상 "오늘 - N일" 을 반환하던 캠페인 분석 탭 날짜 무시 버그 fix(`startDate`/`endDate` 우선, `days` fallback), 리드 카운트도 KST 범위 필터. `/api/ads/efficiency-trend` dayMap 루프를 KST 자정 + `getKstDateString` 비교 패턴으로 정비. 호출 3곳(`campaign-ranking-table`·`ads-funnel`·`ads-campaign-tab`) 및 `demoAdStats` 시그니처 동시 변경 |
 | 2026-05-12 | 캠페인 리드 메모 다건화: `lead_notes` 테이블, 단일 `leads.notes` 제거 + 1차 메모 이관, /api/leads/[id]/notes CRUD, 카드 인라인 확장 타임라인 |
-| 2026-05-04 | 주간 리포트 cron 중지 — `vercel.json`에서 `/api/cron/weekly-report` 항목 제거 (라우트/서비스 코드는 보존) |

@@ -31,18 +31,19 @@ export const GET = withClinicFilter(async (req: Request, { user, clinicId, assig
     getKstDateString(new Date(Date.now() - DEFAULT_DAYS * 86400000))
   const endDate = url.searchParams.get('endDate') || today
 
-  // 요청 기간의 모든 날짜를 빈 틀로 생성 (데이터 없는 날도 0으로)
+  // 요청 기간의 모든 날짜를 빈 틀로 생성 (KST 기준, 데이터 없는 날도 0으로)
+  // new Date(startDate) UTC 자정 패턴 회피 → KST 자정 명시 후 KST 일자로 비교
   const dayMap = new Map<string, DayEntry>()
-  const start = new Date(startDate)
-  const end = new Date(endDate)
-  for (let d = new Date(start); d <= end; d.setDate(d.getDate() + 1)) {
-    const key = getKstDateString(new Date(d))
+  const cursor = new Date(`${startDate}T00:00:00+09:00`)
+  while (getKstDateString(cursor) <= endDate) {
+    const key = getKstDateString(cursor)
     dayMap.set(key, { date: key, spend: 0, clicks: 0, impressions: 0, leads: 0, cpl: 0, cpc: 0, ctr: 0 })
+    cursor.setUTCDate(cursor.getUTCDate() + 1)
   }
 
-  // Timestamp end: next day midnight exclusive
-  const tsEndDate = new Date(endDate + 'T00:00:00+09:00')
-  tsEndDate.setDate(tsEndDate.getDate() + 1)
+  // Timestamp end: endDate 다음날 KST 자정 (exclusive)
+  const tsEndDate = new Date(`${endDate}T00:00:00+09:00`)
+  tsEndDate.setUTCDate(tsEndDate.getUTCDate() + 1)
   const tsEnd = tsEndDate.toISOString()
 
   // 광고 집계 쿼리

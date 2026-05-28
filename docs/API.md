@@ -228,7 +228,8 @@ Samantha 대시보드의 REST API 엔드포인트 문서입니다.
 광고 캠페인 통계 + campaign_id별 리드 수를 조회합니다.
 
 **Query Parameters:**
-- `days`: 조회 일수
+- `startDate`, `endDate`: KST 기준 YYYY-MM-DD (권장, ad_campaign_stats.stat_date 범위 + leads.created_at KST 변환 비교)
+- `days`: fallback. startDate/endDate 미지정 시 "오늘 - days일 ~ 오늘" 범위 (기본 30)
 - `clinic_id`
 - `platform`: 매체 필터 (선택)
 

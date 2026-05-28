@@ -82,8 +82,7 @@ export default function CampaignRankingTable({ startDate, endDate, platformFilte
   const fetchData = useCallback(async () => {
     setLoading(true)
     try {
-      const days = String(Math.max(1, Math.round((new Date(endDate).getTime() - new Date(startDate).getTime()) / 86400000) + 1))
-      const qs = new URLSearchParams({ days })
+      const qs = new URLSearchParams({ startDate, endDate })
       if (selectedClinicId) qs.set('clinic_id', String(selectedClinicId))
       if (platformFilter) qs.set('platform', platformFilter)
 

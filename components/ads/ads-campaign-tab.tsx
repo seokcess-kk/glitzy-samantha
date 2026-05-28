@@ -11,10 +11,9 @@ import LandingPageAnalysis from '@/components/ads/landing-page-analysis'
 interface Props {
   startDate: string
   endDate: string
-  days: string
 }
 
-export default function AdsCampaignTab({ startDate, endDate, days }: Props) {
+export default function AdsCampaignTab({ startDate, endDate }: Props) {
   const { selectedClinicId } = useClinic()
   const [platformFilter, setPlatformFilter] = useState('all')
   const [platforms, setPlatforms] = useState<string[]>(['all'])
@@ -22,7 +21,7 @@ export default function AdsCampaignTab({ startDate, endDate, days }: Props) {
 
   const fetchPlatforms = useCallback(async () => {
     try {
-      const qs = new URLSearchParams({ days })
+      const qs = new URLSearchParams({ startDate, endDate })
       if (selectedClinicId) qs.set('clinic_id', String(selectedClinicId))
       const res = await fetch(`/api/ads/stats?${qs}`)
       if (!res.ok) return
@@ -33,7 +32,7 @@ export default function AdsCampaignTab({ startDate, endDate, days }: Props) {
     } catch {
       // silently fail — keep default ['all']
     }
-  }, [days, selectedClinicId])
+  }, [startDate, endDate, selectedClinicId])
 
   useEffect(() => {
     fetchPlatforms()

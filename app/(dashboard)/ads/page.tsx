@@ -45,11 +45,6 @@ export default function AdsPage() {
   const startDate = dateRange.from ? getKstDateString(dateRange.from) : getKstDateString(startOfMonth(new Date()))
   const endDate = dateRange.to ? getKstDateString(dateRange.to) : getKstDateString(new Date())
 
-  // 기간 일수 계산 (표시용 + 캠페인 탭 stats API용)
-  const daysDiff = dateRange.from && dateRange.to
-    ? Math.max(1, Math.round((dateRange.to.getTime() - dateRange.from.getTime()) / 86400000) + 1)
-    : 30
-
   // Restore tab from URL on mount (avoids hydration mismatch)
   useEffect(() => {
     const tab = new URLSearchParams(window.location.search).get('tab')
@@ -162,7 +157,7 @@ export default function AdsPage() {
         <AdsOverviewTab key={`overview-${startDate}-${endDate}-${refreshKey}`} startDate={startDate} endDate={endDate} />
       )}
       {activeTab === 'campaigns' && (
-        <AdsCampaignTab key={`campaigns-${startDate}-${endDate}-${refreshKey}`} startDate={startDate} endDate={endDate} days={String(daysDiff)} />
+        <AdsCampaignTab key={`campaigns-${startDate}-${endDate}-${refreshKey}`} startDate={startDate} endDate={endDate} />
       )}
       {activeTab === 'attribution' && <AttributionView />}
     </>
