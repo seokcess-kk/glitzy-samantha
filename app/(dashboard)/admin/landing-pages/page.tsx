@@ -37,6 +37,12 @@ import {
   DialogFooter,
 } from '@/components/ui/dialog'
 import { ConfirmDialog, EmptyState, PageHeader } from '@/components/common'
+import { supabase } from '@/lib/supabase'
+
+// 직접 업로드 허용 최대 크기 (브라우저 → Supabase Storage 직접 전송이므로
+// Vercel 4.5MB 페이로드 한도와 무관. 인라인 자산이 많은 LP HTML을 고려해 20MB)
+const MAX_UPLOAD_BYTES = 20 * 1024 * 1024
+const STORAGE_BUCKET = 'landing-pages'
 
 interface LandingPage {
   id: number
@@ -117,27 +123,44 @@ export default function LandingPagesPage() {
       let fileName = form.file_name
       let originalFileName: string | null = null
 
-      // 파일 업로드 처리
+      // 파일 업로드 처리 (서명 URL 발급 → 브라우저에서 Storage로 직접 업로드)
+      // 파일 바이트가 Vercel 함수를 거치지 않으므로 4.5MB 페이로드 한도와 무관하다.
       if (needsUpload && uploadFile) {
         setUploading(true)
-        originalFileName = uploadFile.name
-        const formData = new FormData()
-        formData.append('file', uploadFile)
-        if (editing) {
-          formData.append('overwrite', editing.file_name)
+        if (uploadFile.size > MAX_UPLOAD_BYTES) {
+          throw new Error('파일 크기는 20MB 이하여야 합니다.')
         }
-        const uploadRes = await fetch('/api/admin/landing-pages/upload', {
+        originalFileName = uploadFile.name
+
+        // 1) 서버에서 서명 업로드 URL 발급 (작은 JSON 요청 — 페이로드 한도 회피)
+        const signRes = await fetch('/api/admin/landing-pages/upload', {
           method: 'POST',
-          body: formData,
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            originalName: uploadFile.name,
+            ...(editing && { overwrite: editing.file_name }),
+          }),
         })
-        if (!uploadRes.ok) {
-          let errMsg = '파일 업로드 실패'
-          try { const err = await uploadRes.json(); errMsg = err.error || errMsg } catch {}
+        if (!signRes.ok) {
+          let errMsg = '파일 업로드 준비 실패'
+          try { const err = await signRes.json(); errMsg = err.error || errMsg } catch {}
           throw new Error(errMsg)
         }
-        const uploadData = await uploadRes.json()
-        fileName = uploadData.fileName
-        originalFileName = uploadData.originalFileName || originalFileName
+        const signData = await signRes.json()
+
+        // 2) 브라우저 → Supabase Storage 직접 업로드 (Vercel 함수 우회)
+        const { error: upErr } = await supabase.storage
+          .from(STORAGE_BUCKET)
+          .uploadToSignedUrl(signData.path, signData.token, uploadFile, {
+            contentType: 'text/html',
+            upsert: true,
+          })
+        if (upErr) {
+          throw new Error(`파일 업로드 실패: ${upErr.message}`)
+        }
+
+        fileName = signData.fileName
+        originalFileName = signData.originalFileName || originalFileName
         setUploading(false)
       }
 
@@ -332,7 +355,7 @@ export default function LandingPagesPage() {
                     >
                       <Upload size={24} className="text-muted-foreground" />
                       <span className="text-sm text-muted-foreground">HTML 파일을 선택하거나 여기에 드래그하세요</span>
-                      <span className="text-xs text-muted-foreground/60">최대 5MB, .html</span>
+                      <span className="text-xs text-muted-foreground/60">최대 20MB, .html</span>
                       <input
                         type="file"
                         accept=".html"

@@ -842,6 +842,44 @@ agency_staff 계정의 병원 배정 및 메뉴 권한을 수정합니다.
 
 ---
 
+### POST /api/admin/landing-pages/upload
+
+랜딩페이지 HTML 파일을 Supabase Storage(`landing-pages` 버킷)에 업로드하기 위한 **서명 업로드 URL**을 발급합니다. 파일 바이트는 이 엔드포인트로 전송하지 않습니다 — Vercel 서버리스 함수 요청 바디 한도(4.5MB 고정)를 피하기 위해, 브라우저가 발급받은 서명 URL로 Storage에 직접 업로드(`uploadToSignedUrl`)합니다.
+
+**권한:** `superadmin`
+
+**Request Body (JSON):**
+```json
+{
+  "originalName": "serea_promo.html",
+  "overwrite": "serea_promo_1712534400.html"
+}
+```
+
+- `originalName` (필수): 업로드할 파일의 원본 이름. `.html`/`.htm`만 허용. ASCII 정제 + 타임스탬프 suffix로 저장 파일명 생성(한글 등은 `lp_YYYYMMDD_HHMMSS.html`).
+- `overwrite` (선택): 기존 LP 수정 시 덮어쓸 저장 파일명. 지정 시 정제 없이 동일 파일명 재사용.
+
+**Response:**
+```json
+{
+  "path": "serea_promo_1712534400.html",
+  "token": "<signed-upload-token>",
+  "fileName": "serea_promo_1712534400.html",
+  "originalFileName": "serea_promo.html"
+}
+```
+
+**클라이언트 흐름:**
+1. 이 엔드포인트로 `{ originalName }` POST → `{ path, token, fileName }` 수신
+2. `supabase.storage.from('landing-pages').uploadToSignedUrl(path, token, file, { contentType: 'text/html', upsert: true })`로 브라우저에서 직접 업로드
+3. `POST /api/admin/landing-pages` 에 `file_name: fileName` 메타데이터 저장
+
+**참고:**
+- 파일 크기 검증은 클라이언트(20MB) + 버킷 설정에서 수행(서버는 바이트를 보지 않음)
+- 버킷(`landing-pages`)은 Supabase 대시보드에서 수동 생성 필요(코드/마이그레이션 미관리)
+
+---
+
 ### GET /api/auth/tiktok
 
 TikTok OAuth2 인증을 시작합니다. TikTok 인증 페이지로 리다이렉트됩니다.
