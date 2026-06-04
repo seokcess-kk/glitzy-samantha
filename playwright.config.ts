@@ -27,6 +27,8 @@ export default defineConfig({
       testMatch: /.*\.setup\.ts/,
     },
     // Chrome 테스트 (인증 필요 - auth/landing-page 제외)
+    // auth-login.spec.ts(로그인 성공·로그아웃)는 testIgnore에 걸리지 않아 이 프로젝트에
+    // 포함된다 → 자격 증명(E2E_SUPERADMIN_*)이 필요한 워크플로우 authenticated step에서만 실행.
     {
       name: 'chromium',
       use: {
@@ -36,7 +38,8 @@ export default defineConfig({
       dependencies: ['setup'],
       testIgnore: /(auth|landing-page|demo)\.spec\.ts/,
     },
-    // 인증 없이 실행하는 테스트 (로그인, 랜딩페이지 등)
+    // 인증 없이(=자격 증명 불필요) 실행하는 테스트 (로그인 실패/리다이렉트, 랜딩페이지)
+    // 정규식 경계상 auth-login.spec.ts는 매칭되지 않아 여기서는 제외된다.
     {
       name: 'chromium-no-auth',
       use: { ...devices['Desktop Chrome'] },
