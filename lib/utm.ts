@@ -32,6 +32,31 @@ export function parseUtmFromUrl(url: string): UtmParams {
 }
 
 /**
+ * inflow_url 등 URL의 `id` 쿼리 파라미터에서 랜딩페이지 ID(양의 정수)를 추출.
+ *
+ * 랜딩페이지 폼이 `__LP_DATA__` 주입 실패로 무효한 clinic_id/landing_page_id
+ * (예: 하드코딩 fallback 문자열)를 보냈을 때, 서버가 유입 주소로부터 귀속을
+ * 복구하기 위한 폴백. iframe 렌더 URL(`/api/lp/render?id=...`)과 공개 URL
+ * (`/lp?id=...`) 모두 `id=` 를 갖는다. 상대경로도 처리하도록 base를 지정.
+ *
+ * @returns 양의 정수 ID. 없거나 형식이 어긋나면 null
+ */
+export function parseLandingPageIdFromUrl(url: string | null | undefined): number | null {
+  if (!url) return null
+  try {
+    const urlObj = new URL(url, 'https://samantha.glitzy.kr')
+    const raw = urlObj.searchParams.get('id')
+    if (!raw) return null
+    const trimmed = raw.trim()
+    const id = parseInt(trimmed, 10)
+    // 정확히 숫자만으로 이뤄진 양의 정수일 때만 허용 ("123abc" 등 오인 방지)
+    return Number.isInteger(id) && id > 0 && String(id) === trimmed ? id : null
+  } catch {
+    return null
+  }
+}
+
+/**
  * UTM 파라미터 sanitize (XSS 방지, 길이 제한)
  */
 export function sanitizeUtmParam(value: string | null | undefined, maxLength: number): string | null {

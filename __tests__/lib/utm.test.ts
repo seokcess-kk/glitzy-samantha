@@ -5,6 +5,7 @@ import {
   mergeUtmParams,
   buildUtmUrl,
   getUtmSourceLabel,
+  parseLandingPageIdFromUrl,
 } from '@/lib/utm'
 
 describe('parseUtmFromUrl', () => {
@@ -106,5 +107,43 @@ describe('getUtmSourceLabel', () => {
   it('null → Unknown', () => {
     expect(getUtmSourceLabel(null)).toBe('Unknown')
     expect(getUtmSourceLabel(undefined)).toBe('Unknown')
+  })
+})
+
+describe('parseLandingPageIdFromUrl', () => {
+  it('iframe 렌더 URL의 id 추출', () => {
+    expect(parseLandingPageIdFromUrl('https://samantha.glitzy.kr/api/lp/render?id=31611334')).toBe(31611334)
+  })
+
+  it('공개 URL + UTM 동반 시에도 id 추출', () => {
+    expect(parseLandingPageIdFromUrl('https://samantha.glitzy.kr/lp?id=31611334&utm_source=meta_feed&utm_campaign=2605')).toBe(31611334)
+  })
+
+  it('상대경로도 처리', () => {
+    expect(parseLandingPageIdFromUrl('/api/lp/render?id=42535474')).toBe(42535474)
+  })
+
+  it('id 없는 URL → null', () => {
+    expect(parseLandingPageIdFromUrl('https://samantha.glitzy.kr/lead-form')).toBeNull()
+  })
+
+  it('숫자가 아닌 id → null (fallback 문자열 오인 방지)', () => {
+    expect(parseLandingPageIdFromUrl('https://x.kr/lp?id=brillyn-onda-titanium')).toBeNull()
+    expect(parseLandingPageIdFromUrl('https://x.kr/lp?id=123abc')).toBeNull()
+  })
+
+  it('0·음수 id → null', () => {
+    expect(parseLandingPageIdFromUrl('https://x.kr/lp?id=0')).toBeNull()
+    expect(parseLandingPageIdFromUrl('https://x.kr/lp?id=-5')).toBeNull()
+  })
+
+  it('null/undefined/빈 문자열 → null', () => {
+    expect(parseLandingPageIdFromUrl(null)).toBeNull()
+    expect(parseLandingPageIdFromUrl(undefined)).toBeNull()
+    expect(parseLandingPageIdFromUrl('')).toBeNull()
+  })
+
+  it('완전히 잘못된 입력 → null', () => {
+    expect(parseLandingPageIdFromUrl('not a url at all !!!')).toBeNull()
   })
 })

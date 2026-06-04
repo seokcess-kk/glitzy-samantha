@@ -507,9 +507,17 @@ Samantha 대시보드의 REST API 엔드포인트 문서입니다.
   "utm_content": "banner_v1",
   "utm_term": "성형외과",
   "inflowUrl": "https://...",
-  "clinic_id": 1
+  "clinic_id": 1,
+  "landing_page_id": 31611334
 }
 ```
+
+**clinic_id / landing_page_id 서버 복구:**
+폼이 보낸 `clinic_id`/`landing_page_id` 가 무효(랜딩페이지 HTML이 `__LP_DATA__` 주입 실패로 하드코딩 fallback 문자열을 전송한 경우 등)여도 리드를 버리지 않고 서버가 귀속을 복구한다.
+1. `landing_page_id` 가 무효/누락이면 `inflowUrl` 의 `id=` 쿼리에서 추출(`parseLandingPageIdFromUrl`)
+2. 확정된 `landing_page_id` 로 `landing_pages` 를 조회해 **소속 병원을 진실의 원천으로** `clinic_id` 보정 (body 값과 불일치 시 랜딩페이지 소속 우선, warn 로깅)
+3. 존재하지 않는 `landing_page_id` 는 FK 위반 방지로 미연결(null) 저장
+4. 위 과정으로도 `clinic_id` 를 확정 못 할 때만 400 거부 (이 경우에도 원본 payload 는 `lead_raw_logs` 에 보존)
 
 **Response:**
 ```json

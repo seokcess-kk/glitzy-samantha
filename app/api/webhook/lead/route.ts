@@ -13,6 +13,7 @@ import {
   parseUtmFromUrl,
   sanitizeUtmParams,
   mergeUtmParams,
+  parseLandingPageIdFromUrl,
   type UtmParams,
 } from '@/lib/utm'
 import { createLogger } from '@/lib/logger'
@@ -144,16 +145,9 @@ export async function POST(req: Request) {
     return apiError('유효하지 않은 URL 형식입니다.', 400)
   }
 
-  if (clinic_id === undefined || clinic_id === null || clinic_id === '') {
-    await updateRawLog(supabase, rawLogId, { status: 'failed', error_message: 'clinic_id 누락' })
-    return apiError('clinic_id는 필수입니다.', 400)
-  }
-
-  const validClinicId = parseId(clinic_id)
-  if (validClinicId === null) {
-    await updateRawLog(supabase, rawLogId, { status: 'failed', error_message: 'clinic_id 무효' })
-    return apiError('유효하지 않은 clinic_id입니다.', 400)
-  }
+  // clinic_id / landing_page_id 의 최종 확정은 아래 try 안에서 수행한다.
+  // 폼이 보낸 값이 무효(__LP_DATA__ 미주입 시 하드코딩 fallback 문자열 등)여도
+  // inflow_url 의 id= 와 landing_pages 조회로 귀속을 복구하기 위해 DB 접근이 필요하기 때문.
 
   // --- 데이터 가공 ---
   const normalizedPhone = normalizePhoneNumber(phoneNumber)
@@ -168,8 +162,52 @@ export async function POST(req: Request) {
   const finalUtm = sanitizeUtmParams(mergeUtmParams(explicitUtm, urlUtm))
   const finalSource = finalUtm.utm_source || sanitizedSource
 
+  // clinic_id 는 catch 의 에러 로깅에서도 참조하므로 try 밖에서 선언, 안에서 확정
+  let validClinicId = parseId(clinic_id)
+
   // --- 처리 ---
   try {
+    // 0. clinic_id / landing_page_id 확정 (서버 복구)
+    //   - landing_page_id: body 우선, 무효/누락 시 inflow_url 의 id= 로 복구
+    //   - clinic_id: landing_pages 의 소속 병원을 진실의 원천으로 삼아 보정
+    //     (폼이 __LP_DATA__ 미주입으로 fallback 문자열을 보내도 리드를 버리지 않음)
+    let validLandingPageId: number | null = landing_page_id ? parseId(landing_page_id) : null
+    if (validLandingPageId === null && inflowUrl) {
+      validLandingPageId = parseLandingPageIdFromUrl(inflowUrl)
+    }
+
+    if (validLandingPageId !== null) {
+      const { data: lp } = await supabase
+        .from('landing_pages')
+        .select('id, clinic_id')
+        .eq('id', validLandingPageId)
+        .maybeSingle()
+
+      if (lp) {
+        // 랜딩페이지가 실재 → 그 병원이 진짜 소속. clinic_id 보정/보강
+        if (lp.clinic_id) {
+          if (validClinicId !== null && validClinicId !== lp.clinic_id) {
+            logger.warn('clinic_id 불일치 — 랜딩페이지 소속으로 보정', {
+              bodyClinicId: validClinicId,
+              landingPageClinicId: lp.clinic_id,
+              landingPageId: validLandingPageId,
+            })
+          }
+          validClinicId = lp.clinic_id
+        }
+      } else {
+        // 존재하지 않는 landing_page_id → FK 위반 방지로 미연결 처리
+        logger.warn('존재하지 않는 landing_page_id — 미연결로 저장', { landingPageId: validLandingPageId })
+        validLandingPageId = null
+      }
+    }
+
+    // 복구해도 병원을 특정할 수 없으면 그때만 거부 (이름/전화는 lead_raw_logs 에 보존됨)
+    if (validClinicId === null) {
+      await updateRawLog(supabase, rawLogId, { status: 'failed', error_message: 'clinic_id 확정 불가' })
+      return apiError('clinic_id를 확인할 수 없습니다.', 400)
+    }
+
     // 1. 고객 조회/생성 (clinic_id 기준으로 격리)
     const { data: existingCustomer } = await supabase
       .from('customers')
@@ -193,12 +231,6 @@ export async function POST(req: Request) {
         .single()
       if (error) throw error
       customer = newCustomer
-    }
-
-    // landing_page_id 유효성 검증
-    let validLandingPageId: number | null = null
-    if (landing_page_id) {
-      validLandingPageId = parseId(landing_page_id)
     }
 
     // 2. 리드 생성
