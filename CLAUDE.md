@@ -24,9 +24,28 @@ npm install          # 의존성 설치
 npm run dev          # 개발 서버 (:3000)
 npm run build        # 프로덕션 빌드 (타입 체크 포함)
 npm run lint         # ESLint
-npm run test:e2e     # Playwright E2E 테스트
-npm run test         # Jest 단위 테스트
 npm run analyze      # 번들 크기 분석
+```
+
+### 테스트 — 전체 / 단일 실행
+
+Playwright는 `playwright.config.ts`에 4개 project(`setup`/`chromium`/`chromium-no-auth`/`demo`)로 분할. `chromium`은 `.auth/superadmin.json` storageState 의존(=`setup` 선행 필요).
+
+```bash
+# E2E (Playwright)
+npm run test:e2e                                    # 전체
+npm run test:e2e:ui                                 # UI 모드 (대화형)
+npm run test:e2e:headed                             # 브라우저 표시
+npm run test:e2e:report                             # 마지막 리포트 열기
+npx playwright test e2e/tests/ads.spec.ts           # 단일 파일
+npx playwright test -g "캠페인 분석"                # 테스트명 grep
+npx playwright test --project=chromium-no-auth      # 인증 없는 프로젝트만 (login/landing/demo)
+
+# Jest 단위 테스트
+npm run test                                        # 전체
+npm run test:watch                                  # 변경 시 재실행
+npx jest path/to/file.test.ts                       # 단일 파일
+npx jest -t "함수명"                                 # 테스트명 grep
 ```
 
 ## 디렉토리 구조
@@ -140,8 +159,8 @@ npm run analyze      # 번들 크기 분석
 
 | 경로 | 스케줄 | 용도 |
 |------|--------|------|
-| `/api/cron/sync-ads` | 매일 03:00 | 광고 데이터 동기화 |
-| `/api/cron/sync-press` | 매일 00:00 | 언론보도 동기화 |
+| `/api/cron/sync-ads` | 매일 KST 08:00 (`0 23 * * *` UTC) | 전일자 광고 데이터 동기화 |
+| `/api/cron/sync-press` | 매일 KST 09:00 (`0 0 * * *` UTC) | 언론보도 동기화 |
 
 ## 참조 문서
 

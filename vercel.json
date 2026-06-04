@@ -17,7 +17,7 @@
   "crons": [
     {
       "path": "/api/cron/sync-ads",
-      "schedule": "0 3 * * *"
+      "schedule": "0 23 * * *"
     },
     {
       "path": "/api/cron/sync-press",
