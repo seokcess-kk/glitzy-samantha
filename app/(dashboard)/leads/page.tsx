@@ -25,6 +25,7 @@ import {
 } from '@/components/ui/sheet'
 import { PageHeader, ChannelBadge, CustomerJourney } from '@/components/common'
 import { formatDate, toUtcDate } from '@/lib/date'
+import { extractCustomEntries } from '@/lib/lead-custom-data'
 
 // 퍼널 단계 정의
 type FunnelStage = 'lead' | 'booked' | 'visited' | 'consulted' | 'paid'
@@ -112,9 +113,11 @@ function CustomerDetail({ lead, onDelete, onClose, hideHeader }: { lead: any; on
   const stageConfig = FUNNEL_STAGES[funnelStage]
   const leadCount = allLeads.length
 
-  // 랜딩 페이지 및 설문 응답 정보
+  // 랜딩 페이지 및 추가 정보(custom_data) — 폼이 어떤 구조로 보내도 평탄화하여 표시
   const landingPage = lead.landing_page
-  const customData = lead.custom_data
+  const customData = lead.custom_data as Record<string, unknown> | null | undefined
+  const customEntries = extractCustomEntries(customData)
+  const marketingConsent = customData?.marketing_consent
 
   const treatmentMap: Record<string, { count: number; total: number }> = {}
   payments.forEach((p: any) => {
@@ -174,8 +177,8 @@ function CustomerDetail({ lead, onDelete, onClose, hideHeader }: { lead: any; on
         </div>
       )}
 
-      {/* 랜딩 페이지 및 설문 응답 */}
-      {(landingPage || (customData && Object.keys(customData).length > 0)) && (
+      {/* 랜딩 페이지 및 추가 정보 */}
+      {(landingPage || customEntries.length > 0 || marketingConsent !== undefined) && (
         <div className="mb-4 p-3 bg-muted/40 dark:bg-white/[0.03] rounded-xl border border-border dark:border-white/5">
           {landingPage && (
             <div className="flex items-center gap-2 mb-2">
@@ -184,22 +187,22 @@ function CustomerDetail({ lead, onDelete, onClose, hideHeader }: { lead: any; on
               <span className="text-xs text-brand-400">{landingPage.name}</span>
             </div>
           )}
-          {customData?.survey && Object.keys(customData.survey).length > 0 && (
+          {(customEntries.length > 0 || marketingConsent !== undefined) && (
             <div>
               <p className="text-[11px] font-semibold text-muted-foreground mb-1.5 flex items-center gap-1.5">
-                <Info size={11} /> 설문 응답
+                <Info size={11} /> 추가 정보
               </p>
               <div className="space-y-1">
-                {Object.entries(customData.survey).map(([key, value]) => (
-                  <div key={key} className="flex items-center justify-between text-xs">
-                    <span className="text-muted-foreground">{key}</span>
-                    <span className="text-foreground/80">{String(value)}</span>
+                {customEntries.map(({ label, value }, i) => (
+                  <div key={`${label}-${i}`} className="flex items-start justify-between gap-3 text-xs">
+                    <span className="text-muted-foreground shrink-0">{label}</span>
+                    <span className="text-foreground/80 text-right break-keep">{value}</span>
                   </div>
                 ))}
               </div>
-              {customData.marketing_consent !== undefined && (
+              {marketingConsent !== undefined && (
                 <p className="text-xs text-muted-foreground mt-2 pt-2 border-t border-border dark:border-white/5">
-                  마케팅 수신 동의: {customData.marketing_consent ? '동의' : '미동의'}
+                  마케팅 수신 동의: {marketingConsent ? '동의' : '미동의'}
                 </p>
               )}
             </div>

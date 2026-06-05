@@ -23,6 +23,7 @@ import { DateRange } from 'react-day-picker'
 import { startOfDay, endOfDay } from 'date-fns'
 import { formatDateTime } from '@/lib/date'
 import { normalizeChannel } from '@/lib/channel'
+import { extractCustomEntries } from '@/lib/lead-custom-data'
 
 const LEADS_PER_PAGE = 50
 
@@ -310,8 +311,8 @@ function LeadCard({ lead, currentUserId, currentUserRole, onStatusChange, onNote
   const [editingNoteId, setEditingNoteId] = useState<number | null>(null)
   const [editingContent, setEditingContent] = useState('')
 
-  const survey = lead.custom_data?.survey
-  const surveyEntries = survey ? Object.values(survey) : []
+  // survey 중첩뿐 아니라 평면 custom_data 도 포함해 값 칩으로 표시 (중첩 객체 [object Object] 방지)
+  const surveyEntries = extractCustomEntries(lead.custom_data).map(e => e.value)
   const marketingConsent = lead.custom_data?.marketing_consent
   const leadName = lead.custom_data?.name || lead.customer?.name || '이름 없음'
   const status = lead.lead_status || 'new'
