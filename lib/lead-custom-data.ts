@@ -6,9 +6,14 @@
 // 화면에 직접 노출하지 않는 키.
 // - 내부 처리: 이름은 카드 헤더, 동의는 별도 줄, 식별자는 비표시
 // - 템플릿/이벤트 설정값: 사용자의 선택이 아니라 랜딩페이지가 항상 실어보내는 메타데이터(전체 메뉴·이벤트 정보)
+// - 광고 클릭 ID / UTM: Meta·Google 등이 클릭 URL에 자동으로 붙이는 추적 식별자.
+//   랜딩페이지 폼이 custom_data 로 함께 실어보내면 fbclid(_aem_ ...) 같은 긴 문자열이 칩으로 노출되므로 제외.
 const CUSTOM_DATA_INTERNAL_KEYS = new Set([
   'name', 'marketing_consent', 'idempotency_key', 'event_id',
-  'options', 'product', 'price_note', 'event_period',
+  // 템플릿/이벤트 설정값. bundle = product 의 다중 상품 슬러그 목록(내부 코드)이라 함께 제외
+  'options', 'product', 'bundle', 'price_note', 'event_period',
+  'fbclid', 'gclid', 'ttclid', 'wbraid', 'gbraid', 'msclkid', 'yclid', 'dclid',
+  'utm_id', 'utm_source', 'utm_medium', 'utm_campaign', 'utm_content', 'utm_term',
 ])
 
 // 영문 키를 한글 라벨로 보정 (매칭 없으면 키 그대로 노출). survey 안의 한글 키는 그대로 유지됨
