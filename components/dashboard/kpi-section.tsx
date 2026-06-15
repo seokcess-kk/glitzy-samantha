@@ -88,7 +88,7 @@ export function KpiSection({ data, loading, onNavigate }: KpiSectionProps) {
         ? { value: Math.abs(data.comparison.roas), isPositive: data.comparison.roas > 0 }
         : undefined,
       subtitleColor: 'default',
-      path: '/attribution',
+      path: '/ads?tab=attribution',
     },
   ] : ['광고비', '리드', 'CPL', '매출', 'ROAS'].map(label => ({
     label,

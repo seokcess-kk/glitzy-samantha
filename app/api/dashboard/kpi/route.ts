@@ -43,14 +43,6 @@ async function fetchMetrics(
   const consultCount = consultRes.count || 0
   const contentBudget = contentBudgetRes.data?.reduce((s, p) => s + (p.budget || 0), 0) || 0
 
-  // 기간 내 리드 고객의 customer_id 집합
-  const leadCustomerIds = new Set(leadsRes.data?.map(l => l.customer_id) || [])
-
-  // 리드 고객의 매출 (ROAS 계산용) — 해당 기간에 인입된 리드에서 발생한 매출만
-  const leadRevenue = paymentsRes.data
-    ?.filter(p => leadCustomerIds.has(p.customer_id))
-    .reduce((s, r) => s + Number(r.payment_amount), 0) || 0
-
   // 결제 완료 고객 수 (distinct customer_id)
   const payingCustomerCount = new Set(paymentsRes.data?.map(p => p.customer_id) || []).size
 
@@ -63,7 +55,8 @@ async function fetchMetrics(
 
   return {
     cpl: totalLeads > 0 ? Math.round(totalSpend / totalLeads) : 0,
-    roas: totalSpend > 0 ? Number((leadRevenue / totalSpend).toFixed(2)) : 0,
+    // ROAS: 기간 내 광고비 대비 전체 매출 (리드 귀속 제한 없음)
+    roas: totalSpend > 0 ? Number((totalRevenue / totalSpend).toFixed(2)) : 0,
     bookingRate: totalLeads > 0 ? Number(((bookedCount / totalLeads) * 100).toFixed(1)) : 0,
     totalRevenue,
     totalLeads,
