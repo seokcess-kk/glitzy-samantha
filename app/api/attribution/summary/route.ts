@@ -2,6 +2,8 @@ import { serverSupabase } from '@/lib/supabase'
 import { withClinicFilter, ClinicContext, apiSuccess } from '@/lib/api-middleware'
 import { normalizeChannel } from '@/lib/channel'
 import { applyAttributionModel, AttributionModel, TouchPoint } from '@/lib/attribution-models'
+import { getKstDateString } from '@/lib/date'
+import { fetchAdMarkups, buildMarkupStatRows } from '@/lib/ad-markup'
 import { createLogger } from '@/lib/logger'
 
 const logger = createLogger('AttributionSummary')
@@ -50,7 +52,7 @@ export const GET = withClinicFilter(async (req: Request, { user, clinicId, assig
   leadsQ = applyFilter(leadsQ)
   leadsQ = applyDateFilter(leadsQ, 'created_at')
 
-  let adStatsQ = supabase.from('ad_campaign_stats').select('platform, campaign_name, spend_amount, stat_date')
+  let adStatsQ = supabase.from('ad_campaign_stats').select('platform, campaign_id, campaign_name, spend_amount, stat_date')
   adStatsQ = applyFilter(adStatsQ)
   adStatsQ = applyDateFilter(adStatsQ, 'stat_date')
 
@@ -179,6 +181,7 @@ export const GET = withClinicFilter(async (req: Request, { user, clinicId, assig
   const spendByCampaign: Record<string, number> = {}
   let totalSpend = 0
 
+  const realCampaignName = new Map<string, string>()
   for (const row of adStatsRes.data || []) {
     const ch = normalizeChannel(row.platform)
     const amount = Number(row.spend_amount) || 0
@@ -189,6 +192,23 @@ export const GET = withClinicFilter(async (req: Request, { user, clinicId, assig
     if (campName) {
       spendByCampaign[campName] = (spendByCampaign[campName] || 0) + amount
     }
+    if (row.campaign_id && row.campaign_name && !realCampaignName.has(row.campaign_id)) {
+      realCampaignName.set(row.campaign_id, row.campaign_name)
+    }
+  }
+
+  // 광고비 마크업(관리 수수료 등) 가산 — DB 원본은 그대로, 조회 시점에만 합산.
+  // 매출 귀속 ROAS(메인 KPI와 동일 기준)·채널/캠페인 spend에 반영.
+  const markups = await fetchAdMarkups(supabase, { clinicId, assignedClinicIds })
+  const markupStart = startDate ? getKstDateString(new Date(startDate)) : null
+  const markupEnd = endDate ? getKstDateString(new Date(endDate)) : null
+  const markupRows = buildMarkupStatRows(markups, markupStart, markupEnd)
+  for (const row of markupRows) {
+    const ch = normalizeChannel(row.platform)
+    spendByChannel[ch] = (spendByChannel[ch] || 0) + row.spend_amount
+    totalSpend += row.spend_amount
+    const campName = (row.campaign_id && realCampaignName.get(row.campaign_id)) || row.campaign_name
+    if (campName) spendByCampaign[campName] = (spendByCampaign[campName] || 0) + row.spend_amount
   }
 
   // 채널 결과 조립
@@ -239,5 +259,7 @@ export const GET = withClinicFilter(async (req: Request, { user, clinicId, assig
     byChannel,
     byCampaign,
     totals: { totalSpend, totalRevenue: Math.round(totalRevenue), totalCustomers: allPayingCustomers.size },
+    // 광고비에 마크업이 포함됐는지 — UI 고지(ⓘ "관리비 포함") 표시 여부
+    spendIncludesMarkup: markupRows.length > 0,
   })
 })

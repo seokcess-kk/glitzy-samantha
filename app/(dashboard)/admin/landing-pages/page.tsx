@@ -1,7 +1,8 @@
 'use client'
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import { Plus, FileText, Copy, ExternalLink, Trash2, Pencil, Upload, X } from 'lucide-react'
 import { useSession } from 'next-auth/react'
+import { useClinic } from '@/components/ClinicContext'
 import { useDemoGuard } from '@/hooks/useDemoGuard'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
@@ -60,6 +61,7 @@ export default function LandingPagesPage() {
   const { data: session } = useSession()
   const router = useRouter()
   const user = session?.user
+  const { selectedClinicId } = useClinic()
   const { blockDemoWrite } = useDemoGuard()
 
   const [landingPages, setLandingPages] = useState<LandingPage[]>([])
@@ -81,11 +83,15 @@ export default function LandingPagesPage() {
     if (user && user.role !== 'superadmin' && user?.role !== 'demo_viewer') router.replace('/')
   }, [user, router])
 
-  const fetchData = async () => {
+  const fetchData = useCallback(async () => {
     try {
       setLoading(true)
+      // 좌측 병원 선택 드롭다운(selectedClinicId) 연동 — 선택 시 해당 병원 랜딩페이지만 표시
+      const lpUrl = selectedClinicId
+        ? `/api/admin/landing-pages?includeFiles=true&clinic_id=${selectedClinicId}`
+        : '/api/admin/landing-pages?includeFiles=true'
       const [lpRes, cRes, statsRes] = await Promise.all([
-        fetch('/api/admin/landing-pages?includeFiles=true').then(r => r.json()),
+        fetch(lpUrl).then(r => r.json()),
         fetch('/api/admin/clinics').then(r => r.json()),
         fetch('/api/admin/landing-pages/stats').then(r => r.json()).catch(() => []),
       ])
@@ -107,9 +113,9 @@ export default function LandingPagesPage() {
     } finally {
       setLoading(false)
     }
-  }
+  }, [selectedClinicId])
 
-  useEffect(() => { fetchData() }, [])
+  useEffect(() => { fetchData() }, [fetchData])
 
   const handleSave = async () => {
     if (blockDemoWrite()) return
@@ -431,7 +437,15 @@ export default function LandingPagesPage() {
       <Card variant="glass" className="p-6">
         <div className="flex items-center justify-between mb-4">
           <h2 className="font-semibold text-foreground">랜딩 페이지 목록 ({landingPages.length})</h2>
-          <Button onClick={() => setDialogOpen(true)} size="sm" className="bg-brand-600 hover:bg-brand-700">
+          <Button
+            onClick={() => {
+              // 신규 등록 시 좌측에서 선택된 병원을 기본 배정 병원으로 채움
+              setForm(f => ({ ...f, clinic_id: selectedClinicId ? String(selectedClinicId) : '' }))
+              setDialogOpen(true)
+            }}
+            size="sm"
+            className="bg-brand-600 hover:bg-brand-700"
+          >
             <Plus size={14} /> 랜딩 페이지 등록
           </Button>
         </div>

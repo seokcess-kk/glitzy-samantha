@@ -1,6 +1,7 @@
 import { Card } from '@/components/ui/card'
 import { Skeleton } from '@/components/ui/skeleton'
 import { LucideIcon, ArrowUpRight, ArrowDownRight } from 'lucide-react'
+import { InfoHint } from './info-hint'
 
 interface StatsCardProps {
   label: string
@@ -15,6 +16,8 @@ interface StatsCardProps {
   subtitle?: string
   subtitleColor?: 'default' | 'positive' | 'negative'
   size?: 'default' | 'lg'
+  /** 라벨 옆 ⓘ 고지 문구 (예: '관리비 포함'). 지정 시에만 표시 */
+  hint?: string
 }
 
 function getValueSizeClass(value: string | number, isLg: boolean): string {
@@ -31,7 +34,7 @@ function getValueSizeClass(value: string | number, isLg: boolean): string {
   return 'text-sm md:text-base'
 }
 
-export function StatsCard({ label, value, loading, icon: Icon, trend, onClick, subtitle, subtitleColor = 'default', size = 'default' }: StatsCardProps) {
+export function StatsCard({ label, value, loading, icon: Icon, trend, onClick, subtitle, subtitleColor = 'default', size = 'default', hint }: StatsCardProps) {
   const isLg = size === 'lg'
   const clickable = !!onClick
 
@@ -48,9 +51,12 @@ export function StatsCard({ label, value, loading, icon: Icon, trend, onClick, s
       aria-label={clickable ? `${label}: ${value}` : undefined}
     >
       <div className="flex items-center justify-between mb-3">
-        <p className="text-xs text-muted-foreground font-medium truncate">
-          {label}
-        </p>
+        <div className="flex items-center gap-1 min-w-0">
+          <p className="text-xs text-muted-foreground font-medium truncate">
+            {label}
+          </p>
+          {hint && <InfoHint text={hint} className="shrink-0" />}
+        </div>
         {Icon && <Icon size={isLg ? 16 : 14} className="text-muted-foreground/70 shrink-0" />}
       </div>
       {loading ? (

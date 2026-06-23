@@ -1,6 +1,7 @@
 import { serverSupabase } from '@/lib/supabase'
 import { withClinicFilter, ClinicContext, applyClinicFilter, apiError, apiSuccess } from '@/lib/api-middleware'
 import { getKstDateString } from '@/lib/date'
+import { fetchAdMarkups, buildMarkupStatRows } from '@/lib/ad-markup'
 
 const DAYS = 28 // 최근 4주
 
@@ -69,6 +70,13 @@ export const GET = withClinicFilter(async (req: Request, { user, clinicId, assig
     const key = row.stat_date.slice(0, 10)
     const entry = dayMap.get(key)
     if (entry) entry.spend += Number(row.spend_amount)
+  }
+
+  // 광고비 마크업(관리 수수료 등) 일별 가산 — DB 원본은 그대로, 조회 시점에만 합산
+  const markups = await fetchAdMarkups(supabase, { clinicId, assignedClinicIds })
+  for (const row of buildMarkupStatRows(markups, startDate, today)) {
+    const entry = dayMap.get(row.stat_date)
+    if (entry) entry.spend += row.spend_amount
   }
 
   // 리드 일별 집계

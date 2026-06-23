@@ -1,6 +1,7 @@
 import { serverSupabase } from '@/lib/supabase'
 import { withClinicFilter, ClinicContext, applyClinicFilter, apiSuccess, apiError } from '@/lib/api-middleware'
 import { getKstDateString, toUtcDate } from '@/lib/date'
+import { fetchAdMarkups, buildMarkupStatRows } from '@/lib/ad-markup'
 import { createLogger } from '@/lib/logger'
 
 const logger = createLogger('AdsDayAnalysis')
@@ -100,6 +101,13 @@ export const GET = withClinicFilter(async (req: Request, { user, clinicId, assig
       const d = new Date(row.stat_date + 'T00:00:00+09:00')
       const dayOfWeek = d.getUTCDay()  // UTC 기준 요일은 KST midnight (+09:00)와 동일
       spendByDay[dayOfWeek] += Number(row.spend_amount) || 0
+    }
+
+    // 광고비 마크업(관리 수수료 등) 요일별 가산 — DB 원본은 그대로, 조회 시점에만 합산
+    const markups = await fetchAdMarkups(supabase, { clinicId, assignedClinicIds })
+    for (const row of buildMarkupStatRows(markups, dateStart, dateEnd)) {
+      const d = new Date(row.stat_date + 'T00:00:00+09:00')
+      spendByDay[d.getUTCDay()] += row.spend_amount
     }
 
     const byDay = Array.from({ length: 7 }, (_, day) => {

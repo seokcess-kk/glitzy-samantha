@@ -25,6 +25,7 @@ interface KpiData {
   cpc: number
   ctr: number
   payingCustomerCount: number
+  spendIncludesMarkup?: boolean
   comparison?: KpiComparison
 }
 
@@ -88,6 +89,7 @@ export default function AdsKpiCards({ startDate, endDate }: Props) {
         value={loading ? '' : `₩${totalSpend.toLocaleString()}`}
         loading={loading}
         trend={normalTrend(comparison?.totalSpend)}
+        hint={data?.spendIncludesMarkup ? '관리비 포함' : undefined}
       />
       <StatsCard
         label="총 리드"

@@ -2,6 +2,7 @@ import { serverSupabase } from '@/lib/supabase'
 import { withClinicFilter, ClinicContext, applyClinicFilter, apiError, apiSuccess } from '@/lib/api-middleware'
 import { normalizeChannel } from '@/lib/channel'
 import { getKstDateString } from '@/lib/date'
+import { fetchAdMarkups, buildMarkupStatRows } from '@/lib/ad-markup'
 import { createLogger } from '@/lib/logger'
 
 const logger = createLogger('RoasTrend')
@@ -80,6 +81,16 @@ export const GET = withClinicFilter(async (req: Request, { user, clinicId, assig
       if (!entry) continue
       if (!entry[ch]) entry[ch] = { spend: 0, revenue: 0 }
       entry[ch].spend += Number(row.spend_amount) || 0
+    }
+
+    // 광고비 마크업(관리 수수료 등) 일별 채널 가산 — DB 원본은 그대로, 조회 시점에만 합산
+    const markups = await fetchAdMarkups(supabase, { clinicId, assignedClinicIds })
+    for (const row of buildMarkupStatRows(markups, startDate, endDate)) {
+      const ch = normalizeChannel(row.platform)
+      const entry = dayMap.get(row.stat_date)
+      if (!entry) continue
+      if (!entry[ch]) entry[ch] = { spend: 0, revenue: 0 }
+      entry[ch].spend += row.spend_amount
     }
 
     // 매출 일별 채널 집계 (퍼스트터치 기준)

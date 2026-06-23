@@ -1,6 +1,7 @@
 import { serverSupabase } from '@/lib/supabase'
 import { withClinicFilter, ClinicContext, applyClinicFilter, apiSuccess } from '@/lib/api-middleware'
 import { getKstDateString } from '@/lib/date'
+import { fetchAdMarkups, buildMarkupStatRows, markupCampaignIds, MARKUP_HINT } from '@/lib/ad-markup'
 import { createLogger } from '@/lib/logger'
 
 const logger = createLogger('AdsStats')
@@ -81,7 +82,31 @@ export const GET = withClinicFilter(async (req: Request, { user, clinicId, assig
       }
     }
 
-    return apiSuccess({ stats: data, campaignLeadCounts })
+    // 광고비 마크업(관리 수수료 등) — 대상 캠페인 spend에 일별 가산 (DB 원본은 그대로).
+    // 수수료 전용 합성 행을 합쳐 반환하면 프론트 캠페인 집계(spend/CPC/CPL)에 반영됨.
+    // 프론트는 campaign_name으로 집계하므로, 합성 행의 이름을 실제 동기화된 캠페인명에
+    // 맞춰 동일 캠페인으로 병합되게 한다(설정 campaign_name과 미세 차이 방지).
+    const markups = await fetchAdMarkups(supabase, { clinicId, assignedClinicIds })
+    const realCampaignName = new Map<string, string>()
+    for (const r of data || []) {
+      if (r.campaign_id && r.campaign_name && !realCampaignName.has(r.campaign_id)) {
+        realCampaignName.set(r.campaign_id, r.campaign_name)
+      }
+    }
+    const markupRows = buildMarkupStatRows(markups, startDate, endDate)
+      .filter((r) => !platform || r.platform === platform)
+      .map((r) => ({
+        ...r,
+        campaign_name: (r.campaign_id && realCampaignName.get(r.campaign_id)) || r.campaign_name,
+      }))
+    const stats = markupRows.length > 0 ? [...(data || []), ...markupRows] : data
+
+    return apiSuccess({
+      stats,
+      campaignLeadCounts,
+      // 가산이 적용된 캠페인 — UI 고지(ⓘ "관리비 포함") 표시용
+      markup: { campaignIds: markupCampaignIds(markups, startDate, endDate), hint: MARKUP_HINT },
+    })
   } catch (err) {
     logger.error('ads/stats 조회 실패', err, { clinicId })
     return apiSuccess({ stats: [], campaignLeadCounts: {} })

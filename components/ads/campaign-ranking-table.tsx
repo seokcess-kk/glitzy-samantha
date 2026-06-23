@@ -5,7 +5,7 @@ import { useClinic } from '@/components/ClinicContext'
 import { Card } from '@/components/ui/card'
 import { Skeleton } from '@/components/ui/skeleton'
 import { Input } from '@/components/ui/input'
-import { ChannelBadge, EmptyState } from '@/components/common'
+import { ChannelBadge, EmptyState, InfoHint } from '@/components/common'
 import {
   Table,
   TableBody,
@@ -73,6 +73,8 @@ export default function CampaignRankingTable({ startDate, endDate, platformFilte
   const { selectedClinicId } = useClinic()
   const [rawData, setRawData] = useState<AdStatRecord[]>([])
   const [campaignLeadCounts, setCampaignLeadCounts] = useState<Record<string, number>>({})
+  const [markupCampaignIds, setMarkupCampaignIds] = useState<string[]>([])
+  const [markupHint, setMarkupHint] = useState('관리비 포함')
   const [loading, setLoading] = useState(true)
   const [search, setSearch] = useState('')
   const [sortField, setSortField] = useState<SortField>('spend')
@@ -93,17 +95,21 @@ export default function CampaignRankingTable({ startDate, endDate, platformFilte
         return
       }
       const json = await res.json()
-      // 새 응답 구조: { stats, campaignLeadCounts } 또는 기존 배열
+      // 새 응답 구조: { stats, campaignLeadCounts, markup } 또는 기존 배열
       if (json.stats) {
         setRawData(Array.isArray(json.stats) ? json.stats : [])
         setCampaignLeadCounts(json.campaignLeadCounts || {})
+        setMarkupCampaignIds(Array.isArray(json.markup?.campaignIds) ? json.markup.campaignIds : [])
+        if (json.markup?.hint) setMarkupHint(json.markup.hint)
       } else {
         setRawData(Array.isArray(json) ? json : [])
         setCampaignLeadCounts({})
+        setMarkupCampaignIds([])
       }
     } catch {
       setRawData([])
       setCampaignLeadCounts({})
+      setMarkupCampaignIds([])
     } finally {
       setLoading(false)
     }
@@ -293,7 +299,12 @@ export default function CampaignRankingTable({ startDate, endDate, platformFilte
                         )}
                       </TableCell>
                       <TableCell className="py-2.5 text-right tabular-nums text-sm text-foreground/80">
-                        ₩{row.spend.toLocaleString()}
+                        <span className="inline-flex items-center justify-end gap-1">
+                          ₩{row.spend.toLocaleString()}
+                          {row.campaign_id && markupCampaignIds.includes(row.campaign_id) && (
+                            <InfoHint text={markupHint} />
+                          )}
+                        </span>
                       </TableCell>
                       <TableCell className="py-2.5 text-right tabular-nums text-sm text-foreground/80">
                         {row.clicks.toLocaleString()}

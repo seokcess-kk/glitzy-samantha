@@ -4,6 +4,7 @@ import { useState, useEffect, useCallback } from 'react'
 import { ArrowUpRight, ArrowDownRight, ChevronRight } from 'lucide-react'
 import { toast } from 'sonner'
 import { useClinic } from '@/components/ClinicContext'
+import { InfoHint } from '@/components/common'
 import { Card } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Skeleton } from '@/components/ui/skeleton'
@@ -62,6 +63,7 @@ export default function AttributionView() {
   const [byChannel, setByChannel] = useState<ChannelRow[]>([])
   const [byCampaign, setByCampaign] = useState<CampaignRow[]>([])
   const [totals, setTotals] = useState({ totalSpend: 0, totalRevenue: 0, totalCustomers: 0 })
+  const [spendIncludesMarkup, setSpendIncludesMarkup] = useState(false)
   const [customers, setCustomers] = useState<CustomerRow[]>([])
   const [channelFilter, setChannelFilter] = useState<string | null>(null)
   const [campaignFilter, setCampaignFilter] = useState<string | null>(null)
@@ -87,6 +89,7 @@ export default function AttributionView() {
       setByChannel(data.byChannel || [])
       setByCampaign(data.byCampaign || [])
       setTotals(data.totals || { totalSpend: 0, totalRevenue: 0, totalCustomers: 0 })
+      setSpendIncludesMarkup(!!data.spendIncludesMarkup)
     } catch {
       toast.error('매출 귀속 요약 로드 실패')
     } finally {
@@ -179,9 +182,10 @@ export default function AttributionView() {
         const roas = totals.totalSpend > 0 ? ((totals.totalRevenue / totals.totalSpend) * 100).toFixed(0) : '0'
         const convRate = totalLeads > 0 ? ((totals.totalCustomers / totalLeads) * 100).toFixed(1) : '0'
         const cac = totals.totalCustomers > 0 ? Math.round(totals.totalSpend / totals.totalCustomers) : 0
-        const kpiItems = [
+        const markupHint = spendIncludesMarkup ? '관리비 포함' : undefined
+        const kpiItems: { label: string; value: string; hint?: string }[] = [
           { label: '총 귀속 매출', value: fmtKrw(totals.totalRevenue) },
-          { label: '총 광고비', value: fmtKrw(totals.totalSpend) },
+          { label: '총 광고비', value: fmtKrw(totals.totalSpend), hint: markupHint },
           { label: 'ROAS', value: `${roas}%` },
           { label: '결제 고객', value: `${totals.totalCustomers}명` },
           { label: '리드→결제 전환율', value: `${convRate}%` },
@@ -191,7 +195,10 @@ export default function AttributionView() {
           <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
             {kpiItems.map(item => (
               <Card key={item.label} variant="glass" className="p-4">
-                <p className="text-xs text-muted-foreground font-medium mb-2">{item.label}</p>
+                <div className="flex items-center gap-1 mb-2">
+                  <p className="text-xs text-muted-foreground font-medium">{item.label}</p>
+                  {item.hint && <InfoHint text={item.hint} />}
+                </div>
                 {loading ? <Skeleton className="h-7" /> : (
                   <p className="text-lg font-bold text-foreground tabular-nums">{item.value}</p>
                 )}

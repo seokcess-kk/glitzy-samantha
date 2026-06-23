@@ -44,10 +44,14 @@ export const GET = withSuperAdmin(async (req: Request, { user }) => {
     }
 
     const supabase = serverSupabase()
-    const { data, error } = await supabase
+    // 좌측 병원 선택 드롭다운(selectedClinicId) 연동 — clinic_id 지정 시 해당 병원 랜딩페이지만
+    const clinicId = parseId(url.searchParams.get('clinic_id'))
+    let query = supabase
       .from('landing_pages')
       .select('*, clinic:clinics(id, name)')
       .order('created_at', { ascending: false })
+    if (clinicId) query = query.eq('clinic_id', clinicId)
+    const { data, error } = await query
 
     if (error) return apiError(error.message, 500)
 

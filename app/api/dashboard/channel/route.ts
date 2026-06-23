@@ -3,6 +3,7 @@ import { withClinicFilter, ClinicContext, applyClinicFilter, apiSuccess } from '
 import { normalizeChannel } from '@/lib/channel'
 import { sourceToChannel } from '@/lib/platform'
 import { getKstDateString } from '@/lib/date'
+import { fetchAdMarkups, buildMarkupStatRows } from '@/lib/ad-markup'
 
 /**
  * 채널별 KPI 분석 API
@@ -97,6 +98,14 @@ export const GET = withClinicFilter(async (req: Request, { user, clinicId, assig
     spendByChannel[channel] = (spendByChannel[channel] || 0) + Number(row.spend_amount)
     clicksByChannel[channel] = (clicksByChannel[channel] || 0) + Number(row.clicks || 0)
     impressionsByChannel[channel] = (impressionsByChannel[channel] || 0) + Number(row.impressions || 0)
+  }
+
+  // 광고비 마크업(관리 수수료 등) 채널 가산 — DB 원본은 그대로, 조회 시점에만 합산
+  const markups = await fetchAdMarkups(supabase, ctx)
+  for (const row of buildMarkupStatRows(markups, startKst, endKst)) {
+    if (!row.platform) continue // 채널 귀속 불가(클리닉 총액 마크업)는 채널 분해에서 제외
+    const channel = sourceToChannel(row.platform)
+    spendByChannel[channel] = (spendByChannel[channel] || 0) + row.spend_amount
   }
 
   // 채널별 매출 집계

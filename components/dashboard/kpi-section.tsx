@@ -8,6 +8,7 @@ interface KpiData {
   totalSpend?: number
   cpl?: number
   roas?: number
+  spendIncludesMarkup?: boolean
   today?: {
     leads: number
   }
@@ -29,6 +30,7 @@ interface KpiCard {
   subtitle?: string
   subtitleColor: SubtitleColor
   path: string
+  hint?: string
 }
 
 interface KpiSectionProps {
@@ -52,6 +54,7 @@ export function KpiSection({ data, loading, onNavigate }: KpiSectionProps) {
         : undefined,
       subtitleColor: 'default',
       path: '/ads',
+      hint: data.spendIncludesMarkup ? '관리비 포함' : undefined,
     },
     {
       label: '리드',
@@ -108,6 +111,7 @@ export function KpiSection({ data, loading, onNavigate }: KpiSectionProps) {
             trend={card.trend}
             subtitle={card.subtitle}
             subtitleColor={card.subtitleColor}
+            hint={card.hint}
             onClick={onNavigate ? () => onNavigate(card.path) : undefined}
           />
         </div>

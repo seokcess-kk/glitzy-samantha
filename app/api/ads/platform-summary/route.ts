@@ -2,6 +2,7 @@ import { serverSupabase } from '@/lib/supabase'
 import { withClinicFilter, ClinicContext, applyClinicFilter, apiSuccess, apiError } from '@/lib/api-middleware'
 import { normalizeChannel } from '@/lib/channel'
 import { getKstDateString } from '@/lib/date'
+import { fetchAdMarkups, buildMarkupStatRows } from '@/lib/ad-markup'
 import { createLogger } from '@/lib/logger'
 import { apiToCreativePlatform, getSourceLabel } from '@/lib/platform'
 
@@ -115,6 +116,21 @@ export const GET = withClinicFilter(async (req: Request, { user, clinicId, assig
       adBySource[channel][sourceKey].spend += Number(row.spend_amount) || 0
       adBySource[channel][sourceKey].clicks += Number(row.clicks) || 0
       adBySource[channel][sourceKey].impressions += Number(row.impressions) || 0
+    }
+
+    // 광고비 마크업(관리 수수료 등) 채널/소스 가산 — DB 원본은 그대로, 조회 시점에만 합산
+    const markups = await fetchAdMarkups(supabase, { clinicId, assignedClinicIds })
+    for (const row of buildMarkupStatRows(markups, dateStart, dateEnd)) {
+      if (!row.platform) continue // 채널 귀속 불가(클리닉 총액 마크업)는 채널 분해에서 제외
+      const channel = normalizeChannel(row.platform)
+      if (!adByChannel[channel]) adByChannel[channel] = { spend: 0, clicks: 0, impressions: 0 }
+      adByChannel[channel].spend += row.spend_amount
+
+      const prefix = apiToCreativePlatform(row.platform)
+      const sourceKey = row.campaign_type ? `${prefix}_${row.campaign_type}` : `${prefix}_etc`
+      if (!adBySource[channel]) adBySource[channel] = {}
+      if (!adBySource[channel][sourceKey]) adBySource[channel][sourceKey] = { spend: 0, clicks: 0, impressions: 0 }
+      adBySource[channel][sourceKey].spend += row.spend_amount
     }
 
     // 채널별 리드 집계 + 소스별 리드 집계 + customer→channel 첫 유입 채널 매핑

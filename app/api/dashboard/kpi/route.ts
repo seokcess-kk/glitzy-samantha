@@ -2,6 +2,7 @@ import { serverSupabase } from '@/lib/supabase'
 import { withClinicFilter, ClinicContext, applyClinicFilter, apiError, apiSuccess } from '@/lib/api-middleware'
 import { SupabaseClient } from '@supabase/supabase-js'
 import { getKstDateString, getKstDayStartISO, getKstDayEndISO } from '@/lib/date'
+import { fetchAdMarkups, markupTotal, type AdMarkup } from '@/lib/ad-markup'
 import { createLogger } from '@/lib/logger'
 
 const logger = createLogger('DashboardKpi')
@@ -13,7 +14,8 @@ async function fetchMetrics(
   clinicId: number | null,
   assignedClinicIds: number[] | null,
   start: string,
-  end: string
+  end: string,
+  markups: AdMarkup[]
 ) {
   const ctx = { clinicId, assignedClinicIds }
 
@@ -34,7 +36,10 @@ async function fetchMetrics(
     applyClinicFilter(supabase.from('content_posts').select('budget').gte('created_at', start).lt('created_at', end), ctx)!,
   ])
 
-  const totalSpend = adStatsRes.data?.reduce((s, r) => s + Number(r.spend_amount), 0) || 0
+  // 광고비 마크업(관리 수수료 등) 가산 — DB 원본은 그대로 두고 조회 시점에만 합산.
+  // spend에서 파생되는 ROAS·CPL·CPC·CAC가 모두 자동 반영됨.
+  const markupAmount = markupTotal(markups, statStart, statEnd)
+  const totalSpend = (adStatsRes.data?.reduce((s, r) => s + Number(r.spend_amount), 0) || 0) + markupAmount
   const totalClicks = adStatsRes.data?.reduce((s, r) => s + Number(r.clicks || 0), 0) || 0
   const totalImpressions = adStatsRes.data?.reduce((s, r) => s + Number(r.impressions || 0), 0) || 0
   const totalLeads = leadsRes.data?.length || 0
@@ -69,6 +74,8 @@ async function fetchMetrics(
     totalImpressions,
     cpc: totalClicks > 0 ? Math.round(totalSpend / totalClicks) : 0,
     ctr: totalImpressions > 0 ? Number(((totalClicks / totalImpressions) * 100).toFixed(2)) : 0,
+    // 광고비에 마크업이 포함되었는지 — UI 고지(ⓘ "관리비 포함") 표시 여부
+    spendIncludesMarkup: markupAmount > 0,
   }
 }
 
@@ -137,7 +144,7 @@ export const GET = withClinicFilter(async (req: Request, { user, clinicId, assig
     if (assignedClinicIds !== null && assignedClinicIds.length === 0) {
       return apiSuccess({
         cpl: 0, roas: 0, bookingRate: 0, totalRevenue: 0, totalLeads: 0, totalSpend: 0, totalConsultations: 0, cac: 0, arpc: 0, payingCustomerCount: 0,
-        totalClicks: 0, totalImpressions: 0, cpc: 0, ctr: 0,
+        totalClicks: 0, totalImpressions: 0, cpc: 0, ctr: 0, spendIncludesMarkup: false,
         today: { leads: 0, bookings: 0, revenue: 0, leadsDiff: 0, bookingsDiff: 0, revenueDiff: 0 },
       })
     }
@@ -156,9 +163,12 @@ export const GET = withClinicFilter(async (req: Request, { user, clinicId, assig
     const end = endDate.toISOString()
     const compare = url.searchParams.get('compare') === 'true'
 
+    // 광고비 마크업 설정 (clinic_id 스코프) — 현재/전기 기간에 동일 적용
+    const markups = await fetchAdMarkups(supabase, { clinicId, assignedClinicIds })
+
     // 기간 KPI + 오늘 요약 병렬 조회
     const [current, today] = await Promise.all([
-      fetchMetrics(supabase, clinicId, assignedClinicIds, start, end),
+      fetchMetrics(supabase, clinicId, assignedClinicIds, start, end, markups),
       fetchTodaySummary(supabase, clinicId, assignedClinicIds),
     ])
 
@@ -168,7 +178,7 @@ export const GET = withClinicFilter(async (req: Request, { user, clinicId, assig
       const prevStart = new Date(new Date(start).getTime() - duration).toISOString()
       const prevEnd = new Date(new Date(end).getTime() - duration).toISOString()
 
-      const previous = await fetchMetrics(supabase, clinicId, assignedClinicIds, prevStart, prevEnd)
+      const previous = await fetchMetrics(supabase, clinicId, assignedClinicIds, prevStart, prevEnd, markups)
 
       return apiSuccess({
         ...current,

@@ -1,6 +1,7 @@
 import { serverSupabase } from '@/lib/supabase'
 import { withClinicFilter, ClinicContext, applyClinicFilter, apiError, apiSuccess } from '@/lib/api-middleware'
 import { getKstDateString } from '@/lib/date'
+import { fetchAdMarkups, markupTotal, MARKUP_HINT } from '@/lib/ad-markup'
 import { createLogger } from '@/lib/logger'
 import { normalizeChannel } from '@/lib/channel'
 
@@ -15,6 +16,7 @@ interface AdStatsRow {
   spend_amount: number
   clicks: number
   impressions: number
+  stat_date: string
 }
 
 // inflow_url에서 utm_id (Meta campaign_id) 추출
@@ -94,7 +96,7 @@ export const GET = withClinicFilter(async (req: Request, { user, clinicId, assig
     // 4) ad_stats — campaign_id별 광고 지표 + utm_content별 직접 매칭 + ad_id별 (TikTok/Google)
     let adStatsQuery = supabase
       .from('ad_stats')
-      .select('ad_id, ad_name, platform, campaign_id, utm_content, spend_amount, clicks, impressions')
+      .select('ad_id, ad_name, platform, campaign_id, utm_content, spend_amount, clicks, impressions, stat_date')
 
     const filteredAdStats = applyClinicFilter(adStatsQuery, { clinicId, assignedClinicIds })
     if (filteredAdStats) adStatsQuery = filteredAdStats
@@ -442,10 +444,51 @@ export const GET = withClinicFilter(async (req: Request, { user, clinicId, assig
       })
     }
 
-    // 지출 높은순 정렬, 동률 시 리드수 높은순
+    // 광고비 마크업(관리 수수료 등) — 대상 캠페인 소재에 spend(비용소진) 비중으로 안분.
+    // 총 가산액 M(=일일 정액 × 적용일수)을 소재 spend 비중으로 나눠 더하므로
+    // 소재 합계 = 캠페인 가산액과 일치(랭킹/캠페인 레벨과 일관). 소재 귀속은 ad_stats.campaign_id 기준.
+    // 비중은 "가산 적용 기간(effective_from~to)"의 소재 spend만으로 계산해 정밀화.
+    const markups = await fetchAdMarkups(supabase, { clinicId, assignedClinicIds })
+    const markupCreativeKeys: string[] = []
+    for (const m of markups) {
+      if (!m.campaign_id) continue
+      const M = markupTotal([m], dateStart, dateEnd)
+      if (M <= 0) continue
+
+      // 가산 적용일의 소재별 비용소진 가중치 (ad_stats.campaign_id + stat_date 범위 기준)
+      const weightByKey = new Map<string, number>()
+      for (const row of adStatsData) {
+        if (row.campaign_id !== m.campaign_id) continue
+        const d = row.stat_date?.slice(0, 10)
+        if (!d || d < m.effective_from) continue
+        if (m.effective_to && d > m.effective_to) continue
+        const key = (row.utm_content || row.ad_id || '').toLowerCase()
+        if (!key) continue
+        weightByKey.set(key, (weightByKey.get(key) || 0) + (Number(row.spend_amount) || 0))
+      }
+      const totalWeight = [...weightByKey.values()].reduce((a, b) => a + b, 0)
+      if (totalWeight <= 0) continue // 적용 기간 소재 비용소진 0 → 안분 불가
+
+      for (const c of allCreatives) {
+        const w = weightByKey.get(c.utm_content.toLowerCase()) || 0
+        if (w <= 0) continue
+        const fee = M * (w / totalWeight)
+        c.spend = Math.round(c.spend + fee)
+        c.cpc = c.clicks > 0 ? Math.round(c.spend / c.clicks) : 0
+        c.cpl = c.leads > 0 ? Math.round(c.spend / c.leads) : 0
+        if (!c.campaign_ids.includes(m.campaign_id)) c.campaign_ids.push(m.campaign_id)
+        markupCreativeKeys.push(c.utm_content)
+      }
+    }
+
+    // 지출 높은순 정렬, 동률 시 리드수 높은순 (마크업 안분 반영 후)
     allCreatives.sort((a, b) => b.spend - a.spend || b.leads - a.leads)
 
-    return apiSuccess({ creatives: allCreatives })
+    return apiSuccess({
+      creatives: allCreatives,
+      // 가산이 안분된 소재 — UI 고지(ⓘ "관리비 포함") 표시용
+      markup: { creativeKeys: markupCreativeKeys, hint: MARKUP_HINT },
+    })
   } catch (error) {
     logger.error('소재별 성과 조회 실패', error, { clinicId })
     return apiError('서버 오류가 발생했습니다.', 500)

@@ -1,6 +1,7 @@
 import { serverSupabase } from '@/lib/supabase'
 import { withClinicFilter, ClinicContext, applyClinicFilter, apiError, apiSuccess } from '@/lib/api-middleware'
 import { getKstDateString } from '@/lib/date'
+import { fetchAdMarkups, buildMarkupStatRows } from '@/lib/ad-markup'
 
 const DEFAULT_DAYS = 28
 
@@ -98,6 +99,14 @@ export const GET = withClinicFilter(async (req: Request, { user, clinicId, assig
       entry.clicks += Number(row.clicks || 0)
       entry.impressions += Number(row.impressions || 0)
     }
+  }
+
+  // 광고비 마크업(관리 수수료 등) 일별 가산 — DB 원본은 그대로, 조회 시점에만 합산.
+  // 파생 지표(CPL·CPC) 계산 이전에 가산해야 효율 지표에 반영됨.
+  const markups = await fetchAdMarkups(supabase, { clinicId, assignedClinicIds })
+  for (const row of buildMarkupStatRows(markups, startDate, endDate)) {
+    const entry = dayMap.get(row.stat_date)
+    if (entry) entry.spend += row.spend_amount
   }
 
   // 리드 일별 집계

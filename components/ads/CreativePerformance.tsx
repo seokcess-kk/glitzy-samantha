@@ -4,7 +4,7 @@ import { useState, useEffect, useCallback, useMemo } from 'react'
 import { useClinic } from '@/components/ClinicContext'
 import { Card } from '@/components/ui/card'
 import { Skeleton } from '@/components/ui/skeleton'
-import { ChannelBadge, EmptyState } from '@/components/common'
+import { ChannelBadge, EmptyState, InfoHint } from '@/components/common'
 import {
   Table,
   TableBody,
@@ -47,6 +47,7 @@ interface CreativeData {
 
 interface CreativePerformanceResponse {
   creatives: CreativeData[]
+  markup?: { creativeKeys: string[]; hint: string }
 }
 
 type SortField = 'spend' | 'impressions' | 'clicks' | 'cpc' | 'ctr' | 'leads' | 'cpl'
@@ -104,6 +105,8 @@ export default function CreativePerformance({ startDate, endDate, campaignFilter
   useEffect(() => { fetchData() }, [fetchData])
 
   const creatives = useMemo(() => data?.creatives || [], [data])
+  const markupKeys = useMemo(() => new Set(data?.markup?.creativeKeys || []), [data])
+  const markupHint = data?.markup?.hint || '관리비 포함'
 
   // 캠페인 필터 적용
   const filtered = useMemo(() => {
@@ -243,7 +246,10 @@ export default function CreativePerformance({ startDate, endDate, campaignFilter
                     {row.platform ? <ChannelBadge channel={row.platform} /> : <span className="text-muted-foreground text-xs">-</span>}
                   </TableCell>
                   <TableCell className="text-right tabular-nums py-3 text-sm text-foreground/80">
-                    {row.spend > 0 ? `₩${row.spend.toLocaleString()}` : '-'}
+                    <span className="inline-flex items-center justify-end gap-1">
+                      {row.spend > 0 ? `₩${row.spend.toLocaleString()}` : '-'}
+                      {markupKeys.has(row.utm_content) && <InfoHint text={markupHint} />}
+                    </span>
                   </TableCell>
                   <TableCell className="text-right tabular-nums py-3 text-sm text-foreground/80">
                     {row.impressions > 0 ? row.impressions.toLocaleString() : '-'}
