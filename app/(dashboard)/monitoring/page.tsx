@@ -191,10 +191,20 @@ export default function MonitoringPage() {
     return { avgRank: rankedCount > 0 ? (totalRank / rankedCount).toFixed(1) : '-', top3Count, top10Count, totalKeywords: keywords.length, improvedCount, declinedCount, latestDay }
   }, [keywords, rankings, rankMap])
 
+  // 전체 보기에서 동일 카테고리가 분리되지 않도록 그룹핑 (카테고리 내부는 등록 순서 유지 — stable sort)
+  const displayKeywords = useMemo(() => {
+    if (category !== 'all') return keywords
+    const catIndex = (c: string) => {
+      const i = CATEGORY_LIST.indexOf(c)
+      return i === -1 ? CATEGORY_LIST.length : i
+    }
+    return [...keywords].sort((a, b) => catIndex(a.category) - catIndex(b.category))
+  }, [keywords, category])
+
   // 순위 편집 기능
   const editableCellOrder = useMemo(
-    () => buildEditableCellOrder(keywords, days, isCurrentMonth, todayDay),
-    [keywords, days, isCurrentMonth, todayDay],
+    () => buildEditableCellOrder(displayKeywords, days, isCurrentMonth, todayDay),
+    [displayKeywords, days, isCurrentMonth, todayDay],
   )
 
   const toggleEditMode = useCallback(() => {
@@ -579,8 +589,8 @@ export default function MonitoringPage() {
                 </tr>
               </thead>
               <tbody>
-                {keywords.map((kw, kwIdx) => {
-                  const prevCategory = kwIdx > 0 ? keywords[kwIdx - 1].category : null
+                {displayKeywords.map((kw, kwIdx) => {
+                  const prevCategory = kwIdx > 0 ? displayKeywords[kwIdx - 1].category : null
                   const showCategoryHeader = category === 'all' && kw.category !== prevCategory
                   return (
                     <React.Fragment key={kw.id}>
