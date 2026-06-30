@@ -92,6 +92,7 @@ export function KpiSection({ data, loading, onNavigate }: KpiSectionProps) {
         : undefined,
       subtitleColor: 'default',
       path: '/ads?tab=attribution',
+      hint: '기간 내 전체 매출 기준',
     },
   ] : ['광고비', '리드', 'CPL', '매출', 'ROAS'].map(label => ({
     label,

@@ -3,7 +3,7 @@
 import { useState } from 'react'
 import { Card } from '@/components/ui/card'
 import { Skeleton } from '@/components/ui/skeleton'
-import { EmptyState, ChannelBadge } from '@/components/common'
+import { EmptyState, ChannelBadge, InfoHint } from '@/components/common'
 import { BarChart3, ArrowRight, ArrowUpDown } from 'lucide-react'
 import { CHART_SEMANTIC } from '@/lib/chart-colors'
 import Link from 'next/link'
@@ -66,9 +66,10 @@ export function ChannelTable({ data, loading }: ChannelTableProps) {
   return (
     <Card variant="glass" className="p-5">
       <div className="flex items-center justify-between mb-4">
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-1.5">
           <BarChart3 size={16} className="text-brand-400" />
           <h2 className="text-sm font-semibold text-foreground">채널 성과</h2>
+          <InfoHint text="채널 귀속 매출 기준 (상위 ROAS는 전체 매출)" />
         </div>
         <Link
           href="/ads"
