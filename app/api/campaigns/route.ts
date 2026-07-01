@@ -68,27 +68,40 @@ export const GET = withClinicFilter(async (req: Request, { user, clinicId, assig
     const notesByLead = new Map<number, PrefetchedNote[]>()
 
     if (leadIds.length > 0) {
-      const { data: notes } = await supabase
-        .from('lead_notes')
-        .select('id, lead_id, content, created_by, created_at, updated_at, author:users!lead_notes_created_by_fkey(id, username)')
-        .in('lead_id', leadIds)
-        .order('created_at', { ascending: true })
+      // Supabase 기본 응답 상한(1000행)을 넘는 캠페인에서도 전량 조회.
+      // limit 없는 단일 쿼리는 ASC 정렬 특성상 '최신' 노트가 잘려(=새 메모 누락) 사라지므로
+      // .range() 로 1000건씩 끝까지 페이지네이션한다. created_at 동시각 tie-break용 id 보조 정렬.
+      const PAGE = 1000
+      for (let from = 0; ; from += PAGE) {
+        const { data: notes, error: notesError } = await supabase
+          .from('lead_notes')
+          .select('id, lead_id, content, created_by, created_at, updated_at, author:users!lead_notes_created_by_fkey(id, username)')
+          .in('lead_id', leadIds)
+          .order('created_at', { ascending: true })
+          .order('id', { ascending: true })
+          .range(from, from + PAGE - 1)
 
-      for (const n of notes || []) {
-        const author = Array.isArray(n.author)
-          ? (n.author[0] as { id: number; username: string } | undefined) ?? null
-          : (n.author as { id: number; username: string } | null) ?? null
-        const entry: PrefetchedNote = {
-          id: n.id,
-          content: n.content,
-          created_by: n.created_by,
-          created_at: n.created_at,
-          updated_at: n.updated_at,
-          author,
+        if (notesError) return apiError(notesError.message, 500)
+        if (!notes || notes.length === 0) break
+
+        for (const n of notes) {
+          const author = Array.isArray(n.author)
+            ? (n.author[0] as { id: number; username: string } | undefined) ?? null
+            : (n.author as { id: number; username: string } | null) ?? null
+          const entry: PrefetchedNote = {
+            id: n.id,
+            content: n.content,
+            created_by: n.created_by,
+            created_at: n.created_at,
+            updated_at: n.updated_at,
+            author,
+          }
+          const arr = notesByLead.get(n.lead_id)
+          if (arr) arr.push(entry)
+          else notesByLead.set(n.lead_id, [entry])
         }
-        const arr = notesByLead.get(n.lead_id)
-        if (arr) arr.push(entry)
-        else notesByLead.set(n.lead_id, [entry])
+
+        if (notes.length < PAGE) break
       }
     }
 
