@@ -34,26 +34,38 @@ export const GET = withClinicFilter(async (req: Request, { user, clinicId, assig
 
   // 특정 캠페인의 리드 상세 목록
   if (campaign) {
-    let query = supabase
-      .from('leads')
-      .select(`
-        id, customer_id, utm_source, utm_medium, utm_campaign, utm_content,
-        chatbot_sent, chatbot_sent_at, created_at, landing_page_id, custom_data, lead_status,
-        customer:customers(id, name, phone_number, first_source),
-        landing_page:landing_pages(id, name)
-      `)
-      .eq('utm_campaign', campaign)
-      .order('created_at', { ascending: false })
-      .limit(500)
+    // 캠페인 리드 전량 조회 — 기존 .limit(500)은 리드 500개 초과 캠페인에서 이후 리드(+메모)가
+    // 통째로 누락되므로 .range() 1000건 단위 페이지네이션으로 전환. 동시각 tie-break용 id 보조 정렬.
+    interface LeadDetailRow { id: number; [key: string]: unknown }
+    const LEAD_PAGE = 1000
+    const leads: LeadDetailRow[] = []
+    for (let from = 0; ; from += LEAD_PAGE) {
+      let base = supabase
+        .from('leads')
+        .select(`
+          id, customer_id, utm_source, utm_medium, utm_campaign, utm_content,
+          chatbot_sent, chatbot_sent_at, created_at, landing_page_id, custom_data, lead_status,
+          customer:customers(id, name, phone_number, first_source),
+          landing_page:landing_pages(id, name)
+        `)
+        .eq('utm_campaign', campaign)
 
-    const filtered = applyClinicFilter(query, { clinicId, assignedClinicIds })
-    if (filtered === null) return apiSuccess([])
-    query = filtered
-    if (tsStart) query = query.gte('created_at', tsStart)
-    if (tsEnd) query = query.lt('created_at', tsEnd)
+      const filtered = applyClinicFilter(base, { clinicId, assignedClinicIds })
+      if (filtered === null) return apiSuccess([])
+      base = filtered
+      if (tsStart) base = base.gte('created_at', tsStart)
+      if (tsEnd) base = base.lt('created_at', tsEnd)
 
-    const { data: leads, error } = await query
-    if (error) return apiError(error.message, 500)
+      const { data, error } = await base
+        .order('created_at', { ascending: false })
+        .order('id', { ascending: false })
+        .range(from, from + LEAD_PAGE - 1)
+
+      if (error) return apiError(error.message, 500)
+      if (!data || data.length === 0) break
+      leads.push(...(data as LeadDetailRow[]))
+      if (data.length < LEAD_PAGE) break
+    }
 
     // 노트 prefetch: 리드별 전체 노트 배열을 시간순(ASC)으로 함께 반환 — 펼치기 시 추가 네트워크 호출 방지
     const leadIds = (leads || []).map(l => l.id)
@@ -68,40 +80,45 @@ export const GET = withClinicFilter(async (req: Request, { user, clinicId, assig
     const notesByLead = new Map<number, PrefetchedNote[]>()
 
     if (leadIds.length > 0) {
-      // Supabase 기본 응답 상한(1000행)을 넘는 캠페인에서도 전량 조회.
-      // limit 없는 단일 쿼리는 ASC 정렬 특성상 '최신' 노트가 잘려(=새 메모 누락) 사라지므로
-      // .range() 로 1000건씩 끝까지 페이지네이션한다. created_at 동시각 tie-break용 id 보조 정렬.
-      const PAGE = 1000
-      for (let from = 0; ; from += PAGE) {
-        const { data: notes, error: notesError } = await supabase
-          .from('lead_notes')
-          .select('id, lead_id, content, created_by, created_at, updated_at, author:users!lead_notes_created_by_fkey(id, username)')
-          .in('lead_id', leadIds)
-          .order('created_at', { ascending: true })
-          .order('id', { ascending: true })
-          .range(from, from + PAGE - 1)
+      // 리드가 많으면 .in('lead_id', [...]) URL이 과도하게 길어지므로 leadId를 배치로 나누고,
+      // 각 배치를 다시 .range() 1000건 단위로 페이지네이션해 노트를 전량 조회한다.
+      // (created_at ASC + limit 없는 단일 쿼리는 응답 상한 초과 시 '최신' 메모가 잘려 사라짐)
+      // 리드는 각각 하나의 배치에만 속하므로 리드별 노트 순서(created_at→id ASC)는 그대로 보존됨.
+      const LEAD_CHUNK = 300
+      const NOTE_PAGE = 1000
+      for (let c = 0; c < leadIds.length; c += LEAD_CHUNK) {
+        const chunkIds = leadIds.slice(c, c + LEAD_CHUNK)
+        for (let from = 0; ; from += NOTE_PAGE) {
+          const { data: notes, error: notesError } = await supabase
+            .from('lead_notes')
+            .select('id, lead_id, content, created_by, created_at, updated_at, author:users!lead_notes_created_by_fkey(id, username)')
+            .in('lead_id', chunkIds)
+            .order('created_at', { ascending: true })
+            .order('id', { ascending: true })
+            .range(from, from + NOTE_PAGE - 1)
 
-        if (notesError) return apiError(notesError.message, 500)
-        if (!notes || notes.length === 0) break
+          if (notesError) return apiError(notesError.message, 500)
+          if (!notes || notes.length === 0) break
 
-        for (const n of notes) {
-          const author = Array.isArray(n.author)
-            ? (n.author[0] as { id: number; username: string } | undefined) ?? null
-            : (n.author as { id: number; username: string } | null) ?? null
-          const entry: PrefetchedNote = {
-            id: n.id,
-            content: n.content,
-            created_by: n.created_by,
-            created_at: n.created_at,
-            updated_at: n.updated_at,
-            author,
+          for (const n of notes) {
+            const author = Array.isArray(n.author)
+              ? (n.author[0] as { id: number; username: string } | undefined) ?? null
+              : (n.author as { id: number; username: string } | null) ?? null
+            const entry: PrefetchedNote = {
+              id: n.id,
+              content: n.content,
+              created_by: n.created_by,
+              created_at: n.created_at,
+              updated_at: n.updated_at,
+              author,
+            }
+            const arr = notesByLead.get(n.lead_id)
+            if (arr) arr.push(entry)
+            else notesByLead.set(n.lead_id, [entry])
           }
-          const arr = notesByLead.get(n.lead_id)
-          if (arr) arr.push(entry)
-          else notesByLead.set(n.lead_id, [entry])
-        }
 
-        if (notes.length < PAGE) break
+          if (notes.length < NOTE_PAGE) break
+        }
       }
     }
 
