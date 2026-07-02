@@ -311,9 +311,9 @@ export default function UtmPage() {
 function UtmGenerator({ onBack }: { onBack: () => void }) {
   // Form state
   const [baseUrl, setBaseUrl] = useState('')
-  const [platform, setPlatform] = useState('meta')
-  const [source, setSource] = useState('meta')
-  const [medium, setMedium] = useState('cpc')
+  const [platform, setPlatform] = useState('meta_feed')
+  const [source, setSource] = useState(PLATFORM_PRESETS.meta_feed.source)
+  const [medium, setMedium] = useState(PLATFORM_PRESETS.meta_feed.medium)
   const [campaign, setCampaign] = useState('')
   const [adGroup, setAdGroup] = useState('')
   const [content, setContent] = useState('')
@@ -440,12 +440,14 @@ function UtmGenerator({ onBack }: { onBack: () => void }) {
     fetchAdCreatives()
   }, [fetchTemplates, fetchLinks, fetchLandingPages, fetchAdCreatives])
 
-  // Platform preset effect
+  // Platform preset effect — 프리셋에 없는 키(구버전 템플릿 등)는 무시
   useEffect(() => {
     if (platform !== 'custom') {
       const preset = PLATFORM_PRESETS[platform]
-      setSource(preset.source)
-      setMedium(preset.medium)
+      if (preset) {
+        setSource(preset.source)
+        setMedium(preset.medium)
+      }
     }
   }, [platform])
 
@@ -556,7 +558,7 @@ function UtmGenerator({ onBack }: { onBack: () => void }) {
     if (template.utm_campaign) setCampaign(template.utm_campaign)
     if (template.utm_content) setContent(template.utm_content)
     if (template.utm_term) setTerm(template.utm_term)
-    if (template.platform) setPlatform(template.platform)
+    if (template.platform && PLATFORM_PRESETS[template.platform]) setPlatform(template.platform)
     else setPlatform('custom')
     setSelectedTemplateId(template.id)
   }
