@@ -942,9 +942,9 @@ function CampaignDetail({ campaign, onBack }: { campaign: string; onBack: () => 
         </div>
       )}
 
-      {/* 결과 건수 + 전체 선택 */}
+      {/* 결과 건수 + 전체 선택 (체크박스는 카드 px-4와 동일한 pl-4로 세로 정렬 통일) */}
       {!loading && filtered.length > 0 && (
-        <div className="flex items-center gap-3 mb-3">
+        <div className={`flex items-center gap-3 mb-3 ${isSuperadmin ? 'pl-4' : ''}`}>
           {isSuperadmin && (
             <div className="flex items-center gap-1.5 shrink-0">
               <Checkbox
