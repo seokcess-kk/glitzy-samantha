@@ -450,6 +450,24 @@ Samantha 대시보드의 REST API 엔드포인트 문서입니다.
 { "lead_status": "new|no_answer|consulting|consulted|booked|hold|rejected" }
 ```
 
+### DELETE /api/leads/{id}
+
+리드 1건을 삭제합니다 (**superadmin 전용**). 삭제 전 `deleted_records`에 스냅샷 보관, `lead_notes`·`capi_events`는 FK `ON DELETE CASCADE`로 자동 정리됩니다.
+
+### DELETE /api/leads/bulk
+
+리드를 일괄 삭제합니다 (**superadmin 전용**). 캠페인 리드 화면의 "선택 삭제"에서 호출. 한 번에 최대 200건. 각 ID 스냅샷 보관 후 삭제하며 `lead_notes`·`capi_events`는 CASCADE로 정리됩니다.
+
+**Request Body:**
+```json
+{ "ids": [101, 102, 103] }
+```
+
+**Response:**
+```json
+{ "deleted": 3, "ids": [101, 102, 103] }
+```
+
 ### GET /api/leads/{id}/notes
 
 리드의 메모 타임라인(1차/2차/3차...)을 오래된 순으로 조회합니다.

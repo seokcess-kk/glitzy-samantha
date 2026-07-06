@@ -37,6 +37,41 @@ export async function archiveBeforeDelete(
 }
 
 /**
+ * ID 배열로 여러 레코드를 일괄 아카이브 (선택 벌크 삭제용)
+ * - 여러 clinic이 섞여 있어도 각 레코드의 clinic_id로 정확히 보관 (clinicId 미지정 시)
+ */
+export async function archiveManyBeforeDelete(
+  supabase: SupabaseClient,
+  tableName: string,
+  recordIds: number[],
+  deletedBy: string | number,
+  clinicId?: number | null,
+): Promise<void> {
+  if (recordIds.length === 0) return
+  try {
+    const { data: records } = await supabase
+      .from(tableName)
+      .select('*')
+      .in('id', recordIds)
+
+    if (!records || records.length === 0) return
+
+    const by = typeof deletedBy === 'string' ? parseInt(deletedBy, 10) : deletedBy
+    const inserts = records.map((record: any) => ({
+      table_name: tableName,
+      record_id: record.id,
+      record_data: record,
+      deleted_by: by,
+      clinic_id: clinicId ?? record.clinic_id ?? null,
+    }))
+
+    await supabase.from('deleted_records').insert(inserts)
+  } catch (e) {
+    logger.warn('일괄 삭제 스냅샷 보관 실패(ID)', { tableName, count: recordIds.length, error: e })
+  }
+}
+
+/**
  * 여러 레코드를 일괄 아카이브 (고객 삭제 시 종속 데이터 보관용)
  */
 export async function archiveBulkBeforeDelete(

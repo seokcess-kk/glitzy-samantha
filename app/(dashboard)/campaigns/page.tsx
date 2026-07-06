@@ -16,6 +16,17 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select'
+import { Checkbox } from '@/components/ui/checkbox'
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog'
 import { toast } from 'sonner'
 import { PageHeader, ChannelBadge, SortSelect } from '@/components/common'
 import { DateRangePicker } from '@/components/dashboard/date-range-picker'
@@ -296,13 +307,16 @@ function noteSnippet(content: string, max = 40): string {
   return trimmed.length > max ? trimmed.slice(0, max) + '…' : trimmed
 }
 
-function LeadCard({ lead, currentUserId, currentUserRole, onStatusChange, onNotesChange, selectedClinicId }: {
+function LeadCard({ lead, currentUserId, currentUserRole, onStatusChange, onNotesChange, selectedClinicId, selectable = false, selected = false, onToggleSelect }: {
   lead: CampaignLead
   currentUserId: number | null
   currentUserRole: string | null
   onStatusChange: (id: number, status: string) => void
   onNotesChange: (id: number, notes: LeadNote[]) => void
   selectedClinicId: number | null
+  selectable?: boolean
+  selected?: boolean
+  onToggleSelect?: (id: number) => void
 }) {
   const [expanded, setExpanded] = useState(false)
   const notes = lead.notes
@@ -402,10 +416,18 @@ function LeadCard({ lead, currentUserId, currentUserRole, onStatusChange, onNote
 
   return (
     <div
-      className="px-4 py-3 rounded-2xl bg-muted/40 dark:bg-white/[0.04] border border-border dark:border-white/[0.08] backdrop-blur-[10px]"
+      className={`px-4 py-3 rounded-2xl backdrop-blur-[10px] border transition-colors ${selected ? 'border-brand-500/60 ring-1 ring-brand-500/40 bg-brand-500/[0.06]' : 'border-border dark:border-white/[0.08] bg-muted/40 dark:bg-white/[0.04]'}`}
     >
       {/* 1행: 기본 정보 + 상태 */}
       <div className="flex items-center gap-2 mb-2">
+        {selectable && (
+          <Checkbox
+            checked={selected}
+            onCheckedChange={() => onToggleSelect?.(lead.id)}
+            aria-label={`${leadName} 리드 선택`}
+            className="shrink-0"
+          />
+        )}
         <div className="w-8 h-8 rounded-full bg-brand-600/20 flex items-center justify-center text-brand-400 font-semibold text-sm shrink-0">
           {leadName[0] || <User size={14} />}
         </div>
@@ -609,6 +631,10 @@ function CampaignDetail({ campaign, onBack }: { campaign: string; onBack: () => 
   const [channelFilter, setChannelFilter] = useState('all')
   const [sortBy, setSortBy] = useState('newest')
   const [page, setPage] = useState(1)
+  const isSuperadmin = currentUserRole === 'superadmin'
+  const [selectedIds, setSelectedIds] = useState<Set<number>>(new Set())
+  const [confirmOpen, setConfirmOpen] = useState(false)
+  const [deleting, setDeleting] = useState(false)
 
   const fetchLeads = () => {
     setLoading(true)
@@ -622,6 +648,9 @@ function CampaignDetail({ campaign, onBack }: { campaign: string; onBack: () => 
   }
 
   useEffect(() => { fetchLeads() }, [campaign, selectedClinicId])
+
+  // 캠페인/병원 전환 시 선택 초기화 (다른 목록의 id가 남는 것 방지)
+  useEffect(() => { setSelectedIds(new Set()) }, [campaign, selectedClinicId])
 
   // 필터링 + 정렬
   const filtered = useMemo(() => {
@@ -740,6 +769,57 @@ function CampaignDetail({ campaign, onBack }: { campaign: string; onBack: () => 
     ))
   }
 
+  // ─── 선택 삭제 (superadmin 전용) ───
+  const toggleSelect = (id: number) => {
+    setSelectedIds(prev => {
+      const next = new Set(prev)
+      if (next.has(id)) next.delete(id)
+      else next.add(id)
+      return next
+    })
+  }
+
+  const pageIds = paged.map(l => l.id)
+  const pageAllSelected = pageIds.length > 0 && pageIds.every(id => selectedIds.has(id))
+  const toggleSelectPage = () => {
+    setSelectedIds(prev => {
+      const next = new Set(prev)
+      if (pageAllSelected) pageIds.forEach(id => next.delete(id))
+      else pageIds.forEach(id => next.add(id))
+      return next
+    })
+  }
+
+  const clearSelection = () => setSelectedIds(new Set())
+
+  const handleBulkDelete = async () => {
+    if (selectedIds.size === 0 || deleting) return
+    setDeleting(true)
+    const ids = Array.from(selectedIds)
+    try {
+      const res = await fetch('/api/leads/bulk', {
+        method: 'DELETE',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ ids }),
+      })
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({}))
+        throw new Error(err.error || '리드 삭제 실패')
+      }
+      const data = await res.json()
+      const deletedIds: number[] = Array.isArray(data?.ids) ? data.ids : ids
+      const deletedSet = new Set(deletedIds)
+      setLeads(prev => prev.filter(l => !deletedSet.has(l.id)))
+      setSelectedIds(new Set())
+      setConfirmOpen(false)
+      toast.success(`${deletedIds.length}건의 리드를 삭제했습니다.`)
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : '리드 삭제 실패')
+    } finally {
+      setDeleting(false)
+    }
+  }
+
   const activeFilterCount = (search ? 1 : 0) + (dateRange.from ? 1 : 0) + (channelFilter !== 'all' ? 1 : 0) + (statusFilter !== 'all' ? 1 : 0) + (sortBy !== 'newest' ? 1 : 0)
 
   // 캠페인 내 채널 목록 (동적)
@@ -847,11 +927,38 @@ function CampaignDetail({ campaign, onBack }: { campaign: string; onBack: () => 
         </div>
       )}
 
-      {/* 결과 건수 */}
+      {/* 선택 삭제 액션 바 */}
+      {isSuperadmin && selectedIds.size > 0 && (
+        <div className="sticky top-2 z-20 mb-3 flex items-center gap-3 rounded-xl border border-brand-500/30 bg-brand-500/10 px-4 py-2.5 backdrop-blur-md">
+          <span className="text-sm font-medium text-foreground">{selectedIds.size}건 선택됨</span>
+          <div className="ml-auto flex items-center gap-2">
+            <Button variant="ghost" size="sm" onClick={clearSelection} className="h-8 text-xs">
+              선택 해제
+            </Button>
+            <Button variant="destructive" size="sm" onClick={() => setConfirmOpen(true)} className="h-8 text-xs">
+              <Trash2 size={13} className="mr-1" /> 선택 삭제
+            </Button>
+          </div>
+        </div>
+      )}
+
+      {/* 결과 건수 + 전체 선택 */}
       {!loading && filtered.length > 0 && (
-        <p className="text-xs text-muted-foreground mb-3">
-          총 {filtered.length}건{filtered.length > LEADS_PER_PAGE && ` 중 ${(safePage - 1) * LEADS_PER_PAGE + 1}~${Math.min(safePage * LEADS_PER_PAGE, filtered.length)}건 표시`}
-        </p>
+        <div className="flex items-center gap-3 mb-3">
+          {isSuperadmin && (
+            <div className="flex items-center gap-1.5 shrink-0">
+              <Checkbox
+                checked={pageAllSelected}
+                onCheckedChange={toggleSelectPage}
+                aria-label="이 페이지 리드 전체 선택"
+              />
+              <span className="text-xs text-muted-foreground">전체</span>
+            </div>
+          )}
+          <p className="text-xs text-muted-foreground">
+            총 {filtered.length}건{filtered.length > LEADS_PER_PAGE && ` 중 ${(safePage - 1) * LEADS_PER_PAGE + 1}~${Math.min(safePage * LEADS_PER_PAGE, filtered.length)}건 표시`}
+          </p>
+        </div>
       )}
 
       {/* 리드 목록 */}
@@ -879,6 +986,9 @@ function CampaignDetail({ campaign, onBack }: { campaign: string; onBack: () => 
                     selectedClinicId={selectedClinicId ?? null}
                     onStatusChange={handleStatusChange}
                     onNotesChange={handleNotesChange}
+                    selectable={isSuperadmin}
+                    selected={selectedIds.has(lead.id)}
+                    onToggleSelect={toggleSelect}
                   />
                 ))
         }
@@ -930,6 +1040,38 @@ function CampaignDetail({ campaign, onBack }: { campaign: string; onBack: () => 
           </Button>
         </div>
       )}
+
+      {/* 선택 삭제 확인 다이얼로그 */}
+      <AlertDialog open={confirmOpen} onOpenChange={o => { if (!deleting) setConfirmOpen(o) }}>
+        <AlertDialogContent className="max-w-sm">
+          <AlertDialogHeader>
+            <AlertDialogTitle className="flex items-center gap-2">
+              <Trash2 size={16} className="text-destructive" />
+              리드 삭제
+            </AlertDialogTitle>
+            <AlertDialogDescription asChild>
+              <div className="space-y-2 pt-1 text-sm">
+                <p>
+                  선택한 <span className="font-semibold text-foreground">{selectedIds.size}건</span>의 리드를 삭제하시겠습니까?
+                </p>
+                <p className="text-xs text-muted-foreground">
+                  연결된 메모도 함께 삭제됩니다. 삭제된 데이터는 복구용으로 보관됩니다.
+                </p>
+              </div>
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={deleting}>취소</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={e => { e.preventDefault(); handleBulkDelete() }}
+              disabled={deleting}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              {deleting ? '삭제 중...' : '삭제'}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </>
   )
 }
