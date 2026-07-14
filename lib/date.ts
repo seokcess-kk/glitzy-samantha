@@ -35,6 +35,13 @@ export function formatDateTime(date: string | Date): string {
   })
 }
 
+/** 년월일 + 시분 (예: 2026-07-14 17:46) — 연도까지 필요한 표시용. en-GB는 24시간제 보장 */
+export function formatDateTimeYmdHm(date: string | Date): string {
+  const d = toUtcDate(date)
+  const time = d.toLocaleTimeString('en-GB', { timeZone: TZ, hour: '2-digit', minute: '2-digit' })
+  return `${getKstDateString(d)} ${time}`
+}
+
 /** 시간만 (예: 14:30) */
 export function formatTime(date: string | Date): string {
   return toUtcDate(date).toLocaleTimeString('ko', {

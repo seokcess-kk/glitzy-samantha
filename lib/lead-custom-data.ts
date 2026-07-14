@@ -3,6 +3,8 @@
 // 핵심: 사용자가 "실제 고른 값"만 노출하고, 폼이 함께 실어보내는 전체 메뉴/템플릿 설정값은 숨긴다.
 // 사용처: app/(dashboard)/leads/page.tsx, app/(dashboard)/campaigns/page.tsx
 
+import { toUtcDate, formatDateTimeYmdHm } from '@/lib/date'
+
 // 화면에 직접 노출하지 않는 키.
 // - 내부 처리: 이름은 카드 헤더, 동의는 별도 줄, 식별자는 비표시
 // - 템플릿/이벤트 설정값: 사용자의 선택이 아니라 랜딩페이지가 항상 실어보내는 메타데이터(전체 메뉴·이벤트 정보)
@@ -11,7 +13,8 @@
 const CUSTOM_DATA_INTERNAL_KEYS = new Set([
   'name', 'marketing_consent', 'idempotency_key', 'event_id',
   // 템플릿/이벤트 설정값. bundle = product 의 다중 상품 슬러그 목록(내부 코드)이라 함께 제외
-  'options', 'product', 'bundle', 'price_note', 'event_period',
+  // lang = 폼이 실어보내는 페이지 언어 코드(사용자 선택값 아님)
+  'options', 'product', 'bundle', 'price_note', 'event_period', 'lang',
   'fbclid', 'gclid', 'ttclid', 'wbraid', 'gbraid', 'msclkid', 'yclid', 'dclid',
   'utm_id', 'utm_source', 'utm_medium', 'utm_campaign', 'utm_content', 'utm_term',
 ])
@@ -25,7 +28,12 @@ const CUSTOM_DATA_LABELS: Record<string, string> = {
   concern: '관심 부위',
   selected_option_name: '상품명',
   price: '가격',
+  agreed_at: '동의 시각',
 }
+
+// ISO 8601 날짜+시간 문자열 감지 (예: 2026-07-14T08:46:16.956Z)
+// LP 폼이 동의/제출 시각을 raw ISO 로 실어보내면 그대로 칩에 노출되므로 KST 표시용으로 변환
+const ISO_DATETIME_RE = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}(?::\d{2}(?:\.\d+)?)?(?:Z|[+-]\d{2}:?\d{2})?$/
 
 // 통화로 표기할 키 — 숫자면 1,000 단위 구분 + "원"
 const CUSTOM_DATA_CURRENCY_KEYS = new Set(['price', 'amount', 'total'])
@@ -40,6 +48,11 @@ export function formatCustomValue(value: unknown): string {
   if (Array.isArray(value)) return value.map(formatCustomValue).filter(Boolean).join(', ')
   if (typeof value === 'object') {
     return Object.values(value as Record<string, unknown>).map(formatCustomValue).filter(Boolean).join(', ')
+  }
+  if (typeof value === 'string' && ISO_DATETIME_RE.test(value)) {
+    // 타임존 없는 문자열은 UTC 로 취급(DB 컨벤션과 동일). 파싱 불가하면 원문 유지
+    const d = toUtcDate(value)
+    if (!Number.isNaN(d.getTime())) return formatDateTimeYmdHm(d)
   }
   return String(value)
 }
