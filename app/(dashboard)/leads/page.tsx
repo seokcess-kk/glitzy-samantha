@@ -55,16 +55,19 @@ function getFunnelStage(customer: any): FunnelStage {
 }
 
 const GRADE_CONFIG: Record<string, { color: string; icon: string }> = {
-  VIP: { color: 'bg-yellow-500/20 text-yellow-400 border border-yellow-500/30', icon: '' },
+  블랙: { color: 'bg-zinc-950 text-zinc-100 border border-zinc-500/60', icon: '' },
+  플래티넘: { color: 'bg-cyan-500/20 text-cyan-300 border border-cyan-500/30', icon: '' },
   골드: { color: 'bg-amber-500/20 text-amber-400 border border-amber-500/30', icon: '' },
   실버: { color: 'bg-muted text-foreground/60 border border-border', icon: '' },
   일반: { color: 'bg-muted/50 text-muted-foreground border border-border', icon: '' },
 }
 
-function getGrade(totalPayment: number, treatmentCount: number): keyof typeof GRADE_CONFIG {
-  if (totalPayment >= 5_000_000 || treatmentCount >= 5) return 'VIP'
-  if (totalPayment >= 2_000_000 || treatmentCount >= 3) return '골드'
-  if (totalPayment >= 500_000 || treatmentCount >= 1) return '실버'
+// 총결제액 기준 등급 산정 (금액만 사용)
+function getGrade(totalPayment: number): keyof typeof GRADE_CONFIG {
+  if (totalPayment >= 5_000_000) return '블랙'
+  if (totalPayment >= 3_000_000) return '플래티넘'
+  if (totalPayment >= 2_000_000) return '골드'
+  if (totalPayment >= 1_000_000) return '실버'
   return '일반'
 }
 
@@ -106,7 +109,7 @@ function CustomerDetail({ lead, onDelete, onClose, hideHeader }: { lead: any; on
   const bookings: any[] = c?.bookings || []
   const allLeads: any[] = lead.leads?.length ? lead.leads : [lead]
   const totalPayment = payments.reduce((s: number, p: any) => s + Number(p.payment_amount), 0)
-  const grade = getGrade(totalPayment, payments.length)
+  const grade = getGrade(totalPayment)
   const gradeStyle = GRADE_CONFIG[grade]
   const customerType = getCustomerType(c)
   const funnelStage = getFunnelStage(c)
@@ -631,7 +634,7 @@ function LeadsContent() {
               const c = lead.customer
               const payments: any[] = c?.payments || []
               const totalPayment = payments.reduce((s: number, p: any) => s + Number(p.payment_amount), 0)
-              const grade = getGrade(totalPayment, payments.length)
+              const grade = getGrade(totalPayment)
               const gradeStyle = GRADE_CONFIG[grade]
               const isSelected = selected?.id === lead.id
               const funnelStage = getFunnelStage(c)
