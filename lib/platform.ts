@@ -14,32 +14,50 @@ export const API_PLATFORMS = [
 
 export type ApiPlatform = (typeof API_PLATFORMS)[number]
 
+/**
+ * 광고 매체는 아니지만 병원별 API 설정 UI로 관리하는 부가 연동 플랫폼.
+ * 광고 동기화(SYNC_ENABLED_PLATFORMS)·캠페인 타입·소재 등록 대상에는 포함되지 않는다.
+ * - meta_capi: Meta Conversions API (전환 이벤트 서버 전송). pixel_id + access_token
+ */
+export const CONFIG_ONLY_PLATFORMS = ['meta_capi'] as const
+export type ConfigOnlyPlatform = (typeof CONFIG_ONLY_PLATFORMS)[number]
+
+/** API 설정 UI/라우트가 다루는 전체 플랫폼 (광고 매체 + 부가 연동) */
+export type ConfigPlatform = ApiPlatform | ConfigOnlyPlatform
+
 /** 동기화 활성 플랫폼 — adSyncManager에서 실제 API 호출 대상 */
 export const SYNC_ENABLED_PLATFORMS: ApiPlatform[] = ['meta_ads', 'google_ads', 'tiktok_ads', 'dable_ads']
 
-/** API 설정 UI에 표시할 플랫폼 (6개 전부) */
-export const API_CONFIG_PLATFORMS: readonly ApiPlatform[] = API_PLATFORMS
+/** API 설정 UI에 표시할 플랫폼 (광고 매체 6개 + 부가 연동) */
+export const API_CONFIG_PLATFORMS: readonly ConfigPlatform[] = [...API_PLATFORMS, ...CONFIG_ONLY_PLATFORMS]
 
-export const API_PLATFORM_LABELS: Record<ApiPlatform, string> = {
+/** 연결 테스트가 구현된 플랫폼 (설정 다이얼로그 '연결 테스트' 버튼 활성 기준) */
+export const CONNECTION_TEST_PLATFORMS: readonly ConfigPlatform[] = [
+  'meta_ads', 'google_ads', 'tiktok_ads', 'dable_ads', 'meta_capi',
+]
+
+export const API_PLATFORM_LABELS: Record<ConfigPlatform, string> = {
   meta_ads: 'Meta',
   google_ads: 'Google',
   tiktok_ads: 'TikTok',
   naver_ads: 'Naver',
   kakao_ads: 'Kakao',
   dable_ads: 'Dable',
+  meta_capi: 'Meta CAPI',
 }
 
-export const API_PLATFORM_SHORT: Record<ApiPlatform, string> = {
+export const API_PLATFORM_SHORT: Record<ConfigPlatform, string> = {
   meta_ads: 'M',
   google_ads: 'G',
   tiktok_ads: 'T',
   naver_ads: 'N',
   kakao_ads: 'K',
   dable_ads: 'D',
+  meta_capi: 'CAPI',
 }
 
 /** 플랫폼별 API 키 필드 정의 */
-export const API_PLATFORM_FIELDS: Record<ApiPlatform, { key: string; label: string; placeholder: string }[]> = {
+export const API_PLATFORM_FIELDS: Record<ConfigPlatform, { key: string; label: string; placeholder: string }[]> = {
   meta_ads: [
     { key: 'account_id', label: '광고 계정 ID', placeholder: 'act_xxxxxxxxxx' },
     { key: 'access_token', label: '액세스 토큰', placeholder: '액세스 토큰을 입력하세요' },
@@ -69,16 +87,21 @@ export const API_PLATFORM_FIELDS: Record<ApiPlatform, { key: string; label: stri
     { key: 'client_name', label: 'Client Name', placeholder: 'Dable 계정명 (예: dable.io)' },
     { key: 'api_key', label: 'API Key', placeholder: 'Dable API Key' },
   ],
+  meta_capi: [
+    { key: 'pixel_id', label: 'Pixel(데이터세트) ID', placeholder: '이벤트 데이터세트 ID (숫자)' },
+    { key: 'access_token', label: 'CAPI 액세스 토큰', placeholder: '이벤트 관리자 → 전환 API에서 생성' },
+  ],
 }
 
 /** 플랫폼별 API 저장 시 필수 필드 */
-export const API_REQUIRED_FIELDS: Record<ApiPlatform, string[]> = {
+export const API_REQUIRED_FIELDS: Record<ConfigPlatform, string[]> = {
   meta_ads: ['account_id', 'access_token'],
   google_ads: ['customer_id'],
   tiktok_ads: ['advertiser_id', 'access_token'],
   naver_ads: ['customer_id', 'access_license', 'secret_key'],
   kakao_ads: ['ad_account_id', 'access_token'],
   dable_ads: ['client_name', 'api_key'],
+  meta_capi: ['pixel_id', 'access_token'],
 }
 
 // ═══ 2계층: Campaign Type (플랫폼 하위) ═══
@@ -192,6 +215,11 @@ export function sourceToChannel(source: string): string {
 
 export function isApiPlatform(value: unknown): value is ApiPlatform {
   return typeof value === 'string' && (API_PLATFORMS as readonly string[]).includes(value)
+}
+
+/** 광고 매체 + 부가 연동(meta_capi 등) 포함 — API 설정 라우트의 허용 검증용 */
+export function isConfigPlatform(value: unknown): value is ConfigPlatform {
+  return typeof value === 'string' && (API_CONFIG_PLATFORMS as readonly string[]).includes(value)
 }
 
 export function isSyncEnabled(platform: ApiPlatform): boolean {

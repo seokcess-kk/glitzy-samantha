@@ -9,6 +9,7 @@
 import { createLogger } from '@/lib/logger'
 import { fetchJSON } from '@/lib/api-client'
 import { sendErrorAlert } from '@/lib/error-alert'
+import { decryptApiConfig } from '@/lib/crypto'
 import crypto from 'crypto'
 
 const logger = createLogger('MetaCAPI')
@@ -82,19 +83,29 @@ async function getCapiConfig(
   try {
     const { data } = await supabase
       .from('clinic_api_configs')
-      .select('config')
+      .select('config, is_active')
       .eq('clinic_id', clinicId)
       .eq('platform', 'meta_capi')
       .maybeSingle()
 
     if (data?.config) {
-      const config = data.config as { pixel_id?: string; access_token?: string; enabled?: boolean }
-      if (config.enabled !== false && config.pixel_id && config.access_token) {
+      // 설정 UI의 '활성화' 토글(is_active) OFF면 CAPI 비활성화 (광고 동기화와 동일 규칙)
+      if (data.is_active === false) {
+        logger.debug('CAPI disabled for clinic (is_active=false)', { clinicId })
+        return null
+      }
+      // JSONB에서 꺼낸 값이 객체(평문)이면 직접 사용, 문자열(암호화)이면 복호화
+      const raw = data.config
+      const config = (typeof raw === 'object' && raw !== null
+        ? raw
+        : decryptApiConfig(raw as string)) as { pixel_id?: string; access_token?: string; enabled?: boolean } | null
+
+      if (config && config.enabled !== false && config.pixel_id && config.access_token) {
         return { pixelId: config.pixel_id, accessToken: config.access_token }
       }
-      // enabled: false면 CAPI 비활성화
-      if (config.enabled === false) {
-        logger.debug('CAPI disabled for clinic', { clinicId })
+      // enabled: false (레거시 수동 행) 이면 CAPI 비활성화
+      if (config?.enabled === false) {
+        logger.debug('CAPI disabled for clinic (enabled=false)', { clinicId })
         return null
       }
     }

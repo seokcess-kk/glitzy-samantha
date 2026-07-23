@@ -11,7 +11,7 @@ import { parseId } from '@/lib/security'
 import { encryptApiConfig, decryptApiConfig } from '@/lib/crypto'
 import { archiveBeforeDelete } from '@/lib/archive'
 import { createLogger } from '@/lib/logger'
-import { API_CONFIG_PLATFORMS, API_REQUIRED_FIELDS, isApiPlatform, type ApiPlatform } from '@/lib/platform'
+import { API_CONFIG_PLATFORMS, API_REQUIRED_FIELDS, isConfigPlatform, type ConfigPlatform } from '@/lib/platform'
 
 const logger = createLogger('ApiConfigs')
 
@@ -30,8 +30,8 @@ function maskSensitiveFields(config: Record<string, unknown>): Record<string, un
   return masked
 }
 
-function isAllowedPlatform(platform: unknown): platform is ApiPlatform {
-  return isApiPlatform(platform)
+function isAllowedPlatform(platform: unknown): platform is ConfigPlatform {
+  return isConfigPlatform(platform)
 }
 
 /** config 필드값 길이 제한 (API 토큰은 특수문자 포함 가능하므로 XSS sanitize 하지 않음) */

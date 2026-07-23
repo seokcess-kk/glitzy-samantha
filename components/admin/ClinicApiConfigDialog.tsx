@@ -17,7 +17,7 @@ import { Switch } from '@/components/ui/switch'
 import { formatDateTime } from '@/lib/date'
 import {
   API_CONFIG_PLATFORMS, API_PLATFORM_LABELS, API_PLATFORM_FIELDS,
-  SYNC_ENABLED_PLATFORMS, type ApiPlatform,
+  CONNECTION_TEST_PLATFORMS, type ConfigPlatform,
 } from '@/lib/platform'
 
 interface Props {
@@ -28,7 +28,7 @@ interface Props {
   onUpdated?: () => void
 }
 
-type Platform = ApiPlatform
+type Platform = ConfigPlatform
 
 interface PlatformConfig {
   config: Record<string, string> | null
@@ -253,10 +253,17 @@ export default function ClinicApiConfigDialog({ clinicId, clinicName, open, onCl
     const values = formValues[platform]
     const testResult = testResults[platform]
     const hasExistingConfig = !!config.config
-    const canTest = SYNC_ENABLED_PLATFORMS.includes(platform)
+    const canTest = CONNECTION_TEST_PLATFORMS.includes(platform)
 
     return (
       <div className="space-y-4 p-4 md:p-5">
+        {platform === 'meta_capi' && (
+          <p className="text-xs text-muted-foreground leading-relaxed">
+            전환 API — 리드 유입 시 서버에서 Meta로 전환 이벤트를 전송합니다. Pixel ID는{' '}
+            <span className="text-foreground">해당 병원 GTM에 설치된 Pixel과 동일</span>해야 브라우저 이벤트와 중복 제거됩니다.
+            토큰은 이벤트 관리자 → 데이터세트 → 전환 API에서 생성하세요.
+          </p>
+        )}
         {fields.map(field => {
           const visKey = `${platform}_${field.key}`
           const isVisible = visibleFields[visKey] || false

@@ -10,7 +10,7 @@ import { parseId } from '@/lib/security'
 import { decryptApiConfig } from '@/lib/crypto'
 import { fetchWithRetry } from '@/lib/api-client'
 import { createLogger } from '@/lib/logger'
-import { API_CONFIG_PLATFORMS, isApiPlatform, type ApiPlatform } from '@/lib/platform'
+import { API_CONFIG_PLATFORMS, isConfigPlatform, type ConfigPlatform } from '@/lib/platform'
 import { normalizeGoogleAdsCustomerId } from '@/lib/services/googleAds'
 
 const logger = createLogger('ApiConfigTest')
@@ -52,6 +52,41 @@ async function testMetaAds(config: Record<string, unknown>): Promise<TestResult>
 
   const data = (await response.json()) as { name?: string; account_status?: number }
   return { success: true, accountName: data.name || 'Unknown', platform: 'meta_ads' }
+}
+
+/**
+ * Meta Conversions API (CAPI) 연결 테스트
+ * GET https://graph.facebook.com/v19.0/{pixel_id}?fields=name
+ * - 토큰이 해당 Pixel(데이터세트)에 접근 가능한지 read-only 로 검증 (테스트 이벤트 미생성)
+ */
+async function testMetaCapi(config: Record<string, unknown>): Promise<TestResult> {
+  const pixelId = config.pixel_id as string | undefined
+  const accessToken = config.access_token as string | undefined
+
+  if (!pixelId || !accessToken) {
+    return { success: false, error: 'pixel_id와 access_token이 필요합니다.', platform: 'meta_capi' }
+  }
+  // SSRF 방지 — pixel_id 는 숫자만 허용 (metaCapi 전송 경로와 동일 규칙)
+  if (!/^\d{5,30}$/.test(pixelId)) {
+    return { success: false, error: 'Pixel ID는 숫자여야 합니다.', platform: 'meta_capi' }
+  }
+
+  const url = `https://graph.facebook.com/v19.0/${pixelId}?fields=name`
+
+  const { response } = await fetchWithRetry(url, {
+    timeout: TEST_TIMEOUT,
+    retries: 0,
+    service: 'MetaCapiTest',
+    headers: { Authorization: `Bearer ${accessToken}` },
+  })
+
+  if (!response.ok) {
+    const body = await response.text().catch(() => 'Unknown error')
+    return { success: false, error: `Meta CAPI 오류 (${response.status}): ${body}`, platform: 'meta_capi' }
+  }
+
+  const data = (await response.json()) as { name?: string }
+  return { success: true, accountName: data.name || `Pixel ${pixelId}`, platform: 'meta_capi' }
 }
 
 /**
@@ -203,7 +238,7 @@ export const POST = withSuperAdmin(async (req: Request) => {
 
   const { platform } = body
 
-  if (!isApiPlatform(platform)) {
+  if (!isConfigPlatform(platform)) {
     return apiError(`허용되지 않는 플랫폼입니다. (${API_CONFIG_PLATFORMS.join(', ')})`)
   }
 
@@ -239,9 +274,12 @@ export const POST = withSuperAdmin(async (req: Request) => {
   let result: TestResult
 
   try {
-    switch (platform as ApiPlatform) {
+    switch (platform as ConfigPlatform) {
       case 'meta_ads':
         result = await testMetaAds(config)
+        break
+      case 'meta_capi':
+        result = await testMetaCapi(config)
         break
       case 'google_ads':
         result = await testGoogleAds(config)

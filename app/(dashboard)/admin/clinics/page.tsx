@@ -31,9 +31,9 @@ import { formatDate } from '@/lib/date'
 import { EmptyState, PageHeader } from '@/components/common'
 import ClinicApiConfigDialog from '@/components/admin/ClinicApiConfigDialog'
 import BackfillDialog from '@/components/ads/backfill-dialog'
-import { API_CONFIG_PLATFORMS, API_PLATFORM_SHORT, type ApiPlatform } from '@/lib/platform'
+import { API_CONFIG_PLATFORMS, API_PLATFORM_SHORT, type ConfigPlatform } from '@/lib/platform'
 
-type Platform = ApiPlatform
+type Platform = ConfigPlatform
 
 interface ApiConfigSummary {
   platform: Platform
