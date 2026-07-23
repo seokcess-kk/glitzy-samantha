@@ -10,7 +10,7 @@ export const maxDuration = 60
 
 const logger = createLogger('WeeklyReportCron')
 
-// Vercel Cron: 매주 월요일 00:00 UTC = KST 09:00 (vercel.json 참고)
+// ⚠️ 크론 중지됨(2026-05-04, 60a1924). 재개하려면 vercel.json crons에 "0 0 * * 1"(매주 월 KST 09:00) 복구 필요.
 export async function GET(req: Request) {
   if (req.headers.get('Authorization') !== `Bearer ${process.env.CRON_SECRET}`) {
     return apiError('Unauthorized', 401)

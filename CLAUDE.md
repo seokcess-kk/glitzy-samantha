@@ -57,7 +57,7 @@ npx jest -t "함수명"                                 # 테스트명 grep
 | `app/login/`, `app/lp/`, `app/privacy/`, `app/terms/` | 공개 페이지 | |
 | `components/` | UI 컴포넌트 (ads, attribution, charts, common, dashboard, erp-documents, medichecker, ui, admin) | `components/CLAUDE.md` |
 | `lib/` | 핵심 유틸리티 (auth, security, logger, date 등) | `lib/CLAUDE.md` |
-| `lib/services/` | 외부 API 동기화 (metaAds, tiktokAds, googleAds, pressSync, erpClient, metaCapi) | |
+| `lib/services/` | 외부 API 동기화 (metaAds, tiktokAds, googleAds, dableAds, adSyncManager, pressSync, erpClient, metaCapi, instagramContent, youtubeContent, weeklyReport) | |
 | `lib/medichecker/` | 의료광고 검증 7단계 AI 파이프라인 (RAG, 온톨로지) | |
 | `supabase/migrations/` | DB 마이그레이션 (`YYYYMMDD_설명.sql`) | |
 | `e2e/` | Playwright E2E (fixtures, pages, tests, utils) | |
@@ -74,7 +74,7 @@ npx jest -t "함수명"                                 # 테스트명 grep
 | `Lead` | 리드/문의. UTM + 랜딩페이지 추적 | `Customer`와 1:N. 유입 시점 데이터 |
 | `Booking` | 예약. `created_by`/`updated_by` 추적 | `Consultation`(상담 기록)과 구분 |
 | `Payment` | 결제. `created_by` 추적 | Booking/Consultation과 별도 테이블 |
-| `Campaign` | 광고 캠페인 (Meta/Google/Naver/TikTok) | `AdSet`/`AdGroup`은 하위 타겟팅 그룹 |
+| `Campaign` | 광고 캠페인 (Meta/Google/Naver/TikTok/Dable) | `AdSet`/`AdGroup`은 하위 타겟팅 그룹 |
 | `LandingPage` | 리드 수집 랜딩페이지. 8자리 랜덤 ID | |
 | `MediChecker` | 의료광고법 AI 위반 검증 도구 | 7단계: 키워드→분류→RAG→온톨로지→판단→검증 |
 | `superadmin` | 전체 병원 접근. `?clinic_id=X`로 조회 | |
@@ -161,6 +161,7 @@ npx jest -t "함수명"                                 # 테스트명 grep
 |------|--------|------|
 | `/api/cron/sync-ads` | 매일 KST 08:00 (`0 23 * * *` UTC) | 전일자 광고 데이터 동기화 |
 | `/api/cron/sync-press` | 매일 KST 09:00 (`0 0 * * *` UTC) | 언론보도 동기화 |
+| `/api/cron/weekly-report` | ⚠️ **중지됨** (2026-05-04 `60a1924`) | 병원별 주간 리포트 SMS. 라우트·`weeklyReport` 서비스 코드는 보존. 재개 시 `vercel.json` crons에 `{"path":"/api/cron/weekly-report","schedule":"0 0 * * 1"}` 복구 |
 
 ## 참조 문서
 
