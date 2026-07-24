@@ -2,6 +2,7 @@ import { serverSupabase } from '@/lib/supabase'
 import { withClinicFilter, ClinicContext, applyClinicFilter, apiError, apiSuccess } from '@/lib/api-middleware'
 import { getKstDateString } from '@/lib/date'
 import { fetchAdMarkups, buildMarkupStatRows, markupCampaignIds, MARKUP_HINT } from '@/lib/ad-markup'
+import { fetchAllRowsResult } from '@/lib/supabase-paginate'
 import { createLogger } from '@/lib/logger'
 
 const logger = createLogger('AdsStats')
@@ -40,20 +41,18 @@ export const GET = withClinicFilter(async (req: Request, { user, clinicId, assig
   const leadEnd = leadEndDate.toISOString()
 
   try {
-    // 1) ad_campaign_stats 조회 (stat_date는 DATE 타입 → KST 'YYYY-MM-DD'와 직접 비교)
-    let query = supabase
-      .from('ad_campaign_stats')
-      .select('*')
-      .gte('stat_date', startDate)
-      .lte('stat_date', endDate)
-      .order('stat_date', { ascending: false })
+    // agency_staff 배정 병원 0개 → 빈 결과
+    if (assignedClinicIds !== null && assignedClinicIds.length === 0) {
+      return apiSuccess({ stats: [], campaignLeadCounts: {} })
+    }
 
-    if (platform) query = query.eq('platform', platform)
-    const filtered = applyClinicFilter(query, { clinicId, assignedClinicIds })
-    if (filtered === null) return apiSuccess({ stats: [], campaignLeadCounts: {} })
-    query = filtered
-
-    const { data, error } = await query
+    // 1) ad_campaign_stats 전량 (stat_date는 DATE 타입) — 1,000행 상한을 id 페이지네이션으로 우회
+    const { data, error } = await fetchAllRowsResult<{ campaign_id: string | null; campaign_name: string | null; [key: string]: unknown }>((from, to) => {
+      let q = applyClinicFilter(supabase.from('ad_campaign_stats').select('*')
+        .gte('stat_date', startDate).lte('stat_date', endDate), { clinicId, assignedClinicIds })!
+      if (platform) q = q.eq('platform', platform)
+      return q.order('id').range(from, to)
+    })
     if (error) {
       logger.error('ad_campaign_stats 조회 실패', error, { clinicId })
       // 조회 실패를 빈 성공(0건)으로 위장하지 않고 에러로 표면화 — 프론트에서 "0"과 구분
@@ -64,17 +63,9 @@ export const GET = withClinicFilter(async (req: Request, { user, clinicId, assig
     // leads.inflow_url의 utm_id 파라미터가 Meta campaign_id와 일치
     const campaignLeadCounts: Record<string, number> = {}
 
-    let leadsQuery = supabase
-      .from('leads')
-      .select('inflow_url')
-      .not('inflow_url', 'is', null)
-      .gte('created_at', leadStart)
-      .lt('created_at', leadEnd)
-
-    const filteredLeads = applyClinicFilter(leadsQuery, { clinicId, assignedClinicIds })
-    if (filteredLeads) leadsQuery = filteredLeads
-
-    const { data: leadsData } = await leadsQuery
+    const { data: leadsData } = await fetchAllRowsResult<{ inflow_url: string | null }>((from, to) =>
+      applyClinicFilter(supabase.from('leads').select('inflow_url').not('inflow_url', 'is', null)
+        .gte('created_at', leadStart).lt('created_at', leadEnd), { clinicId, assignedClinicIds })!.order('id').range(from, to))
 
     for (const lead of leadsData || []) {
       const campId = extractUtmId(lead.inflow_url as string)

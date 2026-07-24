@@ -3,6 +3,7 @@ import { withClinicFilter, ClinicContext, applyClinicFilter, apiError, apiSucces
 import { SupabaseClient } from '@supabase/supabase-js'
 import { getKstDateString, getKstDayStartISO, getKstDayEndISO } from '@/lib/date'
 import { fetchAdMarkups, markupTotal, type AdMarkup } from '@/lib/ad-markup'
+import { fetchAllRows } from '@/lib/supabase-paginate'
 import { createLogger } from '@/lib/logger'
 
 const logger = createLogger('DashboardKpi')
@@ -25,31 +26,39 @@ async function fetchMetrics(
   const statEnd = getKstDateString(new Date(new Date(end).getTime() - 86400000))
 
   // 범위 패턴: [start, end) — fetchTodaySummary와 동일한 gte/lt 패턴
-  const [adStatsRes, leadsRes, paymentsRes, bookingsRes, consultRes, contentBudgetRes] = await Promise.all([
-    applyClinicFilter(supabase.from('ad_campaign_stats').select('spend_amount, clicks, impressions').gte('stat_date', statStart).lte('stat_date', statEnd), ctx)!,
-    applyClinicFilter(supabase.from('leads').select('customer_id').gte('created_at', start).lt('created_at', end).limit(5000), ctx)!,
-    applyClinicFilter(supabase.from('payments').select('customer_id, payment_amount').gte('payment_date', statStart).lte('payment_date', statEnd), ctx)!,
+  // 합계/고유집합 지표(광고비·매출)는 PostgREST 1,000행 상한을 id 페이지네이션으로 우회(과소집계 방지).
+  // 개수만 필요한 지표(리드·예약·상담)는 count:'exact'로 정확히 집계.
+  const [adStats, leadsCountRes, payments, bookingsRes, consultRes, contentBudgetRes] = await Promise.all([
+    fetchAllRows<{ spend_amount: number; clicks: number; impressions: number }>((from, to) =>
+      applyClinicFilter(supabase.from('ad_campaign_stats').select('spend_amount, clicks, impressions')
+        .gte('stat_date', statStart).lte('stat_date', statEnd), ctx)!.order('id').range(from, to)),
+    applyClinicFilter(supabase.from('leads').select('*', { count: 'exact', head: true })
+      .gte('created_at', start).lt('created_at', end), ctx)!,
+    fetchAllRows<{ customer_id: number; payment_amount: number }>((from, to) =>
+      applyClinicFilter(supabase.from('payments').select('customer_id, payment_amount')
+        .gte('payment_date', statStart).lte('payment_date', statEnd), ctx)!.order('id').range(from, to)),
     applyClinicFilter(supabase.from('bookings').select('*', { count: 'exact', head: true })
       .neq('status', 'cancelled').gte('created_at', start).lt('created_at', end), ctx)!,
     applyClinicFilter(supabase.from('consultations').select('*', { count: 'exact', head: true })
       .in('status', ['예약완료', '방문완료']).gte('created_at', start).lt('created_at', end), ctx)!,
+    // content_posts는 병원·기간당 저건수(예산 입력) — 1,000행 상한 리스크 낮아 그대로 조회
     applyClinicFilter(supabase.from('content_posts').select('budget').gte('created_at', start).lt('created_at', end), ctx)!,
   ])
 
   // 광고비 마크업(관리 수수료 등) 가산 — DB 원본은 그대로 두고 조회 시점에만 합산.
   // spend에서 파생되는 ROAS·CPL·CPC·CAC가 모두 자동 반영됨.
   const markupAmount = markupTotal(markups, statStart, statEnd)
-  const totalSpend = (adStatsRes.data?.reduce((s, r) => s + Number(r.spend_amount), 0) || 0) + markupAmount
-  const totalClicks = adStatsRes.data?.reduce((s, r) => s + Number(r.clicks || 0), 0) || 0
-  const totalImpressions = adStatsRes.data?.reduce((s, r) => s + Number(r.impressions || 0), 0) || 0
-  const totalLeads = leadsRes.data?.length || 0
-  const totalRevenue = paymentsRes.data?.reduce((s, r) => s + Number(r.payment_amount), 0) || 0
+  const totalSpend = adStats.reduce((s, r) => s + Number(r.spend_amount), 0) + markupAmount
+  const totalClicks = adStats.reduce((s, r) => s + Number(r.clicks || 0), 0)
+  const totalImpressions = adStats.reduce((s, r) => s + Number(r.impressions || 0), 0)
+  const totalLeads = leadsCountRes.count || 0
+  const totalRevenue = payments.reduce((s, r) => s + Number(r.payment_amount), 0)
   const bookedCount = bookingsRes.count || 0
   const consultCount = consultRes.count || 0
   const contentBudget = contentBudgetRes.data?.reduce((s, p) => s + (p.budget || 0), 0) || 0
 
   // 결제 완료 고객 수 (distinct customer_id)
-  const payingCustomerCount = new Set(paymentsRes.data?.map(p => p.customer_id) || []).size
+  const payingCustomerCount = new Set(payments.map(p => p.customer_id)).size
 
   // CAC: (광고비 + 콘텐츠 예산) / 결제 완료 고객 수
   const totalMarketingCost = totalSpend + contentBudget

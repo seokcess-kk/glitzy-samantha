@@ -4,6 +4,7 @@ import { getKstDateString } from '@/lib/date'
 import { fetchAdMarkups, markupTotal, MARKUP_HINT } from '@/lib/ad-markup'
 import { createLogger } from '@/lib/logger'
 import { normalizeChannel } from '@/lib/channel'
+import { fetchAllRowsResult } from '@/lib/supabase-paginate'
 
 const logger = createLogger('CreativesPerformance')
 
@@ -64,51 +65,25 @@ export const GET = withClinicFilter(async (req: Request, { user, clinicId, assig
   }
 
   try {
-    // 1) leads — utm_content가 있는 리드 (inflow_url도 포함)
-    let leadsQuery = supabase
-      .from('leads')
-      .select('id, customer_id, utm_content, inflow_url, created_at')
-      .not('utm_content', 'is', null)
-
-    const filteredLeads = applyClinicFilter(leadsQuery, { clinicId, assignedClinicIds })
-    if (!filteredLeads) return apiSuccess({ creatives: [] })
-    leadsQuery = filteredLeads
-
-    if (tsStart) leadsQuery = leadsQuery.gte('created_at', tsStart)
-    if (tsEnd) leadsQuery = leadsQuery.lt('created_at', tsEnd)
-
-    // 2) ad_creatives — 소재 메타데이터
-    let creativesQuery = supabase
-      .from('ad_creatives')
-      .select('id, name, utm_content, platform, landing_page_id, file_name, file_type')
-
-    const filteredCreatives = applyClinicFilter(creativesQuery, { clinicId, assignedClinicIds })
-    if (filteredCreatives) creativesQuery = filteredCreatives
-
-    // 3) payments — 리드 기준 귀속 (기간 필터 없음)
-    let paymentsQuery = supabase
-      .from('payments')
-      .select('id, payment_amount, customer_id')
-
-    const filteredPayments = applyClinicFilter(paymentsQuery, { clinicId, assignedClinicIds })
-    if (filteredPayments) paymentsQuery = filteredPayments
-
-    // 4) ad_stats — campaign_id별 광고 지표 + utm_content별 직접 매칭 + ad_id별 (TikTok/Google)
-    let adStatsQuery = supabase
-      .from('ad_stats')
-      .select('ad_id, ad_name, platform, campaign_id, utm_content, spend_amount, clicks, impressions, stat_date')
-
-    const filteredAdStats = applyClinicFilter(adStatsQuery, { clinicId, assignedClinicIds })
-    if (filteredAdStats) adStatsQuery = filteredAdStats
-    if (dateStart) adStatsQuery = adStatsQuery.gte('stat_date', dateStart)
-    if (dateEnd) adStatsQuery = adStatsQuery.lte('stat_date', dateEnd)
-
-    // 병렬 쿼리 실행
+    // 1~4. leads·소재·결제·ad_stats — 합계/집합 집계이므로 1,000행 상한을 id 페이지네이션으로 우회.
+    //       (payments는 기존과 동일하게 기간 필터 없음 — 매출 기간정합은 별도 과제 B24)
     const [leadsRes, creativesRes, paymentsRes, adStatsRes] = await Promise.all([
-      leadsQuery,
-      creativesQuery,
-      paymentsQuery,
-      adStatsQuery,
+      fetchAllRowsResult<{ id: number; customer_id: number; utm_content: string | null; inflow_url: string | null; created_at: string }>((from, to) => {
+        let q = applyClinicFilter(supabase.from('leads').select('id, customer_id, utm_content, inflow_url, created_at').not('utm_content', 'is', null), { clinicId, assignedClinicIds })!
+        if (tsStart) q = q.gte('created_at', tsStart)
+        if (tsEnd) q = q.lt('created_at', tsEnd)
+        return q.order('id').range(from, to)
+      }),
+      fetchAllRowsResult<{ id: number; name: string; utm_content: string; platform: string | null; landing_page_id: number | null; file_name: string | null; file_type: string | null }>((from, to) =>
+        applyClinicFilter(supabase.from('ad_creatives').select('id, name, utm_content, platform, landing_page_id, file_name, file_type'), { clinicId, assignedClinicIds })!.order('id').range(from, to)),
+      fetchAllRowsResult<{ id: number; payment_amount: number; customer_id: number }>((from, to) =>
+        applyClinicFilter(supabase.from('payments').select('id, payment_amount, customer_id'), { clinicId, assignedClinicIds })!.order('id').range(from, to)),
+      fetchAllRowsResult<AdStatsRow>((from, to) => {
+        let q = applyClinicFilter(supabase.from('ad_stats').select('ad_id, ad_name, platform, campaign_id, utm_content, spend_amount, clicks, impressions, stat_date'), { clinicId, assignedClinicIds })!
+        if (dateStart) q = q.gte('stat_date', dateStart)
+        if (dateEnd) q = q.lte('stat_date', dateEnd)
+        return q.order('id').range(from, to)
+      }),
     ])
 
     if (leadsRes.error) {
@@ -116,13 +91,13 @@ export const GET = withClinicFilter(async (req: Request, { user, clinicId, assig
       return apiError('리드 데이터 조회 실패', 500)
     }
     if (creativesRes.error) {
-      logger.warn('소재 메타데이터 조회 실패', { clinicId, error: creativesRes.error.message })
+      logger.warn('소재 메타데이터 조회 실패', { clinicId, error: creativesRes.error })
     }
     if (paymentsRes.error) {
-      logger.warn('결제 데이터 조회 실패', { clinicId, error: paymentsRes.error.message })
+      logger.warn('결제 데이터 조회 실패', { clinicId, error: paymentsRes.error })
     }
     if (adStatsRes.error) {
-      logger.warn('ad_stats 조회 실패', { clinicId, error: adStatsRes.error.message })
+      logger.warn('ad_stats 조회 실패', { clinicId, error: adStatsRes.error })
     }
 
     const leads = leadsRes.data || []

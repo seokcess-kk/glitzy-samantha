@@ -2,6 +2,7 @@ import { serverSupabase } from '@/lib/supabase'
 import { withClinicFilter, ClinicContext, applyClinicFilter, apiError, apiSuccess } from '@/lib/api-middleware'
 import { getKstDateString, getKstDayStartISO, getKstDayEndISO } from '@/lib/date'
 import { normalizeChannel } from '@/lib/channel'
+import { fetchAllRowsResult } from '@/lib/supabase-paginate'
 
 /**
  * 캠페인별 리드 목록 API
@@ -138,29 +139,26 @@ export const GET = withClinicFilter(async (req: Request, { user, clinicId, assig
     return apiSuccess({ campaign, leads: leadsWithNotes })
   }
 
-  // 캠페인 목록 (집계)
-  let leadsQuery = supabase
-    .from('leads')
-    .select('id, customer_id, utm_source, utm_campaign, utm_content, landing_page_id, chatbot_sent, created_at')
-    .not('utm_campaign', 'is', null)
-    .order('created_at', { ascending: false })
-    .limit(2000)
-
-  if (tsStart) leadsQuery = leadsQuery.gte('created_at', tsStart)
-  if (tsEnd) leadsQuery = leadsQuery.lt('created_at', tsEnd)
   // 멀티테넌트 격리: superadmin=전체, clinic_admin=자기 병원, agency_staff=배정 병원만(assignedClinicIds)
-  // 기존 bare eq(clinicId)는 agency_staff가 병원 미선택 시 필터가 빠져 타 병원 리드가 노출됐음
-  const filteredLeads = applyClinicFilter(leadsQuery, { clinicId, assignedClinicIds })
-  if (filteredLeads === null) return apiSuccess([]) // agency_staff 배정 병원 0개
-  leadsQuery = filteredLeads
+  // agency_staff 배정 병원 0개 → 빈 결과
+  if (assignedClinicIds !== null && assignedClinicIds.length === 0) return apiSuccess([])
 
-  // 랜딩 페이지 이름 매핑용
-  let lpQuery = supabase.from('landing_pages').select('id, name')
-  const filteredLp = applyClinicFilter(lpQuery, { clinicId, assignedClinicIds })
-  if (filteredLp) lpQuery = filteredLp
+  // 랜딩 페이지 이름 매핑용 (병원당 소량)
+  const lpBase = supabase.from('landing_pages').select('id, name')
+  const lpQuery = applyClinicFilter(lpBase, { clinicId, assignedClinicIds }) || lpBase
 
-  const [leadsRes, lpRes] = await Promise.all([leadsQuery, lpQuery])
-  if (leadsRes.error) return apiError(leadsRes.error.message, 500)
+  // 캠페인 목록 집계 — 리드 전량 필요. 기존 .limit(2000) 상한을 id 페이지네이션으로 우회.
+  const [leadsRes, lpRes] = await Promise.all([
+    fetchAllRowsResult<{ id: number; customer_id: number; utm_source: string | null; utm_campaign: string | null; utm_content: string | null; landing_page_id: number | null; chatbot_sent: boolean; created_at: string }>((from, to) => {
+      let q = applyClinicFilter(supabase.from('leads').select('id, customer_id, utm_source, utm_campaign, utm_content, landing_page_id, chatbot_sent, created_at').not('utm_campaign', 'is', null), { clinicId, assignedClinicIds })!
+      if (tsStart) q = q.gte('created_at', tsStart)
+      if (tsEnd) q = q.lt('created_at', tsEnd)
+      return q.order('id').range(from, to)
+    }),
+    lpQuery,
+  ])
+
+  if (leadsRes.error) return apiError('캠페인 조회에 실패했습니다.', 500)
 
   const lpMap = new Map<number, string>()
   for (const lp of lpRes.data || []) lpMap.set(lp.id, lp.name)

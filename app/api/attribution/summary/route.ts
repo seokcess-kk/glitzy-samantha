@@ -1,10 +1,11 @@
 import { serverSupabase } from '@/lib/supabase'
-import { withClinicFilter, ClinicContext, apiSuccess } from '@/lib/api-middleware'
+import { withClinicFilter, ClinicContext, apiError, apiSuccess } from '@/lib/api-middleware'
 import { normalizeChannel } from '@/lib/channel'
 import { applyAttributionModel, AttributionModel, TouchPoint } from '@/lib/attribution-models'
 import { getKstDateString } from '@/lib/date'
 import { fetchAdMarkups, buildMarkupStatRows } from '@/lib/ad-markup'
 import { createLogger } from '@/lib/logger'
+import { fetchAllRowsResult } from '@/lib/supabase-paginate'
 
 const logger = createLogger('AttributionSummary')
 
@@ -43,20 +44,32 @@ export const GET = withClinicFilter(async (req: Request, { user, clinicId, assig
     return query
   }
 
-  // 병렬 쿼리: 결제(+고객), 리드, 광고비
-  let paymentsQ = supabase.from('payments').select('payment_amount, customer_id, payment_date, treatment_name, customers(id, first_source, first_campaign_id, name, phone_number)')
-  paymentsQ = applyFilter(paymentsQ)
-  paymentsQ = applyDateFilter(paymentsQ, 'payment_date')
+  // 병렬 쿼리: 결제(+고객), 리드, 광고비 — 합계/집합 집계이므로 1,000행 상한을 id 페이지네이션으로 우회
+  const [paymentsRes, leadsRes, adStatsRes] = await Promise.all([
+    fetchAllRowsResult<{ payment_amount: number; customer_id: number; payment_date: string; treatment_name: string | null; customers: { id: number; first_source: string | null; first_campaign_id: string | null; name: string | null; phone_number: string | null }[] }>((from, to) => {
+      let q = supabase.from('payments').select('payment_amount, customer_id, payment_date, treatment_name, customers(id, first_source, first_campaign_id, name, phone_number)')
+      q = applyFilter(q)
+      q = applyDateFilter(q, 'payment_date')
+      return q.order('id').range(from, to)
+    }),
+    fetchAllRowsResult<{ id: number; customer_id: number; utm_source: string | null; utm_campaign: string | null; created_at: string }>((from, to) => {
+      let q = supabase.from('leads').select('id, customer_id, utm_source, utm_campaign, created_at')
+      q = applyFilter(q)
+      q = applyDateFilter(q, 'created_at')
+      return q.order('id').range(from, to)
+    }),
+    fetchAllRowsResult<{ platform: string | null; campaign_id: string | null; campaign_name: string | null; spend_amount: number; stat_date: string }>((from, to) => {
+      let q = supabase.from('ad_campaign_stats').select('platform, campaign_id, campaign_name, spend_amount, stat_date')
+      q = applyFilter(q)
+      q = applyDateFilter(q, 'stat_date')
+      return q.order('id').range(from, to)
+    }),
+  ])
 
-  let leadsQ = supabase.from('leads').select('id, customer_id, utm_source, utm_campaign, created_at')
-  leadsQ = applyFilter(leadsQ)
-  leadsQ = applyDateFilter(leadsQ, 'created_at')
-
-  let adStatsQ = supabase.from('ad_campaign_stats').select('platform, campaign_id, campaign_name, spend_amount, stat_date')
-  adStatsQ = applyFilter(adStatsQ)
-  adStatsQ = applyDateFilter(adStatsQ, 'stat_date')
-
-  const [paymentsRes, leadsRes, adStatsRes] = await Promise.all([paymentsQ, leadsQ, adStatsQ])
+  if (paymentsRes.error || leadsRes.error || adStatsRes.error) {
+    logger.error('귀속 요약 조회 실패', paymentsRes.error || leadsRes.error || adStatsRes.error, { clinicId })
+    return apiError('귀속 요약 조회에 실패했습니다.', 500)
+  }
 
   // --- 채널별 귀속 ---
   const channelMap: Record<string, { leads: Set<number>; revenue: number; customers: Set<number> }> = {}
@@ -119,14 +132,11 @@ export const GET = withClinicFilter(async (req: Request, { user, clinicId, assig
     if (customerIdSet.size > 0) {
       // 2. 결제 고객의 모든 leads 조회 (한 번에, N+1 방지)
       const customerIds = Array.from(customerIdSet)
-      let allLeadsQ = supabase
-        .from('leads')
-        .select('customer_id, utm_source, utm_campaign, created_at')
-        .in('customer_id', customerIds)
-        .order('created_at')
-      allLeadsQ = applyFilter(allLeadsQ)
-
-      const { data: allLeads, error: leadsError } = await allLeadsQ
+      const { data: allLeads, error: leadsError } = await fetchAllRowsResult<{ customer_id: number; utm_source: string | null; utm_campaign: string | null; created_at: string }>((from, to) => {
+        let q = supabase.from('leads').select('customer_id, utm_source, utm_campaign, created_at').in('customer_id', customerIds)
+        q = applyFilter(q)
+        return q.order('id').range(from, to)
+      })
       if (leadsError) {
         logger.error('멀티터치 리드 조회 실패', leadsError, { clinicId })
       }

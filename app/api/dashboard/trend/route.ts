@@ -2,6 +2,7 @@ import { serverSupabase } from '@/lib/supabase'
 import { withClinicFilter, ClinicContext, applyClinicFilter, apiError, apiSuccess } from '@/lib/api-middleware'
 import { getKstDateString } from '@/lib/date'
 import { fetchAdMarkups, buildMarkupStatRows } from '@/lib/ad-markup'
+import { fetchAllRowsResult } from '@/lib/supabase-paginate'
 
 const DAYS = 28 // 최근 4주
 
@@ -28,37 +29,23 @@ export const GET = withClinicFilter(async (req: Request, { user, clinicId, assig
     }
   }
 
-  // 광고 지출 + 리드 수 병렬 조회
-  let adQuery = supabase
-    .from('ad_campaign_stats')
-    .select('stat_date, spend_amount')
-    .gte('stat_date', startDate)
-    .lte('stat_date', today)
-    .order('stat_date')
-
-  let leadQuery = supabase
-    .from('leads')
-    .select('created_at')
-    .gte('created_at', startDate)
-    .order('created_at')
-
-  const adFiltered = applyClinicFilter(adQuery, { clinicId, assignedClinicIds })
-  const leadFiltered = applyClinicFilter(leadQuery, { clinicId, assignedClinicIds })
-
-  if (adFiltered === null && leadFiltered === null) {
-    // 병원 배정 없어도 빈 날짜 틀은 반환
+  // agency_staff 배정 병원 0개 → 빈 날짜 틀 반환
+  if (assignedClinicIds !== null && assignedClinicIds.length === 0) {
     return apiSuccess([...dayMap.values()])
   }
-  if (adFiltered) adQuery = adFiltered
-  if (leadFiltered) leadQuery = leadFiltered
 
+  // 광고 지출 + 리드 수 병렬 조회 — 합계/개수 집계이므로 1,000행 상한을 id 페이지네이션으로 우회
   const [adRes, leadRes] = await Promise.all([
-    adFiltered ? adQuery : Promise.resolve({ data: [] as { stat_date: string; spend_amount: number }[], error: null }),
-    leadFiltered ? leadQuery : Promise.resolve({ data: [] as { created_at: string }[], error: null }),
+    fetchAllRowsResult<{ stat_date: string; spend_amount: number }>((from, to) =>
+      applyClinicFilter(supabase.from('ad_campaign_stats').select('stat_date, spend_amount')
+        .gte('stat_date', startDate).lte('stat_date', today), { clinicId, assignedClinicIds })!.order('id').range(from, to)),
+    fetchAllRowsResult<{ created_at: string }>((from, to) =>
+      applyClinicFilter(supabase.from('leads').select('created_at')
+        .gte('created_at', startDate), { clinicId, assignedClinicIds })!.order('id').range(from, to)),
   ])
 
-  if (adRes.error) return apiError(adRes.error.message, 500)
-  if (leadRes.error) return apiError(leadRes.error.message, 500)
+  if (adRes.error) return apiError('추이 조회에 실패했습니다.', 500)
+  if (leadRes.error) return apiError('추이 조회에 실패했습니다.', 500)
 
   // KST 기준 YYYY-MM-DD 추출
   const toKstDate = (dateStr: string) => {

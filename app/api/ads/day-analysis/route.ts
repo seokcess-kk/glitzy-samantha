@@ -3,6 +3,7 @@ import { withClinicFilter, ClinicContext, applyClinicFilter, apiSuccess, apiErro
 import { getKstDateString, toUtcDate } from '@/lib/date'
 import { fetchAdMarkups, buildMarkupStatRows } from '@/lib/ad-markup'
 import { createLogger } from '@/lib/logger'
+import { fetchAllRowsResult } from '@/lib/supabase-paginate'
 
 const logger = createLogger('AdsDayAnalysis')
 
@@ -47,27 +48,21 @@ export const GET = withClinicFilter(async (req: Request, { user, clinicId, assig
   }
 
   try {
-    // 1. 리드 created_at 조회
-    let leadsQuery = supabase
-      .from('leads')
-      .select('created_at')
-    const filteredLeads = applyClinicFilter(leadsQuery, { clinicId, assignedClinicIds })
-    if (filteredLeads === null) return apiSuccess({ byDay: buildEmptyResult() })
-    leadsQuery = filteredLeads
-    if (tsStart) leadsQuery = leadsQuery.gte('created_at', tsStart)
-    if (tsEnd) leadsQuery = leadsQuery.lt('created_at', tsEnd)
-
-    // 2. 광고 지출 stat_date + spend_amount 조회
-    let adStatsQuery = supabase
-      .from('ad_campaign_stats')
-      .select('stat_date, spend_amount')
-    const filteredAdStats = applyClinicFilter(adStatsQuery, { clinicId, assignedClinicIds })
-    if (filteredAdStats === null) return apiSuccess({ byDay: buildEmptyResult() })
-    adStatsQuery = filteredAdStats
-    if (dateStart) adStatsQuery = adStatsQuery.gte('stat_date', dateStart)
-    if (dateEnd) adStatsQuery = adStatsQuery.lte('stat_date', dateEnd)
-
-    const [leadsRes, adStatsRes] = await Promise.all([leadsQuery, adStatsQuery])
+    // 1~2. 리드·광고지출 — 개수/합계 집계이므로 1,000행 상한을 id 페이지네이션으로 우회
+    const [leadsRes, adStatsRes] = await Promise.all([
+      fetchAllRowsResult<{ created_at: string }>((from, to) => {
+        let q = applyClinicFilter(supabase.from('leads').select('created_at'), { clinicId, assignedClinicIds })!
+        if (tsStart) q = q.gte('created_at', tsStart)
+        if (tsEnd) q = q.lt('created_at', tsEnd)
+        return q.order('id').range(from, to)
+      }),
+      fetchAllRowsResult<{ stat_date: string; spend_amount: number }>((from, to) => {
+        let q = applyClinicFilter(supabase.from('ad_campaign_stats').select('stat_date, spend_amount'), { clinicId, assignedClinicIds })!
+        if (dateStart) q = q.gte('stat_date', dateStart)
+        if (dateEnd) q = q.lte('stat_date', dateEnd)
+        return q.order('id').range(from, to)
+      }),
+    ])
 
     if (leadsRes.error) {
       logger.error('리드 조회 실패', leadsRes.error, { clinicId })

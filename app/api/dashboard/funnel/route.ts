@@ -3,6 +3,7 @@ import { withClinicFilter, ClinicContext, applyClinicFilter, applyDateRange, api
 import { normalizeChannel } from '@/lib/channel'
 import { getKstDateString } from '@/lib/date'
 import { createLogger } from '@/lib/logger'
+import { fetchAllRowsResult } from '@/lib/supabase-paginate'
 
 const logger = createLogger('DashboardFunnel')
 
@@ -42,45 +43,32 @@ export const GET = withClinicFilter(async (req: Request, { user, clinicId, assig
     tsEnd = endDate.toISOString()
   }
 
-  // 데이터 조회 — 모든 timestamp 컬럼에 KPI와 동일한 gte/lt 패턴 적용
-  let leadsQuery = supabase
-    .from('leads')
-    .select('id, customer_id, utm_source, utm_campaign, created_at')
-    .limit(5000)
-  leadsQuery = applyClinicFilter(leadsQuery, ctx)!
-  if (tsStart) leadsQuery = leadsQuery.gte('created_at', tsStart)
-  if (tsEnd) leadsQuery = leadsQuery.lt('created_at', tsEnd)
-
-  let bookingsQuery = supabase
-    .from('bookings')
-    .select('id, customer_id, status, created_at')
-    .limit(5000)
-  bookingsQuery = applyClinicFilter(bookingsQuery, ctx)!
-  if (tsStart) bookingsQuery = bookingsQuery.gte('created_at', tsStart)
-  if (tsEnd) bookingsQuery = bookingsQuery.lt('created_at', tsEnd)
-
-  let consultationsQuery = supabase
-    .from('consultations')
-    .select('id, customer_id, status, created_at')
-    .limit(5000)
-  consultationsQuery = applyClinicFilter(consultationsQuery, ctx)!
-  if (tsStart) consultationsQuery = consultationsQuery.gte('created_at', tsStart)
-  if (tsEnd) consultationsQuery = consultationsQuery.lt('created_at', tsEnd)
-
-  // payment_date(DATE 컬럼)는 KST 날짜 문자열로 비교
-  let paymentsQuery = supabase
-    .from('payments')
-    .select('id, customer_id, payment_amount, payment_date')
-    .limit(5000)
-  paymentsQuery = applyClinicFilter(paymentsQuery, ctx)!
-  if (startKst) paymentsQuery = paymentsQuery.gte('payment_date', startKst)
-  if (endKst) paymentsQuery = paymentsQuery.lte('payment_date', endKst)
-
+  // 데이터 조회 — 합계/집합(고객 set) 집계이므로 기존 .limit(5000) 상한을 id 페이지네이션으로 우회
   const [leadsRes, bookingsRes, consultationsRes, paymentsRes] = await Promise.all([
-    leadsQuery,
-    bookingsQuery,
-    consultationsQuery,
-    paymentsQuery,
+    fetchAllRowsResult<{ id: number; customer_id: number; utm_source: string | null; utm_campaign: string | null; created_at: string }>((from, to) => {
+      let q = applyClinicFilter(supabase.from('leads').select('id, customer_id, utm_source, utm_campaign, created_at'), ctx)!
+      if (tsStart) q = q.gte('created_at', tsStart)
+      if (tsEnd) q = q.lt('created_at', tsEnd)
+      return q.order('id').range(from, to)
+    }),
+    fetchAllRowsResult<{ id: number; customer_id: number; status: string; created_at: string }>((from, to) => {
+      let q = applyClinicFilter(supabase.from('bookings').select('id, customer_id, status, created_at'), ctx)!
+      if (tsStart) q = q.gte('created_at', tsStart)
+      if (tsEnd) q = q.lt('created_at', tsEnd)
+      return q.order('id').range(from, to)
+    }),
+    fetchAllRowsResult<{ id: number; customer_id: number; status: string; created_at: string }>((from, to) => {
+      let q = applyClinicFilter(supabase.from('consultations').select('id, customer_id, status, created_at'), ctx)!
+      if (tsStart) q = q.gte('created_at', tsStart)
+      if (tsEnd) q = q.lt('created_at', tsEnd)
+      return q.order('id').range(from, to)
+    }),
+    fetchAllRowsResult<{ id: number; customer_id: number; payment_amount: number; payment_date: string }>((from, to) => {
+      let q = applyClinicFilter(supabase.from('payments').select('id, customer_id, payment_amount, payment_date'), ctx)!
+      if (startKst) q = q.gte('payment_date', startKst)
+      if (endKst) q = q.lte('payment_date', endKst)
+      return q.order('id').range(from, to)
+    }),
   ])
 
   // 조회 실패를 빈 성공(0)으로 위장하지 않고 에러로 표면화
