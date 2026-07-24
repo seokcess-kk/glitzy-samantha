@@ -47,6 +47,7 @@ import {
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog'
 import { PageHeader, ChannelBadge, SortSelect } from '@/components/common'
+import { TaskInbox } from '@/components/dashboard/task-inbox'
 import { DateRangePicker } from '@/components/dashboard/date-range-picker'
 import { DraggableBooking } from '@/components/patients/draggable-booking'
 import { DroppableCell } from '@/components/patients/droppable-cell'
@@ -1534,6 +1535,9 @@ export default function PatientsPage() {
           </div>
         }
       />
+
+      {/* 오늘 처리할 업무 — 업무 큐 인박스 */}
+      <TaskInbox clinicId={selectedClinicId} />
 
       {/* 예약 등록 다이얼로그 */}
       <Dialog open={createOpen} onOpenChange={setCreateOpen}>

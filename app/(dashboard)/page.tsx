@@ -20,6 +20,7 @@ import { FunnelSection } from '@/components/dashboard/funnel-section'
 import { RecentLeads } from '@/components/dashboard/recent-leads'
 import { ChannelTable } from '@/components/dashboard/channel-table'
 import { DateRangePicker } from '@/components/dashboard/date-range-picker'
+import { TaskInbox } from '@/components/dashboard/task-inbox'
 
 export default function DashboardPage() {
   const { data: session } = useSession()
@@ -102,6 +103,9 @@ export default function DashboardPage() {
           </Button>
         </div>
       )}
+
+      {/* 오늘 처리할 업무 — 업무 큐 인박스 */}
+      <TaskInbox clinicId={selectedClinicId} />
 
       {/* Row 1: KPI 카드 5개 */}
       <KpiSection data={kpi.data} loading={kpi.loading} onNavigate={handleNavigate} />
