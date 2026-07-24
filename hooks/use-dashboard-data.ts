@@ -6,6 +6,7 @@ import { normalizeChannel } from '@/lib/channel'
 interface FetchState<T> {
   data: T | null
   loading: boolean
+  error: boolean
 }
 
 function buildQs(params: Record<string, string | number | null | undefined>): string {
@@ -19,17 +20,19 @@ function buildQs(params: Record<string, string | number | null | undefined>): st
 
 // ─── KPI + 오늘 요약 ───
 export function useKpiData(clinicId: number | null, startDate: string, endDate: string) {
-  const [state, setState] = useState<FetchState<any>>({ data: null, loading: true })
+  const [state, setState] = useState<FetchState<any>>({ data: null, loading: true, error: false })
 
   const fetch_ = useCallback(async () => {
     setState(prev => ({ ...prev, loading: true }))
     try {
       const qs = buildQs({ startDate, endDate, compare: 'true', clinic_id: clinicId })
       const res = await fetch(`/api/dashboard/kpi${qs}`)
+      // 비-2xx 응답을 데이터로 저장하면 undefined 필드가 "0"으로 표시됨 → 에러로 구분
+      if (!res.ok) { setState({ data: null, loading: false, error: true }); return }
       const json = await res.json()
-      setState({ data: json, loading: false })
+      setState({ data: json, loading: false, error: false })
     } catch {
-      setState(prev => ({ ...prev, loading: false }))
+      setState({ data: null, loading: false, error: true })
     }
   }, [clinicId, startDate, endDate])
 
@@ -42,6 +45,7 @@ export function useKpiData(clinicId: number | null, startDate: string, endDate: 
 export function useTrendData(clinicId: number | null, startDate: string, endDate: string) {
   const [trend, setTrend] = useState<any[]>([])
   const [loading, setLoading] = useState(true)
+  const [error, setError] = useState(false)
 
   const fetch_ = useCallback(async () => {
     setLoading(true)
@@ -55,6 +59,7 @@ export function useTrendData(clinicId: number | null, startDate: string, endDate
       const trendQs = buildQs({ startDate: trendStart, clinic_id: clinicId })
 
       const res = await fetch(`/api/dashboard/trend${trendQs}`)
+      if (!res.ok) { setTrend([]); setError(true); return }
       const json = await res.json()
       const raw = Array.isArray(json) ? json : []
       setTrend(raw.map((r: any) => ({
@@ -62,8 +67,10 @@ export function useTrendData(clinicId: number | null, startDate: string, endDate
         spend: r.spend || 0,
         leads: r.leads || 0,
       })))
+      setError(false)
     } catch {
       setTrend([])
+      setError(true)
     } finally {
       setLoading(false)
     }
@@ -71,7 +78,7 @@ export function useTrendData(clinicId: number | null, startDate: string, endDate
 
   useEffect(() => { fetch_() }, [fetch_])
 
-  return { trend, loading, refetch: fetch_ }
+  return { trend, loading, error, refetch: fetch_ }
 }
 
 // ─── 최근 리드 (DatePicker 무관, 항상 최신 8건) ───
@@ -85,12 +92,14 @@ export interface RecentLead {
 export function useRecentLeads(clinicId: number | null) {
   const [recentLeads, setRecentLeads] = useState<RecentLead[]>([])
   const [loading, setLoading] = useState(true)
+  const [error, setError] = useState(false)
 
   const fetch_ = useCallback(async () => {
     setLoading(true)
     try {
       const qs = buildQs({ clinic_id: clinicId, limit: '8' })
       const res = await fetch(`/api/leads${qs}`)
+      if (!res.ok) { setRecentLeads([]); setError(true); return }
       const json = await res.json()
       const customers = Array.isArray(json) ? json : []
 
@@ -110,8 +119,10 @@ export function useRecentLeads(clinicId: number | null) {
       // 최신순 정렬, 최대 8건
       leads.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
       setRecentLeads(leads.slice(0, 8))
+      setError(false)
     } catch {
       setRecentLeads([])
+      setError(true)
     } finally {
       setLoading(false)
     }
@@ -119,7 +130,7 @@ export function useRecentLeads(clinicId: number | null) {
 
   useEffect(() => { fetch_() }, [fetch_])
 
-  return { recentLeads, loading, refetch: fetch_ }
+  return { recentLeads, loading, error, refetch: fetch_ }
 }
 
 // ─── 퍼널 + 채널 + 시술별 매출 ───
@@ -128,6 +139,7 @@ export function useFunnelChannelData(clinicId: number | null, startDate: string,
   const [channel, setChannel] = useState<any[]>([])
   const [treatmentData, setTreatmentData] = useState<{ name: string; amount: number }[]>([])
   const [loading, setLoading] = useState(true)
+  const [error, setError] = useState(false)
 
   const fetch_ = useCallback(async () => {
     setLoading(true)
@@ -135,18 +147,29 @@ export function useFunnelChannelData(clinicId: number | null, startDate: string,
       const qs = buildQs({ startDate, endDate, clinic_id: clinicId })
 
       const [funnelRes, channelRes, treatmentRes] = await Promise.allSettled([
-        fetch(`/api/dashboard/funnel${qs}`).then(r => r.json()),
-        fetch(`/api/dashboard/channel${qs}`).then(r => r.json()),
-        fetch(`/api/dashboard/treatment-revenue${qs}`).then(r => r.json()),
+        fetch(`/api/dashboard/funnel${qs}`),
+        fetch(`/api/dashboard/channel${qs}`),
+        fetch(`/api/dashboard/treatment-revenue${qs}`),
       ])
 
-      if (funnelRes.status === 'fulfilled') setFunnel(funnelRes.value)
-      if (channelRes.status === 'fulfilled') setChannel(Array.isArray(channelRes.value) ? channelRes.value : [])
+      // 실패(네트워크/비-2xx)를 빈 배열로 뭉개지 않고 에러로 표면화
+      let anyError = false
+
+      if (funnelRes.status === 'fulfilled' && funnelRes.value.ok) setFunnel(await funnelRes.value.json())
+      else anyError = true
+
+      if (channelRes.status === 'fulfilled' && channelRes.value.ok) {
+        const j = await channelRes.value.json()
+        setChannel(Array.isArray(j) ? j : [])
+      } else anyError = true
 
       // 시술별 매출 (payments 테이블 직접 조회 — KPI 매출과 동일 기준)
-      if (treatmentRes.status === 'fulfilled') {
-        setTreatmentData(Array.isArray(treatmentRes.value) ? treatmentRes.value : [])
-      }
+      if (treatmentRes.status === 'fulfilled' && treatmentRes.value.ok) {
+        const j = await treatmentRes.value.json()
+        setTreatmentData(Array.isArray(j) ? j : [])
+      } else anyError = true
+
+      setError(anyError)
     } finally {
       setLoading(false)
     }
@@ -154,5 +177,5 @@ export function useFunnelChannelData(clinicId: number | null, startDate: string,
 
   useEffect(() => { fetch_() }, [fetch_])
 
-  return { funnel, channel, treatmentData, loading, refetch: fetch_ }
+  return { funnel, channel, treatmentData, loading, error, refetch: fetch_ }
 }

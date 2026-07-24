@@ -1,5 +1,5 @@
 import { serverSupabase } from '@/lib/supabase'
-import { withClinicFilter, ClinicContext, applyClinicFilter, apiSuccess } from '@/lib/api-middleware'
+import { withClinicFilter, ClinicContext, applyClinicFilter, apiError, apiSuccess } from '@/lib/api-middleware'
 import { getKstDateString } from '@/lib/date'
 import { fetchAdMarkups, buildMarkupStatRows, markupCampaignIds, MARKUP_HINT } from '@/lib/ad-markup'
 import { createLogger } from '@/lib/logger'
@@ -56,7 +56,8 @@ export const GET = withClinicFilter(async (req: Request, { user, clinicId, assig
     const { data, error } = await query
     if (error) {
       logger.error('ad_campaign_stats 조회 실패', error, { clinicId })
-      return apiSuccess({ stats: [], campaignLeadCounts: {} })
+      // 조회 실패를 빈 성공(0건)으로 위장하지 않고 에러로 표면화 — 프론트에서 "0"과 구분
+      return apiError('광고 통계 조회에 실패했습니다.', 500)
     }
 
     // 2) campaign_id별 리드 수 산출
@@ -109,6 +110,6 @@ export const GET = withClinicFilter(async (req: Request, { user, clinicId, assig
     })
   } catch (err) {
     logger.error('ads/stats 조회 실패', err, { clinicId })
-    return apiSuccess({ stats: [], campaignLeadCounts: {} })
+    return apiError('광고 통계 조회에 실패했습니다.', 500)
   }
 })

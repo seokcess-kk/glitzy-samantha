@@ -1,7 +1,10 @@
 import { serverSupabase } from '@/lib/supabase'
-import { withClinicFilter, ClinicContext, applyClinicFilter, applyDateRange, apiSuccess } from '@/lib/api-middleware'
+import { withClinicFilter, ClinicContext, applyClinicFilter, applyDateRange, apiError, apiSuccess } from '@/lib/api-middleware'
 import { normalizeChannel } from '@/lib/channel'
 import { getKstDateString } from '@/lib/date'
+import { createLogger } from '@/lib/logger'
+
+const logger = createLogger('DashboardFunnel')
 
 
 /**
@@ -79,6 +82,12 @@ export const GET = withClinicFilter(async (req: Request, { user, clinicId, assig
     consultationsQuery,
     paymentsQuery,
   ])
+
+  // 조회 실패를 빈 성공(0)으로 위장하지 않고 에러로 표면화
+  if (leadsRes.error || bookingsRes.error || consultationsRes.error || paymentsRes.error) {
+    logger.error('퍼널 조회 실패', leadsRes.error || bookingsRes.error || consultationsRes.error || paymentsRes.error, { clinicId })
+    return apiError('퍼널 조회에 실패했습니다.', 500)
+  }
 
   // 고객별 채널/캠페인 매핑
   const customerChannel: Map<number, string> = new Map()

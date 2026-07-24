@@ -1,8 +1,11 @@
 import { serverSupabase } from '@/lib/supabase'
-import { withClinicFilter, ClinicContext, applyClinicFilter, apiSuccess } from '@/lib/api-middleware'
+import { withClinicFilter, ClinicContext, applyClinicFilter, apiError, apiSuccess } from '@/lib/api-middleware'
 import { normalizeChannel } from '@/lib/channel'
 import { sourceToChannel } from '@/lib/platform'
 import { getKstDateString } from '@/lib/date'
+import { createLogger } from '@/lib/logger'
+
+const logger = createLogger('DashboardChannel')
 import { fetchAdMarkups, buildMarkupStatRows } from '@/lib/ad-markup'
 
 /**
@@ -71,6 +74,12 @@ export const GET = withClinicFilter(async (req: Request, { user, clinicId, assig
     adStatsQuery,
     paymentsQuery,
   ])
+
+  // 조회 실패를 빈 성공(0)으로 위장하지 않고 에러로 표면화
+  if (leadsRes.error || adStatsRes.error || paymentsRes.error) {
+    logger.error('채널 성과 조회 실패', leadsRes.error || adStatsRes.error || paymentsRes.error, { clinicId })
+    return apiError('채널 성과 조회에 실패했습니다.', 500)
+  }
 
   // 채널별 리드 집계 — 플랫폼 단위 통합 (Meta, Google 등)
   const leadsByChannel: Record<string, Set<number>> = {}
