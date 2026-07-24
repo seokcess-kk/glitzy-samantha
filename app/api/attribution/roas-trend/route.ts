@@ -4,6 +4,7 @@ import { normalizeChannel } from '@/lib/channel'
 import { getKstDateString } from '@/lib/date'
 import { fetchAdMarkups, buildMarkupStatRows } from '@/lib/ad-markup'
 import { createLogger } from '@/lib/logger'
+import { fetchAllRowsResult } from '@/lib/supabase-paginate'
 
 const logger = createLogger('RoasTrend')
 
@@ -38,37 +39,24 @@ export const GET = withClinicFilter(async (req: Request, { user, clinicId, assig
     dayMap.set(getKstDateString(new Date(d)), {})
   }
 
-  // 광고비 쿼리 (일별 + 플랫폼별)
-  let adQuery = supabase
-    .from('ad_campaign_stats')
-    .select('stat_date, platform, spend_amount')
-    .gte('stat_date', startDate)
-    .lte('stat_date', endDate)
-
-  // 결제 쿼리 (일별 + 고객의 첫 유입 채널)
-  let paymentQuery = supabase
-    .from('payments')
-    .select('payment_amount, payment_date, customers(first_source)')
-    .gte('payment_date', startDate)
-    .lte('payment_date', endDate)
-
-  const adFiltered = applyClinicFilter(adQuery, { clinicId, assignedClinicIds })
-  const payFiltered = applyClinicFilter(paymentQuery, { clinicId, assignedClinicIds })
-
-  if (adFiltered === null && payFiltered === null) {
+  // agency_staff 배정 병원 0개 → 빈 결과
+  if (assignedClinicIds !== null && assignedClinicIds.length === 0) {
     return apiSuccess([])
   }
-  if (adFiltered) adQuery = adFiltered
-  if (payFiltered) paymentQuery = payFiltered
 
   try {
+    // 광고비·결제 일별 집계 — 합계이므로 1,000행 상한을 id 페이지네이션으로 우회
     const [adRes, payRes] = await Promise.all([
-      adFiltered ? adQuery : Promise.resolve({ data: [] as { stat_date: string; platform: string; spend_amount: number }[], error: null }),
-      payFiltered ? paymentQuery : Promise.resolve({ data: [] as { payment_amount: number; payment_date: string; customers: { first_source: string | null } | null }[], error: null }),
+      fetchAllRowsResult<{ stat_date: string; platform: string; spend_amount: number }>((from, to) =>
+        applyClinicFilter(supabase.from('ad_campaign_stats').select('stat_date, platform, spend_amount')
+          .gte('stat_date', startDate).lte('stat_date', endDate), { clinicId, assignedClinicIds })!.order('id').range(from, to)),
+      fetchAllRowsResult<{ payment_amount: number; payment_date: string; customers: { first_source: string | null }[] }>((from, to) =>
+        applyClinicFilter(supabase.from('payments').select('payment_amount, payment_date, customers(first_source)')
+          .gte('payment_date', startDate).lte('payment_date', endDate), { clinicId, assignedClinicIds })!.order('id').range(from, to)),
     ])
 
-    if (adRes.error) return apiError(adRes.error.message, 500)
-    if (payRes.error) return apiError(payRes.error.message, 500)
+    if (adRes.error) return apiError('ROAS 추이 조회에 실패했습니다.', 500)
+    if (payRes.error) return apiError('ROAS 추이 조회에 실패했습니다.', 500)
 
     const toKstDate = (dateStr: string) =>
       new Date(dateStr).toLocaleDateString('en-CA', { timeZone: 'Asia/Seoul' })

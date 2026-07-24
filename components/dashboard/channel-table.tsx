@@ -69,7 +69,7 @@ export function ChannelTable({ data, loading }: ChannelTableProps) {
         <div className="flex items-center gap-1.5">
           <BarChart3 size={16} className="text-brand-400" />
           <h2 className="text-sm font-semibold text-foreground">채널 성과</h2>
-          <InfoHint text="채널 귀속 매출 기준 (상위 ROAS는 전체 매출)" />
+          <InfoHint text="광고 유입 채널 기준. 광고 출처 미확인(미귀속) 매출은 광고 기여에서 제외 대상 · ROAS는 전체 매출 기준" />
         </div>
         <Link
           href="/ads"

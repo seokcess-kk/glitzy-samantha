@@ -60,6 +60,7 @@ export default function DashboardPage() {
   }
 
   const anyLoading = kpi.loading || trendData.loading || funnelChannel.loading
+  const anyError = kpi.error || trendData.error || funnelChannel.error || recentLeadsData.error
   const handleNavigate = (path: string) => router.push(path)
 
   // 기간 일수 계산 (표시용)
@@ -91,6 +92,16 @@ export default function DashboardPage() {
           </div>
         }
       />
+
+      {/* 데이터 로딩 실패 알림 — 오류를 "0"으로 위장하지 않고 명시 */}
+      {anyError && (
+        <div className="mb-4 flex flex-col gap-2 rounded-lg border border-destructive/30 bg-destructive/10 px-4 py-3 text-sm text-destructive sm:flex-row sm:items-center sm:justify-between">
+          <span>일부 데이터를 불러오지 못했습니다. 표시된 수치가 실제와 다를 수 있습니다.</span>
+          <Button variant="outline" size="sm" onClick={handleRefresh} disabled={anyLoading} className="shrink-0">
+            다시 시도
+          </Button>
+        </div>
+      )}
 
       {/* Row 1: KPI 카드 5개 */}
       <KpiSection data={kpi.data} loading={kpi.loading} onNavigate={handleNavigate} />

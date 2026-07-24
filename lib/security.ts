@@ -19,6 +19,7 @@ export const VALID_BOOKING_STATUSES = [
 export type BookingStatus = (typeof VALID_BOOKING_STATUSES)[number]
 
 export const VALID_CONSULTATION_STATUSES = [
+  '상담대기',
   '예약완료',
   '방문완료',
   '노쇼',

@@ -1,9 +1,13 @@
 import { serverSupabase } from '@/lib/supabase'
-import { withClinicFilter, ClinicContext, applyClinicFilter, apiSuccess } from '@/lib/api-middleware'
+import { withClinicFilter, ClinicContext, applyClinicFilter, apiError, apiSuccess } from '@/lib/api-middleware'
 import { normalizeChannel } from '@/lib/channel'
 import { sourceToChannel } from '@/lib/platform'
 import { getKstDateString } from '@/lib/date'
+import { createLogger } from '@/lib/logger'
 import { fetchAdMarkups, buildMarkupStatRows } from '@/lib/ad-markup'
+import { fetchAllRowsResult } from '@/lib/supabase-paginate'
+
+const logger = createLogger('DashboardChannel')
 
 /**
  * 채널별 KPI 분석 API
@@ -40,37 +44,34 @@ export const GET = withClinicFilter(async (req: Request, { user, clinicId, assig
     tsEnd = endDate.toISOString()
   }
 
-  // 1. 리드 데이터 조회 (utm_source 포함) — KPI와 동일한 gte/lt 패턴
-  let leadsQuery = supabase
-    .from('leads')
-    .select('id, customer_id, utm_source, created_at')
-    .limit(5000)
-  leadsQuery = applyClinicFilter(leadsQuery, ctx)!
-  if (tsStart) leadsQuery = leadsQuery.gte('created_at', tsStart)
-  if (tsEnd) leadsQuery = leadsQuery.lt('created_at', tsEnd)
-
-  // 2. 광고 지출 데이터 — stat_date(DATE 컬럼)는 KST 날짜 문자열로 비교
-  let adStatsQuery = supabase
-    .from('ad_campaign_stats')
-    .select('platform, spend_amount, clicks, impressions, stat_date')
-  adStatsQuery = applyClinicFilter(adStatsQuery, ctx)!
-  if (startKst) adStatsQuery = adStatsQuery.gte('stat_date', startKst)
-  if (endKst) adStatsQuery = adStatsQuery.lte('stat_date', endKst)
-
-  // 3. 결제 데이터 — payment_date(DATE 컬럼)는 KST 날짜 문자열로 비교
-  let paymentsQuery = supabase
-    .from('payments')
-    .select('payment_amount, customer_id, payment_date')
-    .limit(5000)
-  paymentsQuery = applyClinicFilter(paymentsQuery, ctx)!
-  if (startKst) paymentsQuery = paymentsQuery.gte('payment_date', startKst)
-  if (endKst) paymentsQuery = paymentsQuery.lte('payment_date', endKst)
-
+  // 1~3. 리드·광고지출·결제 — 합계/집합 집계이므로 PostgREST 1,000행 상한을 id 페이지네이션으로 우회
+  //       (기존 .limit(5000)/무제한은 고volume 병원·기간에서 과소집계). {data,error} 형태 유지 → 아래 에러 표면화 패턴 그대로.
   const [leadsRes, adStatsRes, paymentsRes] = await Promise.all([
-    leadsQuery,
-    adStatsQuery,
-    paymentsQuery,
+    fetchAllRowsResult<{ id: number; customer_id: number; utm_source: string | null; created_at: string }>((from, to) => {
+      let q = applyClinicFilter(supabase.from('leads').select('id, customer_id, utm_source, created_at'), ctx)!
+      if (tsStart) q = q.gte('created_at', tsStart)
+      if (tsEnd) q = q.lt('created_at', tsEnd)
+      return q.order('id').range(from, to)
+    }),
+    fetchAllRowsResult<{ platform: string; spend_amount: number; clicks: number; impressions: number; stat_date: string }>((from, to) => {
+      let q = applyClinicFilter(supabase.from('ad_campaign_stats').select('platform, spend_amount, clicks, impressions, stat_date'), ctx)!
+      if (startKst) q = q.gte('stat_date', startKst)
+      if (endKst) q = q.lte('stat_date', endKst)
+      return q.order('id').range(from, to)
+    }),
+    fetchAllRowsResult<{ payment_amount: number; customer_id: number; payment_date: string }>((from, to) => {
+      let q = applyClinicFilter(supabase.from('payments').select('payment_amount, customer_id, payment_date'), ctx)!
+      if (startKst) q = q.gte('payment_date', startKst)
+      if (endKst) q = q.lte('payment_date', endKst)
+      return q.order('id').range(from, to)
+    }),
   ])
+
+  // 조회 실패를 빈 성공(0)으로 위장하지 않고 에러로 표면화
+  if (leadsRes.error || adStatsRes.error || paymentsRes.error) {
+    logger.error('채널 성과 조회 실패', leadsRes.error || adStatsRes.error || paymentsRes.error, { clinicId })
+    return apiError('채널 성과 조회에 실패했습니다.', 500)
+  }
 
   // 채널별 리드 집계 — 플랫폼 단위 통합 (Meta, Google 등)
   const leadsByChannel: Record<string, Set<number>> = {}

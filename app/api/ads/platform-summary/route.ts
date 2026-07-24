@@ -5,6 +5,7 @@ import { getKstDateString } from '@/lib/date'
 import { fetchAdMarkups, buildMarkupStatRows } from '@/lib/ad-markup'
 import { createLogger } from '@/lib/logger'
 import { apiToCreativePlatform, getSourceLabel } from '@/lib/platform'
+import { fetchAllRowsResult } from '@/lib/supabase-paginate'
 
 const logger = createLogger('AdsPlatformSummary')
 
@@ -44,40 +45,26 @@ export const GET = withClinicFilter(async (req: Request, { user, clinicId, assig
   if (emptyCheck === null) return apiSuccess([])
 
   try {
-    // 1. 광고 통계 조회 (platform, campaign_type, spend, clicks, impressions)
-    let adStatsQuery = supabase
-      .from('ad_campaign_stats')
-      .select('platform, campaign_type, spend_amount, clicks, impressions, stat_date')
-    const filteredAdStats = applyClinicFilter(adStatsQuery, { clinicId, assignedClinicIds })
-    if (filteredAdStats === null) return apiSuccess([])
-    adStatsQuery = filteredAdStats
-    if (dateStart) adStatsQuery = adStatsQuery.gte('stat_date', dateStart)
-    if (dateEnd) adStatsQuery = adStatsQuery.lte('stat_date', dateEnd)
-
-    // 2. 리드 조회 (utm_source, customer_id)
-    let leadsQuery = supabase
-      .from('leads')
-      .select('id, customer_id, utm_source, created_at')
-    const filteredLeads = applyClinicFilter(leadsQuery, { clinicId, assignedClinicIds })
-    if (filteredLeads === null) return apiSuccess([])
-    leadsQuery = filteredLeads
-    if (tsStart) leadsQuery = leadsQuery.gte('created_at', tsStart)
-    if (tsEnd) leadsQuery = leadsQuery.lt('created_at', tsEnd)
-
-    // 3. 결제 조회 (customer_id, payment_amount)
-    let paymentsQuery = supabase
-      .from('payments')
-      .select('customer_id, payment_amount, payment_date')
-    const filteredPayments = applyClinicFilter(paymentsQuery, { clinicId, assignedClinicIds })
-    if (filteredPayments === null) return apiSuccess([])
-    paymentsQuery = filteredPayments
-    if (dateStart) paymentsQuery = paymentsQuery.gte('payment_date', dateStart)
-    if (dateEnd) paymentsQuery = paymentsQuery.lte('payment_date', dateEnd)
-
+    // 1~3. 광고통계·리드·결제 — 합계/집합 집계이므로 PostgREST 1,000행 상한을 id 페이지네이션으로 우회
     const [adStatsRes, leadsRes, paymentsRes] = await Promise.all([
-      adStatsQuery,
-      leadsQuery,
-      paymentsQuery,
+      fetchAllRowsResult<{ platform: string; campaign_type: string | null; spend_amount: number; clicks: number; impressions: number; stat_date: string }>((from, to) => {
+        let q = applyClinicFilter(supabase.from('ad_campaign_stats').select('platform, campaign_type, spend_amount, clicks, impressions, stat_date'), { clinicId, assignedClinicIds })!
+        if (dateStart) q = q.gte('stat_date', dateStart)
+        if (dateEnd) q = q.lte('stat_date', dateEnd)
+        return q.order('id').range(from, to)
+      }),
+      fetchAllRowsResult<{ id: number; customer_id: number; utm_source: string | null; created_at: string }>((from, to) => {
+        let q = applyClinicFilter(supabase.from('leads').select('id, customer_id, utm_source, created_at'), { clinicId, assignedClinicIds })!
+        if (tsStart) q = q.gte('created_at', tsStart)
+        if (tsEnd) q = q.lt('created_at', tsEnd)
+        return q.order('id').range(from, to)
+      }),
+      fetchAllRowsResult<{ customer_id: number; payment_amount: number; payment_date: string }>((from, to) => {
+        let q = applyClinicFilter(supabase.from('payments').select('customer_id, payment_amount, payment_date'), { clinicId, assignedClinicIds })!
+        if (dateStart) q = q.gte('payment_date', dateStart)
+        if (dateEnd) q = q.lte('payment_date', dateEnd)
+        return q.order('id').range(from, to)
+      }),
     ])
 
     if (adStatsRes.error) {

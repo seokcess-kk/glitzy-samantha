@@ -93,7 +93,7 @@ export function FunnelSection({ data, loading }: FunnelSectionProps) {
           <Users size={16} className="text-brand-400" />
           <h2 className="text-sm font-semibold text-foreground">전환 퍼널</h2>
         </div>
-        <span className="text-xs text-muted-foreground">리드 → 결제 전환율</span>
+        <span className="text-xs text-muted-foreground">리드 → 결제 (기간 전환율)</span>
       </div>
 
       {loading ? (
@@ -291,7 +291,7 @@ function FunnelProgress({
       {totalRate !== undefined && totalRate > 0 && (
         <div className="mt-5 pt-4 border-t border-border dark:border-white/5">
           <div className="flex items-center justify-between mb-2">
-            <span className="text-xs text-muted-foreground">전체 전환율 (리드 → 결제)</span>
+            <span className="text-xs text-muted-foreground">전체 전환율 (리드 → 결제 · 기간 기준)</span>
             <span className="text-base font-bold text-emerald-600 dark:text-emerald-400 tabular-nums">
               {totalRate}%
             </span>

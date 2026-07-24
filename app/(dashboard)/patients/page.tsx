@@ -887,7 +887,12 @@ function BookingRow({ booking, onRefresh, isSuperAdmin, canEditPayment, clinicId
   const customer = booking.customer
   const cfg = STATUS_CONFIG[booking.status] || { label: booking.status, variant: 'secondary' as const }
   const totalPayment = (customer?.payments || []).reduce((s: number, p: any) => s + Number(p.payment_amount), 0)
-  const consultations: any[] = customer?.consultations || []
+  // 상담 이력 다건 누적 → 최신순 정렬(임베드 배열 순서 비보장). consultations[0]=최신, 타임라인 최신 우선
+  const consultations: any[] = [...(customer?.consultations || [])].sort(
+    (a: any, b: any) =>
+      new Date(b.created_at || b.consultation_date || 0).getTime() -
+      new Date(a.created_at || a.consultation_date || 0).getTime()
+  )
   // 유입 경로: utm_source가 있는 첫 번째 리드 기준, 없으면 first_source 폴백
   const leads: any[] = customer?.leads || []
   const leadWithSource = leads.find((l: any) => l.utm_source) || leads[0]
