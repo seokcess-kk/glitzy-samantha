@@ -60,6 +60,8 @@ export default function ClinicsPage() {
   const [notifyPhones, setNotifyPhones] = useState<string[]>([''])
   const [notifyEnabled, setNotifyEnabled] = useState(false)
   const [notifySaving, setNotifySaving] = useState(false)
+  const [notifyTesting, setNotifyTesting] = useState(false)
+  const [smsFailures, setSmsFailures] = useState<{ total: number; sinceDays: number } | null>(null)
   // API 설정
   const [apiConfigTarget, setApiConfigTarget] = useState<{ id: number; name: string } | null>(null)
   const [apiConfigSummaries, setApiConfigSummaries] = useState<Record<number, ApiConfigSummary[]>>({})
@@ -116,6 +118,12 @@ export default function ClinicsPage() {
   }, [])
 
   useEffect(() => { fetchClinics() }, [])
+  useEffect(() => {
+    fetch('/api/admin/sms-failures')
+      .then(r => (r.ok ? r.json() : null))
+      .then(d => { if (d && typeof d.total === 'number') setSmsFailures(d) })
+      .catch(() => {})
+  }, [])
 
   useEffect(() => {
     if (clinics.length > 0) {
@@ -311,6 +319,32 @@ export default function ClinicsPage() {
     }
   }
 
+  const handleNotifyTest = async () => {
+    if (blockDemoWrite()) return
+    if (!notifyTarget) return
+    const filtered = notifyPhones.filter(p => p && p.trim())
+    if (filtered.length === 0) {
+      toast.error('테스트할 연락처를 입력해주세요.')
+      return
+    }
+    setNotifyTesting(true)
+    try {
+      const res = await fetch(`/api/admin/clinics/${notifyTarget.id}/test-sms`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ phones: filtered }),
+      })
+      const json = await res.json()
+      if (!res.ok) throw new Error(json.error || '발송 실패')
+      if (json.allSent) toast.success('테스트 문자를 발송했습니다.')
+      else toast.error('일부 번호 발송에 실패했습니다. 발송 로그를 확인하세요.')
+    } catch (e: any) {
+      toast.error(e.message || '테스트 문자 발송에 실패했습니다.')
+    } finally {
+      setNotifyTesting(false)
+    }
+  }
+
   // 테이블에 표시할 알림 번호 목록
   const getNotifyDisplay = (clinic: any) => {
     const phones: string[] =
@@ -341,6 +375,13 @@ export default function ClinicsPage() {
   return (
     <>
       <PageHeader icon={Building2} title="병원 관리" description="병원 고객사 등록 및 관리" />
+
+      {smsFailures && smsFailures.total > 0 && (
+        <div className="mb-4 flex items-center gap-2 rounded-lg border border-amber-500/30 bg-amber-500/10 px-4 py-3 text-sm text-amber-700 dark:text-amber-400">
+          <span aria-hidden>⚠️</span>
+          <span>최근 {smsFailures.sinceDays}일 문자 발송 실패 <b>{smsFailures.total}건</b> — 알림 설정과 발송 상태를 확인하세요.</span>
+        </div>
+      )}
 
       <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
         <DialogContent className="max-w-lg">
@@ -566,6 +607,9 @@ export default function ClinicsPage() {
             </div>
           </div>
           <DialogFooter>
+            <Button variant="outline" onClick={handleNotifyTest} disabled={notifyTesting} className="mr-auto">
+              {notifyTesting ? '발송 중...' : '테스트 발송'}
+            </Button>
             <Button variant="ghost" onClick={() => setNotifyDialogOpen(false)}>취소</Button>
             <Button onClick={handleNotifySave} disabled={notifySaving} className="bg-brand-600 hover:bg-brand-700">
               {notifySaving ? '저장 중...' : '저장'}
