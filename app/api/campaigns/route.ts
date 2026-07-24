@@ -146,13 +146,18 @@ export const GET = withClinicFilter(async (req: Request, { user, clinicId, assig
     .order('created_at', { ascending: false })
     .limit(2000)
 
-  if (clinicId) leadsQuery = leadsQuery.eq('clinic_id', clinicId)
   if (tsStart) leadsQuery = leadsQuery.gte('created_at', tsStart)
   if (tsEnd) leadsQuery = leadsQuery.lt('created_at', tsEnd)
+  // 멀티테넌트 격리: superadmin=전체, clinic_admin=자기 병원, agency_staff=배정 병원만(assignedClinicIds)
+  // 기존 bare eq(clinicId)는 agency_staff가 병원 미선택 시 필터가 빠져 타 병원 리드가 노출됐음
+  const filteredLeads = applyClinicFilter(leadsQuery, { clinicId, assignedClinicIds })
+  if (filteredLeads === null) return apiSuccess([]) // agency_staff 배정 병원 0개
+  leadsQuery = filteredLeads
 
   // 랜딩 페이지 이름 매핑용
   let lpQuery = supabase.from('landing_pages').select('id, name')
-  if (clinicId) lpQuery = lpQuery.eq('clinic_id', clinicId)
+  const filteredLp = applyClinicFilter(lpQuery, { clinicId, assignedClinicIds })
+  if (filteredLp) lpQuery = filteredLp
 
   const [leadsRes, lpRes] = await Promise.all([leadsQuery, lpQuery])
   if (leadsRes.error) return apiError(leadsRes.error.message, 500)
