@@ -1,5 +1,6 @@
 'use client'
-import { useState, useEffect, useCallback, useMemo, useRef } from 'react'
+import { useState, useEffect, useCallback, useMemo, useRef, Suspense } from 'react'
+import { useSearchParams } from 'next/navigation'
 import { Search, Plus, ChevronDown, ChevronUp, Check, AlertCircle, Calendar, List, ChevronLeft, ChevronRight, Clock, Phone, Edit2, Trash2, X, Settings, MessageSquare } from 'lucide-react'
 import { LeadNotesTimeline, type LeadNote } from '@/components/patients/LeadNotesTimeline'
 import { useSession } from 'next-auth/react'
@@ -1208,7 +1209,7 @@ function DayView({ currentMonth, bookingsByDate, todayKey, selectedDate, onSelec
 }
 
 // 메인 페이지
-export default function PatientsPage() {
+function PatientsPageInner() {
   const { selectedClinicId } = useClinic()
   const { data: session } = useSession()
   const isSuperAdmin = session?.user?.role === 'superadmin'
@@ -1225,6 +1226,17 @@ export default function PatientsPage() {
   const [paymentFilter, setPaymentFilter] = useState<'all' | 'paid' | 'unpaid'>('all')
   const [sortBy, setSortBy] = useState<'newest' | 'oldest' | 'name' | 'payment'>('newest')
   const [dateRange, setDateRange] = useState<DateRange>({ from: startOfMonth(startOfDay(new Date())), to: startOfDay(new Date()) })
+  const searchParams = useSearchParams()
+  // 업무 인박스 드릴다운(?scope=today&status=...) 반영 — URL 변경에 반응
+  useEffect(() => {
+    const scope = searchParams.get('scope')
+    const st = searchParams.get('status')
+    if (scope === 'today') {
+      const t = startOfDay(new Date())
+      setDateRange({ from: t, to: t })
+    }
+    if (st) setStatusFilter(st)
+  }, [searchParams])
   const [currentMonth, setCurrentMonth] = useState(new Date())
   const [selectedDate, setSelectedDate] = useState<string | null>(null)
   // 예약 등록 다이얼로그
@@ -1389,7 +1401,7 @@ export default function PatientsPage() {
       // 검색
       const matchSearch = !search || b.customer?.name?.includes(search) || b.customer?.phone_number?.includes(search)
       // 상태
-      const matchStatus = statusFilter === 'all' || b.status === statusFilter
+      const matchStatus = statusFilter === 'all' || statusFilter.split(',').includes(b.status)
       // 날짜 범위
       let matchDate = true
       if (dateRange.from && b.booking_datetime) {
@@ -1435,17 +1447,23 @@ export default function PatientsPage() {
     paymentFilter !== 'all',
   ].filter(Boolean).length
 
-  const stats = useMemo(() => ({
-    total: filtered.length,
-    visited: filtered.filter(b => b.status === 'visited').length,
-    noshow: filtered.filter(b => b.status === 'noshow').length,
-    revenue: filtered.reduce((s, b) => s + (b.customer?.payments || []).reduce((ps: number, p: any) => ps + Number(p.payment_amount), 0), 0),
-  }), [filtered])
+  const stats = useMemo(() => {
+    const visited = filtered.filter(b => b.status === 'visited').length
+    const noshow = filtered.filter(b => b.status === 'noshow').length
+    return {
+      total: filtered.length,
+      visited,
+      noshow,
+      // 노쇼율 = 노쇼 / (방문완료 + 노쇼) — 실제 방문 예정이었던 예약 중 노쇼 비율
+      noshowRate: (visited + noshow) > 0 ? Number(((noshow / (visited + noshow)) * 100).toFixed(1)) : 0,
+      revenue: filtered.reduce((s, b) => s + (b.customer?.payments || []).reduce((ps: number, p: any) => ps + Number(p.payment_amount), 0), 0),
+    }
+  }, [filtered])
 
   // 캘린더 데이터 준비 (상태·유입경로·결제 필터 반영, 날짜 필터는 캘린더 자체 네비게이션 사용)
   const calendarBookings = useMemo(() => {
     return bookings.filter(b => {
-      const matchStatus = statusFilter === 'all' || b.status === statusFilter
+      const matchStatus = statusFilter === 'all' || statusFilter.split(',').includes(b.status)
       let matchSource = true
       if (sourceFilter !== 'all') {
         const leads = b.customer?.leads || []
@@ -1625,11 +1643,12 @@ export default function PatientsPage() {
       </Dialog>
 
       {/* 통계 카드 (클릭 시 필터) */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-3 md:gap-4 mb-6">
+      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-3 md:gap-4 mb-6">
         {[
           { label: '전체 예약', value: stats.total, filter: 'all' },
           { label: '방문완료', value: stats.visited, filter: 'visited' },
           { label: '노쇼', value: stats.noshow, filter: 'noshow' },
+          { label: '노쇼율', value: `${stats.noshowRate}%`, filter: null },
           { label: '총 결제액', value: `₩${stats.revenue.toLocaleString()}`, filter: null },
         ].map(({ label, value, filter }) => (
           <Card
@@ -2140,5 +2159,13 @@ export default function PatientsPage() {
         </AlertDialogContent>
       </AlertDialog>
     </>
+  )
+}
+
+export default function PatientsPage() {
+  return (
+    <Suspense fallback={null}>
+      <PatientsPageInner />
+    </Suspense>
   )
 }

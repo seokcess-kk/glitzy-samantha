@@ -69,13 +69,14 @@ export function TaskInbox({ clinicId }: { clinicId: number | null }) {
     fetch_()
   }, [fetch_])
 
+  const staleHours = data?.staleHours ?? 24
   const tiles: QueueTile[] = [
-    { key: 'newLeads', label: '신규 미처리 리드', icon: UserPlus, path: '/leads', tone: 'urgent' },
-    { key: 'staleNewLeads', label: `${data?.staleHours ?? 24}시간+ 미연락`, icon: Clock, path: '/leads', tone: 'warn' },
-    { key: 'consultedNotBooked', label: '상담 후 미예약', icon: MessageSquareDot, path: '/leads', tone: 'info' },
-    { key: 'holdLeads', label: '보류 리드', icon: PauseCircle, path: '/leads', tone: 'info' },
-    { key: 'todayBookings', label: '오늘 예약', icon: CalendarCheck, path: '/patients', tone: 'neutral' },
-    { key: 'todayCancelledNoshow', label: '오늘 취소·노쇼', icon: CalendarX, path: '/patients', tone: 'warn' },
+    { key: 'newLeads', label: '신규 미처리 리드', icon: UserPlus, path: '/leads/queue?status=new', tone: 'urgent' },
+    { key: 'staleNewLeads', label: `${staleHours}시간+ 미연락`, icon: Clock, path: `/leads/queue?status=new&staleHours=${staleHours}`, tone: 'warn' },
+    { key: 'consultedNotBooked', label: '상담 후 미예약', icon: MessageSquareDot, path: '/leads/queue?status=consulting,consulted', tone: 'info' },
+    { key: 'holdLeads', label: '보류 리드', icon: PauseCircle, path: '/leads/queue?status=hold', tone: 'info' },
+    { key: 'todayBookings', label: '오늘 예약', icon: CalendarCheck, path: '/patients?scope=today', tone: 'neutral' },
+    { key: 'todayCancelledNoshow', label: '오늘 취소·노쇼', icon: CalendarX, path: '/patients?scope=today&status=noshow,cancelled', tone: 'warn' },
   ]
 
   return (
