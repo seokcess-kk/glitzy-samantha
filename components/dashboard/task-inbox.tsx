@@ -4,7 +4,7 @@ import { useEffect, useState, useCallback } from 'react'
 import { useRouter } from 'next/navigation'
 import { Card } from '@/components/ui/card'
 import { Skeleton } from '@/components/ui/skeleton'
-import { ListTodo, UserPlus, Clock, PauseCircle, MessageSquareDot, CalendarCheck, CalendarX } from 'lucide-react'
+import { ListTodo, UserPlus, Clock, PhoneCall, PauseCircle, MessageSquareDot, CalendarCheck, CalendarX } from 'lucide-react'
 import type { LucideIcon } from 'lucide-react'
 
 interface TaskQueues {
@@ -14,6 +14,7 @@ interface TaskQueues {
   consultedNotBooked: number
   todayBookings: number
   todayCancelledNoshow: number
+  dueCallbacks: number
   staleHours: number
 }
 
@@ -73,6 +74,7 @@ export function TaskInbox({ clinicId }: { clinicId: number | null }) {
   const tiles: QueueTile[] = [
     { key: 'newLeads', label: '신규 미처리 리드', icon: UserPlus, path: '/leads/queue?status=new', tone: 'urgent' },
     { key: 'staleNewLeads', label: `${staleHours}시간+ 미연락`, icon: Clock, path: `/leads/queue?status=new&staleHours=${staleHours}`, tone: 'warn' },
+    { key: 'dueCallbacks', label: '오늘 재연락 대상', icon: PhoneCall, path: '/leads/queue?callback=due', tone: 'urgent' },
     { key: 'consultedNotBooked', label: '상담 후 미예약', icon: MessageSquareDot, path: '/leads/queue?status=consulting,consulted', tone: 'info' },
     { key: 'holdLeads', label: '보류 리드', icon: PauseCircle, path: '/leads/queue?status=hold', tone: 'info' },
     { key: 'todayBookings', label: '오늘 예약', icon: CalendarCheck, path: '/patients?scope=today', tone: 'neutral' },
@@ -87,8 +89,8 @@ export function TaskInbox({ clinicId }: { clinicId: number | null }) {
       </div>
 
       {loading ? (
-        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3">
-          {Array.from({ length: 6 }).map((_, i) => (
+        <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-7 gap-3">
+          {Array.from({ length: 7 }).map((_, i) => (
             <Skeleton key={i} className="h-[76px] rounded-lg" />
           ))}
         </div>
@@ -100,7 +102,7 @@ export function TaskInbox({ clinicId }: { clinicId: number | null }) {
           </button>
         </div>
       ) : (
-        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3">
+        <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-7 gap-3">
           {tiles.map(tile => {
             const count = data ? data[tile.key] : 0
             const active = count > 0

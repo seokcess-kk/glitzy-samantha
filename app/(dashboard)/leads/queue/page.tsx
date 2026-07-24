@@ -11,7 +11,7 @@ import { Skeleton } from '@/components/ui/skeleton'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { useClinic } from '@/components/ClinicContext'
 import { extractCustomEntries } from '@/lib/lead-custom-data'
-import { formatDateTime } from '@/lib/date'
+import { formatDate, formatDateTime } from '@/lib/date'
 import { getLeadStatusMeta, SELECTABLE_LEAD_STATUSES, LEAD_STATUS_CONFIG } from '@/lib/lead-status'
 
 interface QueueLead {
@@ -21,6 +21,9 @@ interface QueueLead {
   lead_status: string
   created_at: string
   custom_data: unknown
+  next_contact_at: string | null
+  last_contacted_at: string | null
+  contact_attempt_count: number
 }
 
 interface Filter {
@@ -28,11 +31,13 @@ interface Filter {
   label: string
   status: string
   staleHours?: number
+  callback?: string
 }
 
 const FILTERS: Filter[] = [
   { key: 'new', label: '신규 미처리', status: 'new' },
   { key: 'stale', label: '미연락(오래됨)', status: 'new', staleHours: 24 },
+  { key: 'callback', label: '재연락 대상', status: '', callback: 'due' },
   { key: 'no_answer', label: '부재', status: 'no_answer' },
   { key: 'consulting', label: '상담중·완료', status: 'consulting,consulted' },
   { key: 'hold', label: '보류', status: 'hold' },
@@ -46,6 +51,7 @@ function QueueInner() {
   const { selectedClinicId } = useClinic()
   const status = params.get('status') || ''
   const staleHours = params.get('staleHours')
+  const callback = params.get('callback')
 
   const [leads, setLeads] = useState<QueueLead[]>([])
   const [total, setTotal] = useState(0)
@@ -59,6 +65,7 @@ function QueueInner() {
       const qs = new URLSearchParams()
       if (status) qs.set('status', status)
       if (staleHours) qs.set('staleHours', staleHours)
+      if (callback) qs.set('callback', callback)
       if (selectedClinicId) qs.set('clinic_id', String(selectedClinicId))
       const res = await fetch(`/api/leads/queue?${qs.toString()}`)
       if (!res.ok) {
@@ -78,21 +85,25 @@ function QueueInner() {
     } finally {
       setLoading(false)
     }
-  }, [status, staleHours, selectedClinicId])
+  }, [status, staleHours, callback, selectedClinicId])
 
   useEffect(() => {
     fetch_()
   }, [fetch_])
 
   const activeKey =
-    FILTERS.find(f => f.status === status && (f.staleHours ? String(f.staleHours) === staleHours : !staleHours))?.key ||
-    (status ? 'custom' : 'all')
+    FILTERS.find(f =>
+      f.status === status &&
+      (f.staleHours ? String(f.staleHours) === staleHours : !staleHours) &&
+      (f.callback ? f.callback === callback : !callback),
+    )?.key || ((status || callback) ? 'custom' : 'all')
   const activeLabel = FILTERS.find(f => f.key === activeKey)?.label || '리드 큐'
 
   const goFilter = (f: Filter) => {
     const qs = new URLSearchParams()
     if (f.status) qs.set('status', f.status)
     if (f.staleHours) qs.set('staleHours', String(f.staleHours))
+    if (f.callback) qs.set('callback', f.callback)
     const str = qs.toString()
     router.push(`/leads/queue${str ? `?${str}` : ''}`)
   }
@@ -111,6 +122,26 @@ function QueueInner() {
       fetch_()
     } catch {
       toast.error('상태 변경에 실패했습니다.')
+    } finally {
+      setUpdatingId(null)
+    }
+  }
+
+  const setCallback = async (id: number, dateStr: string) => {
+    setUpdatingId(id)
+    try {
+      // 날짜만 받아 KST 09:00로 저장(해제 시 null)
+      const next_contact_at = dateStr ? new Date(`${dateStr}T09:00:00+09:00`).toISOString() : null
+      const res = await fetch(`/api/leads/${id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ next_contact_at }),
+      })
+      if (!res.ok) throw new Error()
+      toast.success(dateStr ? '재연락일이 설정되었습니다.' : '재연락일이 해제되었습니다.')
+      fetch_()
+    } catch {
+      toast.error('재연락일 설정에 실패했습니다. (재연락 마이그레이션 필요)')
     } finally {
       setUpdatingId(null)
     }
@@ -190,6 +221,24 @@ function QueueInner() {
                       </div>
                     )}
                     <p className="text-[11px] text-muted-foreground mt-1.5">{formatDateTime(lead.created_at)}</p>
+                    <div className="flex flex-wrap items-center gap-x-3 gap-y-1 mt-2 text-[11px]">
+                      {lead.contact_attempt_count > 0 && (
+                        <span className="text-muted-foreground">처리 {lead.contact_attempt_count}회</span>
+                      )}
+                      {lead.next_contact_at && (
+                        <span className="text-amber-600 dark:text-amber-400">재연락 {formatDate(lead.next_contact_at)}</span>
+                      )}
+                      <label className="inline-flex items-center gap-1 text-muted-foreground">
+                        재연락일
+                        <input
+                          type="date"
+                          value={lead.next_contact_at ? new Date(lead.next_contact_at).toLocaleDateString('en-CA', { timeZone: 'Asia/Seoul' }) : ''}
+                          onChange={e => setCallback(lead.id, e.target.value)}
+                          disabled={updatingId === lead.id}
+                          className="h-6 rounded border border-border bg-transparent px-1"
+                        />
+                      </label>
+                    </div>
                   </div>
                   <div className="w-28 shrink-0">
                     <Select

@@ -23,7 +23,7 @@ export const GET = withClinicFilter(async (req: Request, { user, clinicId, assig
   if (user.role === 'demo_viewer') {
     return apiSuccess({
       newLeads: 5, staleNewLeads: 2, holdLeads: 3, consultedNotBooked: 4,
-      todayBookings: 6, todayCancelledNoshow: 1, staleHours: DEFAULT_STALE_HOURS,
+      todayBookings: 6, todayCancelledNoshow: 1, dueCallbacks: 3, staleHours: DEFAULT_STALE_HOURS,
     })
   }
 
@@ -31,7 +31,7 @@ export const GET = withClinicFilter(async (req: Request, { user, clinicId, assig
   if (assignedClinicIds !== null && assignedClinicIds.length === 0) {
     return apiSuccess({
       newLeads: 0, staleNewLeads: 0, holdLeads: 0, consultedNotBooked: 0,
-      todayBookings: 0, todayCancelledNoshow: 0, staleHours: DEFAULT_STALE_HOURS,
+      todayBookings: 0, todayCancelledNoshow: 0, dueCallbacks: 0, staleHours: DEFAULT_STALE_HOURS,
     })
   }
 
@@ -70,6 +70,17 @@ export const GET = withClinicFilter(async (req: Request, { user, clinicId, assig
       return apiError('업무 큐 조회에 실패했습니다.', 500)
     }
 
+    // 오늘 재연락 대상 — best-effort(재연락 마이그레이션 20260724 미적용 시 0, 나머지 인박스는 유지)
+    let dueCallbacks = 0
+    const dueRes = await applyClinicFilter(
+      supabase.from('leads').select('*', { count: 'exact', head: true })
+        .lte('next_contact_at', now.toISOString())
+        .not('lead_status', 'in', '("booked","rejected")'),
+      ctx,
+    )!
+    if (dueRes.error) logger.warn('재연락 대상 집계 건너뜀(마이그레이션 미적용 가능)', { clinicId })
+    else dueCallbacks = dueRes.count || 0
+
     return apiSuccess({
       newLeads: newLeads.count || 0,
       staleNewLeads: staleNewLeads.count || 0,
@@ -77,6 +88,7 @@ export const GET = withClinicFilter(async (req: Request, { user, clinicId, assig
       consultedNotBooked: consultedNotBooked.count || 0,
       todayBookings: todayBookings.count || 0,
       todayCancelledNoshow: todayCancelledNoshow.count || 0,
+      dueCallbacks,
       staleHours,
     })
   } catch (err) {
