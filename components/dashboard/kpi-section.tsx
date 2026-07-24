@@ -65,6 +65,7 @@ export function KpiSection({ data, loading, onNavigate }: KpiSectionProps) {
       subtitle: `오늘 +${todayLeads}`,
       subtitleColor: todayLeads > 0 ? 'positive' : 'default',
       path: '/leads',
+      hint: '리드 건수(이벤트 기준)',
     },
     {
       label: 'CPL',
@@ -76,23 +77,24 @@ export function KpiSection({ data, loading, onNavigate }: KpiSectionProps) {
       path: '/ads',
     },
     {
-      label: '매출',
+      label: '운영 매출',
       value: `₩${(data.totalRevenue ?? 0).toLocaleString()}`,
       trend: data.comparison?.totalRevenue !== undefined && data.comparison.totalRevenue !== 0
         ? { value: Math.abs(data.comparison.totalRevenue), isPositive: data.comparison.totalRevenue > 0 }
         : undefined,
       subtitleColor: 'default',
       path: '/patients',
+      hint: '전체 결제 기준 · 광고 성과 아님',
     },
     {
-      label: 'ROAS',
+      label: '운영 ROAS',
       value: `${((data.roas ?? 0) * 100).toFixed(0)}%`,
       trend: data.comparison?.roas !== undefined && data.comparison.roas !== 0
         ? { value: Math.abs(data.comparison.roas), isPositive: data.comparison.roas > 0 }
         : undefined,
       subtitleColor: 'default',
       path: '/ads?tab=attribution',
-      hint: '기간 내 전체 매출 기준',
+      hint: '전체 매출 ÷ 광고비 · 광고 기여 매출 아님',
     },
   ] : ['광고비', '리드', 'CPL', '매출', 'ROAS'].map(label => ({
     label,
